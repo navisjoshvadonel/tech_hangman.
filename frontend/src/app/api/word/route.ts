@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import { promises as fs } from 'fs';
 
-const PYTHON_API = process.env.PYTHON_API_URL || 'http://localhost:5000/api';
+const PYTHON_API = process.env.PYTHON_API_URL || 'http://127.0.0.1:5000/api';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
