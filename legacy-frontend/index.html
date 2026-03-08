@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HANG MAN: Anti-Gravity Agent</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <style>
+        /* === Custom Cursor === */
+        * {
+            cursor: none !important;
+        }
+
+        .cursor-dot,
+        .cursor-outline {
+            pointer-events: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00ffcc;
+            box-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+        }
+
+        .cursor-outline {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+            transition: all 0.15s ease-out, opacity 0.3s ease-in-out;
+        }
+
+        body:hover .cursor-dot,
+        body:hover .cursor-outline {
+            opacity: 1;
+        }
+
+        .cursor-hover .cursor-outline {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 255, 204, 0.1);
+            border-width: 3px;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.6);
+        }
+
+        .cursor-active .cursor-dot {
+            transform: translate(-50%, -50%) scale(1.5);
+        }
+
+        .cursor-active .cursor-outline {
+            transform: translate(-50%, -50%) scale(0.8);
+            background-color: rgba(0, 255, 204, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+    <!-- Global SVG Defs -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- Cinematic Intro Overlay -->
+    <div id="intro-overlay" class="overlay">
+        <div class="intro-sequence">
+            <div class="intro-text-line" id="intro-line-1">WELCOME USER...</div>
+            <div class="intro-text-line" id="intro-line-2">ARRESTING THE MAN...</div>
+            <div class="intro-text-line" id="intro-line-3">SETTING UP THE STAGE...</div>
+            <div class="intro-text-line" id="intro-line-4">THE MAN NEEDS YOU...</div>
+            <div class="intro-main-title" id="intro-logo">THE HANG MAN</div>
+        </div>
+    </div>
+
+    <!-- Domain Quote Transition Overlay -->
+    <div id="quote-transition-overlay" class="overlay hidden">
+        <div class="quote-content">
+            <h3 id="domain-category-name">PROTOCOL</h3>
+            <p id="domain-quote-text">"Quote"</p>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="overlay hidden">
+        <div class="login-content-wrapper">
+            <div class="cyber-core-container">
+                <svg class="cyber-core-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Base structural rings -->
+                    <circle cx="150" cy="75" r="50" class="core-ring core-ring-outer" />
+                    <circle cx="150" cy="75" r="35" class="core-ring core-ring-middle" />
+                    <circle cx="150" cy="75" r="20" class="core-ring core-ring-inner" />
+
+                    <!-- Pulsing Data Core -->
+                    <circle cx="150" cy="75" r="8" class="core-node" />
+
+                    <!-- Decorative HUD elements -->
+                    <path class="hud-bracket" d="M 90,45 L 80,45 L 80,105 L 90,105" />
+                    <path class="hud-bracket" d="M 210,45 L 220,45 L 220,105 L 210,105" />
+
+                    <line class="hud-line" x1="150" y1="10" x2="150" y2="20" />
+                    <line class="hud-line" x1="150" y1="130" x2="150" y2="140" />
+                    <line class="hud-line" x1="85" y1="75" x2="95" y2="75" />
+                    <line class="hud-line" x1="205" y1="75" x2="215" y2="75" />
+
+                    <!-- Scanning Laser Beam -->
+                    <rect class="cyber-scanner-laser" x="70" y="20" width="160" height="2" />
+                </svg>
+            </div>
+
+            <div class="login-box">
+                <div class="login-tabs">
+                    <button class="login-tab active" id="tab-returning">RETURNING PLAYER</button>
+                    <button class="login-tab" id="tab-new">NEW RECRUIT</button>
+                </div>
+
+                <!-- Returning Player Panel -->
+                <div class="login-panel" id="panel-returning">
+                    <p class="login-subtitle">Welcome back, Agent.</p>
+                    <div class="input-row">
+                        <input type="text" id="username-input" placeholder="ENTER YOUR CALLSIGN" autocomplete="off"
+                            maxlength="15" />
+                        <button id="login-btn">RESUME MISSION</button>
+                    </div>
+                    <p class="login-hint" id="login-error-msg"></p>
+                </div>
+
+                <!-- New Player Panel -->
+                <div class="login-panel hidden" id="panel-new">
+                    <p class="login-subtitle">Create your identity, Recruit.</p>
+                    <div class="input-row">
+                        <input type="text" id="register-username-input" placeholder="CHOOSE A CALLSIGN"
+                            autocomplete="off" maxlength="15" />
+                        <button id="register-btn">ENLIST NOW</button>
+                    </div>
+                    <p class="login-hint" id="register-error-msg"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="red-overlay"></div>
+
+    <div id="selection-screen" class="overlay hidden">
+        <div class="selection-content-wrapper">
+            <!-- Left Side: Cross & Quote -->
+            <div class="selection-left">
+                <div id="left-logo-container">
+                    <svg class="cross-svg" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="50" y1="10" x2="50" y2="140" class="cross-line" />
+                        <line x1="20" y1="40" x2="80" y2="40" class="cross-line" />
+                    </svg>
+                </div>
+                <div id="left-quote-container" class="bible-quote">
+                    "For the Son of Man came to seek and to save the lost." <br><span class="quote-ref">- Luke
+                        19:10</span>
+                </div>
+            </div>
+
+            <!-- Right Side: Categories & Difficulties -->
+            <div class="selection-right">
+                <div id="category-selection">
+                    <h2 id="selection-title">Select Category</h2>
+                    <div class="selection-grid">
+                        <button class="cat-btn" data-cat="DATABASE">DATABASE</button>
+                        <button class="cat-btn" data-cat="DATA_STRUCTURE">DATA STRUCTURE</button>
+                        <button class="cat-btn" data-cat="JAVA">JAVA</button>
+                        <button class="cat-btn" data-cat="PYTHON">PYTHON</button>
+                        <button class="cat-btn" data-cat="C">C</button>
+                        <button class="cat-btn" data-cat="CPP">C++</button>
+                        <button class="cat-btn" data-cat="ARTIFICIAL_INTELLIGENCE">ARTIFICIAL INTELLIGENCE</button>
+                        <button class="cat-btn" data-cat="OPERATING_SYSTEM">OPERATING SYSTEM</button>
+                        <button class="cat-btn" data-cat="CODE_OUTPUT">💻 CODE OUTPUT</button>
+                        <button class="cat-btn" data-cat="GENERAL_KNOWLEDGE">GENERAL KNOWLEDGE</button>
+                        <button class="cat-btn" data-cat="NETWORKING">NETWORKING</button>
+                        <button class="cat-btn" data-cat="CYBERSECURITY">CYBERSECURITY</button>
+                        <button class="cat-btn" data-cat="WEBDEVELOPMENT">WEB DEVELOPMENT</button>
+                        <button class="cat-btn" data-cat="SOFTWAREENGINEERING">SOFTWARE ENG.</button>
+                        <button class="cat-btn" data-cat="LINUX">LINUX</button>
+                        <button class="cat-btn" data-cat="CLOUD">CLOUD</button>
+                        <button class="cat-btn" data-cat="DATASCIENCE">DATA SCIENCE</button>
+                    </div>
+                </div>
+
+                <div id="difficulty-selection" class="hidden">
+                    <h2 id="chosen-category-title">CATEGORY</h2>
+                    <p class="subtitle" style="text-align: center; margin-bottom: 15px;">SELECT THREAT LEVEL</p>
+                    <div class="selection-grid">
+                        <button class="diff-btn" data-diff="EASY">EASY</button>
+                        <button class="diff-btn" data-diff="MEDIUM">MEDIUM</button>
+                        <button class="diff-btn" data-diff="HARD">HARD</button>
+                    </div>
+                    <button id="back-to-cat-btn" class="text-btn" style="margin-top:20px; width: 100%;">&lt;
+                        BACK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <!-- Top Status Bar -->
+        <div class="status-bar">
+            <div class="user-info">
+                <span id="current-user">USER: ---</span>
+                <span id="current-rank" class="rank-badge">RANK: Beginner</span>
+                <span id="current-xp" class="xp-badge">XP: 0</span>
+                <button id="change-protocol-btn" class="text-btn">CHANGE LEVEL</button>
+                <button id="logout-btn" class="text-btn">LOGOUT</button>
+            </div>
+            <div class="score-info">
+                <div class="score-box">
+                    <span class="score-label">SCORE:</span>
+                    <span id="current-score">0</span>
+                </div>
+                <div class="score-box high-score-box">
+                    <span class="score-label">HIGH SCORE:</span>
+                    <span id="high-score">0</span>
+                </div>
+            </div>
+            <button id="leaderboard-btn" class="text-btn">LEADERBOARD</button>
+            <button id="daily-btn" class="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
+            <button id="trophies-btn" class="text-btn">🏆 TROPHIES</button>
+        </div>
+        <div class="header">
+            <h1>HANG MAN</h1>
+        </div>
+
+        <div class="hangman-display">
+            <svg class="hangman-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+                <!-- 0: Base -->
+                <line class="draw-part part-0" pathLength="100" x1="20" y1="230" x2="180" y2="230" />
+                <!-- 1: Pole -->
+                <line class="draw-part part-1" pathLength="100" x1="50" y1="230" x2="50" y2="20" />
+                <!-- 2: Top bar -->
+                <line class="draw-part part-2" pathLength="100" x1="50" y1="20" x2="130" y2="20" />
+                <!-- 3: Rope -->
+                <line class="draw-part part-3" pathLength="100" x1="130" y1="20" x2="130" y2="50" />
+                <!-- 4: Head -->
+                <circle class="draw-part part-4" pathLength="100" cx="130" cy="70" r="20" />
+                <!-- 5: Body -->
+                <line class="draw-part part-5" pathLength="100" x1="130" y1="90" x2="130" y2="150" />
+                <!-- 6: Left Arm -->
+                <line class="draw-part part-6" pathLength="100" x1="130" y1="100" x2="100" y2="130" />
+                <!-- 7: Right Arm -->
+                <line class="draw-part part-7" pathLength="100" x1="130" y1="100" x2="160" y2="130" />
+                <!-- 8: Left Leg -->
+                <line class="draw-part part-8" pathLength="100" x1="130" y1="150" x2="100" y2="190" />
+                <!-- 9: Right Leg -->
+                <line class="draw-part part-9" pathLength="100" x1="130" y1="150" x2="160" y2="190" />
+            </svg>
+        </div>
+
+        <div id="word-display" class="word-display"></div>
+
+        <!-- Clue Section -->
+        <div class="clue-container">
+            <div class="hint-controls">
+                <button id="hint-btn" class="text-btn hint-btn">GET HINT (FREE)</button>
+            </div>
+            <p id="clue-display" class="hidden">CLUE: <span id="clue-text">waiting for signal...</span></p>
+        </div>
+
+        <div id="keyboard" class="keyboard"></div>
+
+        <!-- Cinematic Escape Overlay -->
+        <div id="escape-container" class="escape-container hidden">
+            <div class="escape-portal"></div>
+            <div class="escape-runner-container">
+                <svg class="escape-runner" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+                    <g class="runner-group-escape">
+                        <circle class="runner-head" cx="50" cy="30" r="10" />
+                        <line class="runner-body" x1="50" y1="40" x2="50" y2="80" />
+                        <!-- Arms -->
+                        <line class="runner-arm-l" x1="50" y1="50" x2="30" y2="70" />
+                        <line class="runner-arm-r" x1="50" y1="50" x2="70" y2="30" />
+                        <!-- Legs -->
+                        <line class="runner-leg-l" x1="50" y1="80" x2="30" y2="120" />
+                        <line class="runner-leg-r" x1="50" y1="80" x2="70" y2="110" />
+                    </g>
+                </svg>
+            </div>
+            <div class="particles" id="escape-particles"></div>
+        </div>
+    </div>
+
+    <div id="popup">
+        <div id="popup-message"></div>
+        <button id="next-btn">are u ready to save another man</button>
+    </div>
+
+    <!-- Leaderboard Popup -->
+    <div id="leaderboard-popup" class="hidden">
+        <h3>TOP PLAYERS</h3>
+        <div class="lb-tabs">
+            <button class="lb-tab active" data-leaderboard="score">HIGH SCORE</button>
+            <button class="lb-tab" data-leaderboard="speed">FASTEST WIN</button>
+            <button class="lb-tab" data-leaderboard="streak">LONG STREAK</button>
+        </div>
+        <table id="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>RANK</th>
+                    <th>PLAYER</th>
+                    <th id="lb-val-header">SCORE</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+            </tbody>
+        </table>
+        <button id="close-leaderboard-btn">CLOSE</button>
+    </div>
+
+    <!-- Anomaly Event Popup -->
+    <div id="anomaly-popup" class="hidden">
+        <div class="anomaly-content">
+            <div class="anomaly-title">⚠ ANOMALY DETECTED</div>
+            <div id="anomaly-event-name" class="anomaly-event"></div>
+            <div id="anomaly-event-desc" class="anomaly-desc"></div>
+            <button id="anomaly-confirm-btn">ACKNOWLEDGE</button>
+        </div>
+    </div>
+
+    <!-- Achievements Modal -->
+    <div id="achievements-popup" class="hidden">
+        <div class="achievements-content">
+            <h3>🏆 YOUR TROPHIES</h3>
+            <div id="achievements-list"></div>
+            <button id="close-achievements-btn">CLOSE</button>
+        </div>
+    </div>
+
+    <script src="script.js?v=2"></script>
+</body>
+
+</html>
