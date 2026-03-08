@@ -12,7 +12,8 @@ export async function POST(request: Request) {
         });
         const data = await res.json();
         return NextResponse.json(data);
-    } catch {
+    } catch (error) {
+        console.error('Daily Complete Proxy Error:', error);
         return NextResponse.json({ success: false, message: 'Backend unreachable' });
     }
 }

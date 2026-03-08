@@ -12,7 +12,8 @@ export async function POST(request: Request) {
         });
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
-    } catch {
+    } catch (error) {
+        console.error('Score Proxy Error:', error);
         return NextResponse.json({ highest_score: 0, xp: 0, rank: 'Beginner', level: 1, new_achievements: [] });
     }
 }
