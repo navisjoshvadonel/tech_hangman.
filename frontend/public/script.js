@@ -170,9 +170,12 @@ usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handle
 async function handleLogin() {
   const username = usernameInput.value.trim();
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.innerText = "";
+  errorMsg.innerText = "AUTHENTICATING... (MAY TAKE 30s ON FIRST LOAD)";
   errorMsg.classList.remove("success");
-  if (!username) return;
+  if (!username) {
+    errorMsg.innerText = "";
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/login`, {
@@ -202,9 +205,12 @@ registerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handle
 async function handleRegister() {
   const username = registerInput.value.trim();
   const errorMsg = document.getElementById("register-error-msg");
-  errorMsg.innerText = "";
+  errorMsg.innerText = "ENLISTING... (MAY TAKE 30s ON FIRST LOAD)";
   errorMsg.classList.remove("success");
-  if (!username) return;
+  if (!username) {
+    errorMsg.innerText = "";
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/register`, {

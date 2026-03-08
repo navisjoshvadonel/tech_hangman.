@@ -15,14 +15,8 @@ export async function POST(request: Request) {
         return NextResponse.json(data, { status: res.status });
     } catch (error) {
         console.error('Register Proxy Error:', error);
-        // Python backend offline: auto-register as guest
         return NextResponse.json({
-            username: body.username || 'RECRUIT',
-            user_id: null,
-            highest_score: 0,
-            xp: 0,
-            rank: 'Beginner',
-            level: 1
-        });
+            error: "SERVER WAKING UP. PLEASE WAIT 30 SECONDS AND TRY AGAIN."
+        }, { status: 503 });
     }
 }

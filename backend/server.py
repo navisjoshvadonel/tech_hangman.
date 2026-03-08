@@ -271,7 +271,9 @@ def submit_score():
         row = c.fetchone()
     except sqlite3.OperationalError:
         c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
-        row = list(c.fetchone()) + [999999, 0, 0] # Fallback if migration hasn't fully applied
+        row = c.fetchone()
+        if row:
+            row = list(row) + [999999, 0, 0] # Fallback if migration hasn't fully applied
     
     if not row:
         conn.close()
@@ -482,13 +484,19 @@ def get_profile():
         
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('''
-        SELECT username, highest_score, xp, level, rank, total_wins, total_losses, 
-               fastest_win_seconds, current_streak, longest_streak, hints_used, total_games, story_progress 
-        FROM Users WHERE id = ?
-    ''', (user_id,))
-    row = c.fetchone()
-    
+    try:
+        c.execute('''
+            SELECT username, highest_score, xp, level, rank, total_wins, total_losses, 
+                   fastest_win_seconds, current_streak, longest_streak, hints_used, total_games, story_progress 
+            FROM Users WHERE id = ?
+        ''', (user_id,))
+        row = c.fetchone()
+    except sqlite3.OperationalError:
+        c.execute('SELECT username, highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
+        row = c.fetchone()
+        if row:
+            row = list(row) + [999999, 0, 0, 0, 0, 1]
+
     if not row:
         conn.close()
         return jsonify({"error": "User not found"}), 404
@@ -525,8 +533,11 @@ def use_hint():
         
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
-    conn.commit()
+    try:
+        c.execute('UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass # hints_used column might not exist yet
     conn.close()
     
     # Logic for hint generation can be complex, for now just acknowledge use
