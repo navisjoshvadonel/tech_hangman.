@@ -1120,6 +1120,8 @@ let mouseY = 0;
 let outlineX = 0;
 let outlineY = 0;
 
+let cursorTimer;
+
 window.addEventListener("mousemove", (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
@@ -1127,6 +1129,13 @@ window.addEventListener("mousemove", (e) => {
   // Dot follows immediately
   cursorDot.style.left = `${mouseX}px`;
   cursorDot.style.top = `${mouseY}px`;
+
+  // Handle inactivity auto-hide
+  document.body.classList.remove("cursor-inactive");
+  clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => {
+    document.body.classList.add("cursor-inactive");
+  }, 1000);
 });
 
 // Linear interpolation for smooth trailing effect

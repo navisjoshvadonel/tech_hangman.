@@ -50,6 +50,11 @@ body:hover .cursor-outline {
   opacity: 1;
 }
 
+body.cursor-inactive .cursor-dot,
+body.cursor-inactive .cursor-outline {
+  opacity: 0;
+}
+
 .cursor-hover .cursor-outline {
   width: 60px;
   height: 60px;
