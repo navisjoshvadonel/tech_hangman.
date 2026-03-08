@@ -267,7 +267,7 @@ def submit_score():
     c = conn.cursor()
     
     try:
-        c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak FROM Users WHERE id = ?', (user_id,))
+        c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
     except sqlite3.OperationalError:
         c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
@@ -279,11 +279,16 @@ def submit_score():
         conn.close()
         return jsonify({"error": "User not found"}), 404
         
-    current_high, current_xp, current_level, current_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak = row
+    current_high, current_xp, current_level, current_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress = row
     
-    # Calculate new stats
-    new_high_score = score if score > current_high else current_high
-    new_xp = current_xp + xp_added
+    # --- MEANINGFUL SCORING SYSTEM ---
+    # Multipliers based on difficulty
+    difficulty = data.get('difficulty', 'MEDIUM').upper()
+    multipliers = {"EASY": 1.0, "MEDIUM": 1.5, "HARD": 2.5}
+    mult = multipliers.get(difficulty, 1.0)
+
+    # Base XP calculation
+    base_xp = xp_added # Use the value sent from frontend as base (usu 150 for win, 10 for loss)
     
     if is_win is True:
         total_wins += 1
@@ -292,12 +297,34 @@ def submit_score():
             longest_streak = current_streak
         if time_taken and time_taken < fastest_win_seconds:
             fastest_win_seconds = time_taken
+            
+        # Time Bonus: Max 500 XP, decreases with time
+        time_bonus = max(0, 500 - (time_taken * 5)) if time_taken else 0
+        
+        # Flawless Bonus: 500 XP for 0 wrong guesses
+        wrong_guesses_count = data.get('wrong_guesses', 99)
+        flawless_bonus = 500 if wrong_guesses_count == 0 else 0
+        
+        # Streak Bonus: 10% extra per streak point, capped at 100%
+        streak_mult = 1.0 + min(1.0, (current_streak - 1) * 0.1) if current_streak > 1 else 1.0
+        
+        # Calculate Final XP for the win
+        # Formula: (Base * Difficulty + Bonuses) * Streak
+        final_xp_added = int(((base_xp * mult) + time_bonus + flawless_bonus) * streak_mult)
+        
     elif is_win is False:
         total_losses += 1
         current_streak = 0
-        
+        final_xp_added = int(base_xp * mult) # Still get some XP for trying, based on difficulty
+    else:
+        final_xp_added = 0
+
+    # Apply to user
+    new_high_score = score if score > current_high else current_high
+    new_xp = current_xp + final_xp_added
+    
     # Calculate level and rank based on new XP
-    new_level = (new_xp // 100) + 1 # Simple level formula (1 level per 100 xp roughly, or just driven by ranks)
+    new_level = (new_xp // 100) + 1 
     if new_xp >= 25000:
         new_rank = "Hangman Master"
     elif new_xp >= 10000:
@@ -320,9 +347,9 @@ def submit_score():
     try:
         c.execute('''
             UPDATE Users 
-            SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, total_games = ?
+            SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, total_games = total_games + 1
             WHERE id = ?
-        ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, total_games, user_id))
+        ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, user_id))
     except sqlite3.OperationalError:
         # Fallback if fastest_win_seconds, current_streak, longest_streak, story_progress, total_games columns are missing
         c.execute('''

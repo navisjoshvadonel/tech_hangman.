@@ -170,7 +170,7 @@ usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handle
 async function handleLogin() {
   const username = usernameInput.value.trim();
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.innerText = "AUTHENTICATING... (MAY TAKE 30s ON FIRST LOAD)";
+  errorMsg.innerText = "AUTHENTICATING...";
   errorMsg.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
@@ -205,7 +205,7 @@ registerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handle
 async function handleRegister() {
   const username = registerInput.value.trim();
   const errorMsg = document.getElementById("register-error-msg");
-  errorMsg.innerText = "ENLISTING... (MAY TAKE 30s ON FIRST LOAD)";
+  errorMsg.innerText = "ENLISTING...";
   errorMsg.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
@@ -639,7 +639,8 @@ function checkWin() {
 
     setTimeout(() => {
       // Hide standard hangman and shake screen
-      document.querySelector('.hangman-display').style.opacity = '0';
+      const hangmanDisplay = document.querySelector('.hangman-display');
+      if (hangmanDisplay) hangmanDisplay.style.opacity = '0';
       gameContainer.classList.add("game-container-shake");
 
       setTimeout(() => {
@@ -684,7 +685,8 @@ function checkWin() {
             setTimeout(() => {
               escapeContainer.classList.add("hidden");
               escapeContainer.classList.remove('glitch-flash');
-              document.querySelector('.hangman-display').style.opacity = '1';
+              const hangmanDisplay = document.querySelector('.hangman-display');
+              if (hangmanDisplay) hangmanDisplay.style.opacity = '1';
 
               gameContainer.classList.add("win-state");
               console.log("Adding classes");
@@ -1272,9 +1274,10 @@ window.addEventListener("mousemove", (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 
-  // Dot follows immediately
-  cursorDot.style.left = `${mouseX}px`;
-  cursorDot.style.top = `${mouseY}px`;
+  if (cursorDot) {
+    cursorDot.style.left = `${mouseX}px`;
+    cursorDot.style.top = `${mouseY}px`;
+  }
 
   // Handle inactivity auto-hide
   document.body.classList.remove("cursor-inactive");
@@ -1290,8 +1293,10 @@ function animateCursor() {
   outlineX += (mouseX - outlineX) * speed;
   outlineY += (mouseY - outlineY) * speed;
 
-  cursorOutline.style.left = `${outlineX}px`;
-  cursorOutline.style.top = `${outlineY}px`;
+  if (cursorOutline) {
+    cursorOutline.style.left = `${outlineX}px`;
+    cursorOutline.style.top = `${outlineY}px`;
+  }
 
   requestAnimationFrame(animateCursor);
 }

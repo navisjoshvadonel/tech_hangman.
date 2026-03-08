@@ -371,7 +371,8 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         xp_added: xpGained * scoreMultiplier,
         is_win: isWin,
         time_taken: timeTaken,
-        wrong_guesses: wrongGuesses  // For Flawless achievement
+        wrong_guesses: wrongGuesses,  // For Flawless achievement
+        difficulty: selectedDifficulty
       })
     });
     const data = await res.json();
@@ -493,7 +494,8 @@ function checkWin() {
 
     setTimeout(() => {
       // Hide standard hangman and shake screen
-      document.querySelector('.hangman-display').style.opacity = '0';
+      const hangmanDisplay = document.querySelector('.hangman-display');
+      if (hangmanDisplay) hangmanDisplay.style.opacity = '0';
       gameContainer.classList.add("game-container-shake");
 
       setTimeout(() => {
@@ -538,7 +540,8 @@ function checkWin() {
             setTimeout(() => {
               escapeContainer.classList.add("hidden");
               escapeContainer.classList.remove('glitch-flash');
-              document.querySelector('.hangman-display').style.opacity = '1';
+              const hangmanDisplay = document.querySelector('.hangman-display');
+              if (hangmanDisplay) hangmanDisplay.style.opacity = '1';
 
               gameContainer.classList.add("win-state");
               console.log("Adding classes");
@@ -1124,9 +1127,10 @@ window.addEventListener("mousemove", (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 
-  // Dot follows immediately
-  cursorDot.style.left = `${mouseX}px`;
-  cursorDot.style.top = `${mouseY}px`;
+  if (cursorDot) {
+    cursorDot.style.left = `${mouseX}px`;
+    cursorDot.style.top = `${mouseY}px`;
+  }
 });
 
 // Linear interpolation for smooth trailing effect
@@ -1135,8 +1139,10 @@ function animateCursor() {
   outlineX += (mouseX - outlineX) * speed;
   outlineY += (mouseY - outlineY) * speed;
 
-  cursorOutline.style.left = `${outlineX}px`;
-  cursorOutline.style.top = `${outlineY}px`;
+  if (cursorOutline) {
+    cursorOutline.style.left = `${outlineX}px`;
+    cursorOutline.style.top = `${outlineY}px`;
+  }
 
   requestAnimationFrame(animateCursor);
 }
