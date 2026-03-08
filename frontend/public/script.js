@@ -90,7 +90,7 @@ const introLogo = document.getElementById("intro-logo");
 
 // === Initialization, Intro & Login ===
 
-document.addEventListener("DOMContentLoaded", playIntroSequence);
+setTimeout(playIntroSequence, 100);
 
 function playIntroSequence() {
   // Line 1: 0ms
