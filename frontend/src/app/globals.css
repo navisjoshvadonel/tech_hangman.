@@ -374,9 +374,9 @@ body {
 
 .intro-main-title {
   color: #fff;
-  font-size: 5rem;
+  font-size: clamp(3rem, 6vw, 5rem);
   font-weight: bold;
-  letter-spacing: 20px;
+  letter-spacing: clamp(10px, 2vw, 20px);
   position: absolute;
   opacity: 0;
   text-shadow: 0 0 30px rgba(0, 255, 204, 0.9), 0 0 60px rgba(0, 255, 204, 0.5);

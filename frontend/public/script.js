@@ -98,29 +98,29 @@ const introLogo = document.getElementById("intro-logo");
 setTimeout(playIntroSequence, 100);
 
 function playIntroSequence() {
-  // Line 1: 0ms
+  // Line 1: 0.3s
   setTimeout(() => { introLine1.classList.add("animate-text-in"); }, 300);
 
-  // Line 2: 2.5s
+  // Line 2: 1.8s
   setTimeout(() => { introLine2.classList.add("animate-text-in"); }, 1800);
 
-  // Line 3: 4.5s
+  // Line 3: 3.2s
   setTimeout(() => { introLine3.classList.add("animate-text-in"); }, 3200);
 
-  // Line 4: 6.5s
+  // Line 4: 4.6s
   setTimeout(() => { introLine4.classList.add("animate-text-in"); }, 4600);
 
-  // Logo Reveal: 8.5s
+  // Logo Reveal: 6.0s (Animation takes 4s, finishes at 10.0s)
   setTimeout(() => { introLogo.classList.add("animate-logo-in"); }, 6000);
 
-  // Fade out Intro & Show Login: 12.5s
+  // Fade out Intro & Show Login: wait for logo animation to finish (10.0s)
   setTimeout(() => {
     introOverlay.classList.add("fade-out-overlay");
     loginOverlay.classList.remove("hidden");
 
     // Remove intro entirely after transition to clean DOM
     setTimeout(() => { introOverlay.remove(); }, 1000);
-  }, 8000);
+  }, 10000);
 }
 
 // === Tab Switching ===
