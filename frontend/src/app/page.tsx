@@ -46,9 +46,9 @@ export default function Home() {
     setGuessedLetters(new Set());
     setMistakes(0);
 
-    // In a full implementation, this should call your Python backend or the Next.js API route
+    // Fetch word from the Next.js API route based on the selected category
     try {
-      const res = await fetch('/api/word');
+      const res = await fetch(`/api/word?category=${selectedCategory}`);
       const data = await res.json();
       setWord(data.word.toUpperCase());
       setClue(data.hint || data.clue || "No clue available.");
