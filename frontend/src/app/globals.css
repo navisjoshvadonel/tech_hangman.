@@ -12,6 +12,61 @@
   display: none !important;
 }
 
+/* === Cyber Cursor === */
+* {
+  cursor: none !important;
+}
+
+.cursor-dot,
+.cursor-outline {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #00ffcc;
+  box-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+}
+
+.cursor-outline {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #00ffcc;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+  transition: all 0.15s ease-out, opacity 0.3s ease-in-out;
+}
+
+body:hover .cursor-dot,
+body:hover .cursor-outline {
+  opacity: 1;
+}
+
+.cursor-hover .cursor-outline {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(0, 255, 204, 0.1);
+  border-width: 3px;
+  box-shadow: 0 0 25px rgba(0, 255, 204, 0.6);
+}
+
+.cursor-active .cursor-dot {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.cursor-active .cursor-outline {
+  transform: translate(-50%, -50%) scale(0.8);
+  background-color: rgba(0, 255, 204, 0.2);
+}
+
 body {
   margin: 0;
   padding: 20px;
