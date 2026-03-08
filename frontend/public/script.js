@@ -115,7 +115,7 @@ function playIntroSequence() {
 
     // Remove intro entirely after transition to clean DOM
     setTimeout(() => { introOverlay.remove(); }, 1000);
-  }, 8500);
+  }, 7000);
 }
 
 // === Tab Switching ===
