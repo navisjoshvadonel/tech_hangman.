@@ -163,7 +163,7 @@ export default function Home() {
         {/* Top Status Bar */}
         <div className="status-bar">
           <div className="user-info">
-            <span id="current-user">USER: ---</span>
+            <span id="current-user">AGENT: ---</span>
             <span id="current-rank" className="rank-badge">RANK: Beginner</span>
             <span id="current-xp" className="xp-badge">XP: 0</span>
             <button id="change-protocol-btn" className="text-btn">CHANGE LEVEL</button>

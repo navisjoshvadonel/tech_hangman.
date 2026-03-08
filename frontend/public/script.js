@@ -94,19 +94,19 @@ setTimeout(playIntroSequence, 100);
 
 function playIntroSequence() {
   // Line 1: 0ms
-  setTimeout(() => { introLine1.classList.add("animate-text-in"); }, 500);
+  setTimeout(() => { introLine1.classList.add("animate-text-in"); }, 300);
 
   // Line 2: 2.5s
-  setTimeout(() => { introLine2.classList.add("animate-text-in"); }, 2500);
+  setTimeout(() => { introLine2.classList.add("animate-text-in"); }, 1800);
 
   // Line 3: 4.5s
-  setTimeout(() => { introLine3.classList.add("animate-text-in"); }, 4500);
+  setTimeout(() => { introLine3.classList.add("animate-text-in"); }, 3200);
 
   // Line 4: 6.5s
-  setTimeout(() => { introLine4.classList.add("animate-text-in"); }, 6500);
+  setTimeout(() => { introLine4.classList.add("animate-text-in"); }, 4600);
 
   // Logo Reveal: 8.5s
-  setTimeout(() => { introLogo.classList.add("animate-logo-in"); }, 8500);
+  setTimeout(() => { introLogo.classList.add("animate-logo-in"); }, 6000);
 
   // Fade out Intro & Show Login: 12.5s
   setTimeout(() => {
@@ -115,7 +115,7 @@ function playIntroSequence() {
 
     // Remove intro entirely after transition to clean DOM
     setTimeout(() => { introOverlay.remove(); }, 1000);
-  }, 12500);
+  }, 8500);
 }
 
 // === Tab Switching ===
@@ -142,7 +142,7 @@ function applyUserSession(data) {
   currentLevel = data.level || 1;
   currentScore = 0;
 
-  currentUserSpan.innerText = `USER: ${currentUser.toUpperCase()}`;
+  currentUserSpan.innerText = `AGENT: ${currentUser.toUpperCase()}`;
   currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
   currentXpSpan.innerText = `EXP: ${currentXp}`;
   highScoreSpan.innerText = `${highestScore}`;
