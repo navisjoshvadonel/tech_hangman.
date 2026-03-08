@@ -1,145 +1,299 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { WelcomeScreen } from '@/components/WelcomeScreen';
-import { CategorySelector } from '@/components/CategorySelector';
-import { WordDisplay } from '@/components/WordDisplay';
-import { Keyboard } from '@/components/Keyboard';
-import { HangmanFigure } from '@/components/HangmanFigure';
-import { CustomCursor } from '@/components/CustomCursor';
-
-type GameState = 'welcome' | 'categories' | 'playing' | 'won' | 'lost';
+import React from 'react';
+import LegacyScript from './LegacyScript';
 
 export default function Home() {
-  const [gameState, setGameState] = useState<GameState>('welcome');
-  const [category, setCategory] = useState<string>('');
-  const [word, setWord] = useState<string>('');
-  const [clue, setClue] = useState<string>('');
-  const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
-  const [mistakes, setMistakes] = useState<number>(0);
-
-  const MAX_MISTAKES = 10;
-
-  // Derive win/loss state from current guesses
-  useEffect(() => {
-    if (gameState !== 'playing' || !word) return;
-
-    // Check Win
-    const wordLetters = word.replace(/ /g, '').split('');
-    const hasWon = wordLetters.every(char => guessedLetters.has(char));
-
-    if (hasWon) {
-      setTimeout(() => setGameState('won'), 500);
-    }
-    // Check Loss
-    else if (mistakes >= MAX_MISTAKES) {
-      setTimeout(() => setGameState('lost'), 500);
-    }
-  }, [guessedLetters, mistakes, word, gameState]);
-
-  const startGame = () => {
-    setGameState('categories');
-  };
-
-  const selectCategory = async (selectedCategory: string) => {
-    setCategory(selectedCategory);
-    setGuessedLetters(new Set());
-    setMistakes(0);
-
-    // Fetch word from the Next.js API route based on the selected category
-    try {
-      const res = await fetch(`/api/word?category=${selectedCategory}`);
-      const data = await res.json();
-      setWord(data.word.toUpperCase());
-      setClue(data.hint || data.clue || "No clue available.");
-      setGameState('playing');
-    } catch (err) {
-      console.error("Failed to fetch word. Falling back.", err);
-      // Fallback if API is unreachable
-      setWord("PROTOCOL");
-      setClue("A standard set of rules.");
-      setGameState('playing');
-    }
-  };
-
-  const handleGuess = (letter: string) => {
-    if (gameState !== 'playing') return;
-
-    const newGuessed = new Set(guessedLetters);
-    newGuessed.add(letter);
-    setGuessedLetters(newGuessed);
-
-    if (!word.includes(letter)) {
-      setMistakes(prev => prev + 1);
-    }
-  };
-
-  const resetGame = () => {
-    setGameState('categories');
-  };
-
   return (
-    <main className="min-h-screen bg-[#050810] text-white font-mono overflow-x-hidden relative flex flex-col pt-12">
-      <CustomCursor />
+    <>
+      {/* 
+        This loads the entire vanilla JS logic from the legacy build.
+        It runs after the DOM is rendered so document.getElementById works.
+      */}
+      <LegacyScript />
 
-      {/* Persistent Header */}
-      <h1 className="text-4xl text-center font-bold tracking-[10px] text-cyan-400 neon-text-cyan mb-8">
-        HANG MAN
-      </h1>
+      {/* Global SVG Defs */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
 
-      {gameState === 'welcome' && (
-        <WelcomeScreen onStart={startGame} />
-      )}
-
-      {gameState === 'categories' && (
-        <CategorySelector onSelect={selectCategory} />
-      )}
-
-      {(gameState === 'playing' || gameState === 'won' || gameState === 'lost') && (
-        <div className="flex flex-col items-center w-full max-w-4xl mx-auto px-4">
-
-          <div className="flex justify-between w-full mb-4 px-4 text-cyan-400">
-            <span>DOMAIN: {category}</span>
-            <span className={mistakes >= 8 ? 'text-red-500 animate-pulse' : ''}>
-              SYSTEM INTEGRITY: {MAX_MISTAKES - mistakes} / {MAX_MISTAKES}
-            </span>
-          </div>
-
-          <HangmanFigure mistakes={mistakes} />
-          <WordDisplay word={word} guessedLetters={guessedLetters} />
-
-          {/* Clue Section */}
-          <div className="my-6 p-4 border-l-4 border-cyan-400 bg-cyan-900/20 max-w-2xl text-center w-full">
-            <span className="text-amber-400 italic text-lg drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">
-              CLUE: {clue}
-            </span>
-          </div>
-
-          {(gameState === 'playing') ? (
-            <Keyboard
-              word={word}
-              guessedLetters={guessedLetters}
-              onGuess={handleGuess}
-              disabled={false}
-            />
-          ) : (
-            <div className="flex flex-col items-center mt-8 p-8 border border-cyan-400 bg-cyan-900/30 rounded-xl backdrop-blur-md shadow-[0_0_30px_rgba(0,255,204,0.2)]">
-              <h2 className={`text-3xl font-bold mb-4 ${gameState === 'won' ? 'text-green-400 shadow-[0_0_15px_#22c55e]' : 'text-red-500 shadow-[0_0_15px_#ef4444]'}`}>
-                {gameState === 'won' ? 'MISSION ACCOMPLISHED' : 'SYSTEM COMPROMISED'}
-              </h2>
-              {gameState === 'lost' && (
-                <p className="text-xl mb-6 text-zinc-300">The correct sequence was: <span className="text-cyan-400 font-bold">{word}</span></p>
-              )}
-              <button
-                onClick={resetGame}
-                className="px-8 py-3 bg-cyan-950 border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-black transition-colors"
-              >
-                AWAITING NEW DIRECTIVE (PLAY AGAIN)
-              </button>
-            </div>
-          )}
+      {/* Cinematic Intro Overlay */}
+      <div id="intro-overlay" className="overlay">
+        <div className="intro-sequence">
+          <div className="intro-text-line" id="intro-line-1">WELCOME USER...</div>
+          <div className="intro-text-line" id="intro-line-2">ARRESTING THE MAN...</div>
+          <div className="intro-text-line" id="intro-line-3">SETTING UP THE STAGE...</div>
+          <div className="intro-text-line" id="intro-line-4">THE MAN NEEDS YOU...</div>
+          <div className="intro-main-title" id="intro-logo">THE HANG MAN</div>
         </div>
-      )}
-    </main>
+      </div>
+
+      {/* Domain Quote Transition Overlay */}
+      <div id="quote-transition-overlay" className="overlay hidden">
+        <div className="quote-content">
+          <h3 id="domain-category-name">PROTOCOL</h3>
+          <p id="domain-quote-text">"Quote"</p>
+        </div>
+      </div>
+
+      {/* Login Overlay */}
+      <div id="login-overlay" className="overlay hidden">
+        <div className="login-content-wrapper">
+          <div className="cyber-core-container">
+            <svg className="cyber-core-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+              {/* Base structural rings */}
+              <circle cx="150" cy="75" r="50" className="core-ring core-ring-outer" />
+              <circle cx="150" cy="75" r="35" className="core-ring core-ring-middle" />
+              <circle cx="150" cy="75" r="20" className="core-ring core-ring-inner" />
+
+              {/* Pulsing Data Core */}
+              <circle cx="150" cy="75" r="8" className="core-node" />
+
+              {/* Decorative HUD elements */}
+              <path className="hud-bracket" d="M 90,45 L 80,45 L 80,105 L 90,105" />
+              <path className="hud-bracket" d="M 210,45 L 220,45 L 220,105 L 210,105" />
+
+              <line className="hud-line" x1="150" y1="10" x2="150" y2="20" />
+              <line className="hud-line" x1="150" y1="130" x2="150" y2="140" />
+              <line className="hud-line" x1="85" y1="75" x2="95" y2="75" />
+              <line className="hud-line" x1="205" y1="75" x2="215" y2="75" />
+
+              {/* Scanning Laser Beam */}
+              <rect className="cyber-scanner-laser" x="70" y="20" width="160" height="2" />
+            </svg>
+          </div>
+
+          <div className="login-box">
+            <div className="login-tabs">
+              <button className="login-tab active" id="tab-returning">RETURNING PLAYER</button>
+              <button className="login-tab" id="tab-new">NEW RECRUIT</button>
+            </div>
+
+            {/* Returning Player Panel */}
+            <div className="login-panel" id="panel-returning">
+              <p className="login-subtitle">Welcome back, Agent.</p>
+              <div className="input-row">
+                <input type="text" id="username-input" placeholder="ENTER YOUR CALLSIGN" autoComplete="off"
+                  maxLength={15} />
+                <button id="login-btn">RESUME MISSION</button>
+              </div>
+              <p className="login-hint" id="login-error-msg"></p>
+            </div>
+
+            {/* New Player Panel */}
+            <div className="login-panel hidden" id="panel-new">
+              <p className="login-subtitle">Create your identity, Recruit.</p>
+              <div className="input-row">
+                <input type="text" id="register-username-input" placeholder="CHOOSE A CALLSIGN"
+                  autoComplete="off" maxLength={15} />
+                <button id="register-btn">ENLIST NOW</button>
+              </div>
+              <p className="login-hint" id="register-error-msg"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="red-overlay"></div>
+
+      <div id="selection-screen" className="overlay hidden">
+        <div className="selection-content-wrapper">
+          {/* Left Side: Cross & Quote */}
+          <div className="selection-left">
+            <div id="left-logo-container">
+              <svg className="cross-svg" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+                <line x1="50" y1="10" x2="50" y2="140" className="cross-line" />
+                <line x1="20" y1="40" x2="80" y2="40" className="cross-line" />
+              </svg>
+            </div>
+            <div id="left-quote-container" className="bible-quote">
+              "For the Son of Man came to seek and to save the lost." <br /><span className="quote-ref">- Luke
+                19:10</span>
+            </div>
+          </div>
+
+          {/* Right Side: Categories & Difficulties */}
+          <div className="selection-right">
+            <div id="category-selection">
+              <h2 id="selection-title">Select Category</h2>
+              <div className="selection-grid">
+                <button className="cat-btn" data-cat="DATABASE">DATABASE</button>
+                <button className="cat-btn" data-cat="DATA_STRUCTURE">DATA STRUCTURE</button>
+                <button className="cat-btn" data-cat="JAVA">JAVA</button>
+                <button className="cat-btn" data-cat="PYTHON">PYTHON</button>
+                <button className="cat-btn" data-cat="C">C</button>
+                <button className="cat-btn" data-cat="CPP">C++</button>
+                <button className="cat-btn" data-cat="ARTIFICIAL_INTELLIGENCE">ARTIFICIAL INTELLIGENCE</button>
+                <button className="cat-btn" data-cat="OPERATING_SYSTEM">OPERATING SYSTEM</button>
+                <button className="cat-btn" data-cat="CODE_OUTPUT">💻 CODE OUTPUT</button>
+                <button className="cat-btn" data-cat="GENERAL_KNOWLEDGE">GENERAL KNOWLEDGE</button>
+                <button className="cat-btn" data-cat="NETWORKING">NETWORKING</button>
+                <button className="cat-btn" data-cat="CYBERSECURITY">CYBERSECURITY</button>
+                <button className="cat-btn" data-cat="WEBDEVELOPMENT">WEB DEVELOPMENT</button>
+                <button className="cat-btn" data-cat="SOFTWAREENGINEERING">SOFTWARE ENG.</button>
+                <button className="cat-btn" data-cat="LINUX">LINUX</button>
+                <button className="cat-btn" data-cat="CLOUD">CLOUD</button>
+                <button className="cat-btn" data-cat="DATASCIENCE">DATA SCIENCE</button>
+              </div>
+            </div>
+
+            <div id="difficulty-selection" className="hidden">
+              <h2 id="chosen-category-title">CATEGORY</h2>
+              <p className="subtitle" style={{ textAlign: "center", marginBottom: "15px" }}>SELECT THREAT LEVEL</p>
+              <div className="selection-grid">
+                <button className="diff-btn" data-diff="EASY">EASY</button>
+                <button className="diff-btn" data-diff="MEDIUM">MEDIUM</button>
+                <button className="diff-btn" data-diff="HARD">HARD</button>
+              </div>
+              <button id="back-to-cat-btn" className="text-btn" style={{ marginTop: "20px", width: "100%" }}>&lt; BACK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="game-container" className="hidden">
+        {/* Top Status Bar */}
+        <div className="status-bar">
+          <div className="user-info">
+            <span id="current-user">USER: ---</span>
+            <span id="current-rank" className="rank-badge">RANK: Beginner</span>
+            <span id="current-xp" className="xp-badge">XP: 0</span>
+            <button id="change-protocol-btn" className="text-btn">CHANGE LEVEL</button>
+            <button id="logout-btn" className="text-btn">LOGOUT</button>
+          </div>
+          <div className="score-info">
+            <div className="score-box">
+              <span className="score-label">SCORE:</span>
+              <span id="current-score">0</span>
+            </div>
+            <div className="score-box high-score-box">
+              <span className="score-label">HIGH SCORE:</span>
+              <span id="high-score">0</span>
+            </div>
+          </div>
+          <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
+          <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
+          <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
+        </div>
+        <div className="header">
+          <h1>HANG MAN</h1>
+        </div>
+
+        <div className="hangman-display">
+          <svg className="hangman-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+            {/* 0: Base */}
+            <line className="draw-part part-0" pathLength={100} x1="20" y1="230" x2="180" y2="230" />
+            {/* 1: Pole */}
+            <line className="draw-part part-1" pathLength={100} x1="50" y1="230" x2="50" y2="20" />
+            {/* 2: Top bar */}
+            <line className="draw-part part-2" pathLength={100} x1="50" y1="20" x2="130" y2="20" />
+            {/* 3: Rope */}
+            <line className="draw-part part-3" pathLength={100} x1="130" y1="20" x2="130" y2="50" />
+            {/* 4: Head */}
+            <circle className="draw-part part-4" pathLength={100} cx="130" cy="70" r="20" />
+            {/* 5: Body */}
+            <line className="draw-part part-5" pathLength={100} x1="130" y1="90" x2="130" y2="150" />
+            {/* 6: Left Arm */}
+            <line className="draw-part part-6" pathLength={100} x1="130" y1="100" x2="100" y2="130" />
+            {/* 7: Right Arm */}
+            <line className="draw-part part-7" pathLength={100} x1="130" y1="100" x2="160" y2="130" />
+            {/* 8: Left Leg */}
+            <line className="draw-part part-8" pathLength={100} x1="130" y1="150" x2="100" y2="190" />
+            {/* 9: Right Leg */}
+            <line className="draw-part part-9" pathLength={100} x1="130" y1="150" x2="160" y2="190" />
+          </svg>
+        </div>
+
+        <div id="word-display" className="word-display"></div>
+
+        {/* Clue Section */}
+        <div className="clue-container">
+          <div className="hint-controls">
+            <button id="hint-btn" className="text-btn hint-btn">GET HINT (FREE)</button>
+          </div>
+          <p id="clue-display" className="hidden">CLUE: <span id="clue-text">waiting for signal...</span></p>
+        </div>
+
+        <div id="keyboard" className="keyboard"></div>
+
+        {/* Cinematic Escape Overlay */}
+        <div id="escape-container" className="escape-container hidden">
+          <div className="escape-portal"></div>
+          <div className="escape-runner-container">
+            <svg className="escape-runner" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+              <g className="runner-group-escape">
+                <circle className="runner-head" cx="50" cy="30" r="10" />
+                <line className="runner-body" x1="50" y1="40" x2="50" y2="80" />
+                {/* Arms */}
+                <line className="runner-arm-l" x1="50" y1="50" x2="30" y2="70" />
+                <line className="runner-arm-r" x1="50" y1="50" x2="70" y2="30" />
+                {/* Legs */}
+                <line className="runner-leg-l" x1="50" y1="80" x2="30" y2="120" />
+                <line className="runner-leg-r" x1="50" y1="80" x2="70" y2="110" />
+              </g>
+            </svg>
+          </div>
+          <div className="particles" id="escape-particles"></div>
+        </div>
+      </div>
+
+      <div id="popup">
+        <div id="popup-message"></div>
+        <button id="next-btn">are u ready to save another man</button>
+      </div>
+
+      {/* Leaderboard Popup */}
+      <div id="leaderboard-popup" className="hidden">
+        <h3>TOP PLAYERS</h3>
+        <div className="lb-tabs">
+          <button className="lb-tab active" data-leaderboard="score">HIGH SCORE</button>
+          <button className="lb-tab" data-leaderboard="speed">FASTEST WIN</button>
+          <button className="lb-tab" data-leaderboard="streak">LONG STREAK</button>
+        </div>
+        <table id="leaderboard-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>PLAYER</th>
+              <th id="lb-val-header">SCORE</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+          </tbody>
+        </table>
+        <button id="close-leaderboard-btn">CLOSE</button>
+      </div>
+
+      {/* Anomaly Event Popup */}
+      <div id="anomaly-popup" className="hidden">
+        <div className="anomaly-content">
+          <div className="anomaly-title">⚠ ANOMALY DETECTED</div>
+          <div id="anomaly-event-name" className="anomaly-event"></div>
+          <div id="anomaly-event-desc" className="anomaly-desc"></div>
+          <button id="anomaly-confirm-btn">ACKNOWLEDGE</button>
+        </div>
+      </div>
+
+      {/* Achievements Modal */}
+      <div id="achievements-popup" className="hidden">
+        <div className="achievements-content">
+          <h3>🏆 YOUR TROPHIES</h3>
+          <div id="achievements-list"></div>
+          <button id="close-achievements-btn">CLOSE</button>
+        </div>
+      </div>
+
+      {/* Custom Cursor */}
+      <div className="cursor-dot"></div>
+      <div className="cursor-outline"></div>
+    </>
   );
 }

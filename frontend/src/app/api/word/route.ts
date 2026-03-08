@@ -2,54 +2,58 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import { promises as fs } from 'fs';
 
+const PYTHON_API = process.env.PYTHON_API_URL || 'http://localhost:5000/api';
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
+    const category = searchParams.get('category') || '';
+    const difficulty = searchParams.get('difficulty') || '';
+    const userId = searchParams.get('user_id') || '';
 
+    // First, try to proxy to the Python backend (when running locally with the backend)
     try {
-        // Find the absolute path of the json directory
+        const params = new URLSearchParams({ category, difficulty });
+        if (userId) params.set('user_id', userId);
+        const res = await fetch(`${PYTHON_API}/word?${params}`, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) {
+            const data = await res.json();
+            return NextResponse.json(data);
+        }
+    } catch {
+        // Python backend not running — use the local words.json fallback
+    }
+
+    // Fallback: serve word from the local words.json
+    try {
         const jsonDirectory = path.join(process.cwd(), 'src/data');
-
-        // Read the json file
-        const fileContents = await fs.readFile(jsonDirectory + '/words.json', 'utf8');
-
-        // Parse the json data
+        const fileContents = await fs.readFile(path.join(jsonDirectory, 'words.json'), 'utf8');
         const wordsData = JSON.parse(fileContents);
 
-        let availableWords: any[] = [];
+        let pool: { word: string; clue?: string; hint?: string }[] = [];
 
         if (category && wordsData[category]) {
-            // Flatten all difficulties for the selected category
             const diffs = wordsData[category];
-            availableWords = [
-                ...(diffs.EASY || []),
-                ...(diffs.MEDIUM || []),
-                ...(diffs.HARD || [])
-            ];
+            if (difficulty && diffs[difficulty]) {
+                pool = diffs[difficulty];
+            } else {
+                pool = [...(diffs.EASY || []), ...(diffs.MEDIUM || []), ...(diffs.HARD || [])];
+            }
         } else {
-            // Flatten ALL words if no category provided (or invalid category)
+            // No valid category — flatten all words
             for (const cat of Object.keys(wordsData)) {
                 const diffs = wordsData[cat];
-                availableWords = [
-                    ...availableWords,
-                    ...(diffs.EASY || []),
-                    ...(diffs.MEDIUM || []),
-                    ...(diffs.HARD || [])
-                ];
+                pool = [...pool, ...(diffs.EASY || []), ...(diffs.MEDIUM || []), ...(diffs.HARD || [])];
             }
         }
 
-        if (availableWords.length === 0) {
-            return NextResponse.json({ word: "ERROR", hint: "No words found for this category." }, { status: 404 });
+        if (pool.length === 0) {
+            return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'fallback' });
         }
 
-        // Select a random word
-        const randomWordObj = availableWords[Math.floor(Math.random() * availableWords.length)];
-
-        return NextResponse.json(randomWordObj);
-
+        const wordObj = pool[Math.floor(Math.random() * pool.length)];
+        return NextResponse.json({ ...wordObj, clue: wordObj.clue || wordObj.hint || 'No clue available.', status: 'ok' });
     } catch (error) {
-        console.error("Error reading words.json:", error);
-        return NextResponse.json({ word: "PROTOCOL", hint: "Fallback: Database unreachable." }, { status: 500 });
+        console.error('Word route error:', error);
+        return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'error' }, { status: 500 });
     }
 }
