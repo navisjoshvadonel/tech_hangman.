@@ -340,10 +340,6 @@ export default function Home() {
           <button id="close-achievements-btn">CLOSE</button>
         </div>
       </div>
-
-      {/* Custom Cursor */}
-      <div className="cursor-dot"></div>
-      <div className="cursor-outline"></div>
     </>
   );
 }
