@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hangman-backend
+    env: python
+    rootDirectory: backend
+    buildCommand: pip install -r requirements.txt && python populate_db.py
+    startCommand: python server.py
+    plan: free
+    disk:
+      name: hangman-db
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /data/hangman.db

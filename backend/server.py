@@ -9,7 +9,7 @@ import os
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-DB_PATH = 'hangman.db'
+DB_PATH = os.environ.get('DB_PATH', 'hangman.db')
 
 @app.route('/')
 def index():
