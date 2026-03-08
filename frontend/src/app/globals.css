@@ -7,6 +7,11 @@
   --panel-bg: rgba(10, 15, 20, 0.6);
 }
 
+/* Critical utility class used by script.js to show/hide screens */
+.hidden {
+  display: none !important;
+}
+
 body {
   margin: 0;
   padding: 20px;
