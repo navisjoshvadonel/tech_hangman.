@@ -1,0 +1,116 @@
+"use client";
+
+import React, { useEffect, useRef } from 'react';
+
+export const CustomCursor: React.FC = () => {
+    const dotRef = useRef<HTMLDivElement>(null);
+    const outlineRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let outlineX = mouseX;
+        let outlineY = mouseY;
+        let isClicking = false;
+
+        const onMouseMove = (e: MouseEvent) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        };
+
+        const onMouseDown = () => {
+            isClicking = true;
+            if (dotRef.current) dotRef.current.style.transform = `translate(-50%, -50%) scale(1.5)`;
+            if (outlineRef.current) {
+                outlineRef.current.style.transform = `translate(-50%, -50%) scale(0.8)`;
+                outlineRef.current.style.backgroundColor = `rgba(0, 255, 204, 0.2)`;
+            }
+        };
+
+        const onMouseUp = () => {
+            isClicking = false;
+            if (dotRef.current) dotRef.current.style.transform = `translate(-50%, -50%) scale(1)`;
+            if (outlineRef.current) {
+                outlineRef.current.style.transform = `translate(-50%, -50%) scale(1)`;
+                outlineRef.current.style.backgroundColor = `transparent`;
+            }
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
+
+        let animationFrameId: number;
+
+        const animate = () => {
+            // Lerp for smooth outline follow
+            outlineX += (mouseX - outlineX) * 0.15;
+            outlineY += (mouseY - outlineY) * 0.15;
+
+            if (dotRef.current) {
+                // Dot follows instantly, but we manage positioning here to keep it strictly aligned
+                if (!isClicking) {
+                    dotRef.current.style.transform = `translate(-50%, -50%)`;
+                }
+                dotRef.current.style.left = `${mouseX}px`;
+                dotRef.current.style.top = `${mouseY}px`;
+            }
+
+            if (outlineRef.current) {
+                outlineRef.current.style.left = `${outlineX}px`;
+                outlineRef.current.style.top = `${outlineY}px`;
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mousedown', onMouseDown);
+            window.removeEventListener('mouseup', onMouseUp);
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, []);
+
+    return (
+        <>
+            <div
+                ref={dotRef}
+                className="pointer-events-none fixed z-[10000] w-2 h-2 rounded-full bg-cyan-400 drop-shadow-[0_0_10px_var(--neon-cyan)] transition-transform duration-100 ease-in-out hidden md:block mix-blend-screen"
+                style={{ left: '-10px', top: '-10px', boxShadow: '0 0 10px #00ffcc, 0 0 20px #00ffcc' }}
+            />
+            <div
+                ref={outlineRef}
+                className="pointer-events-none fixed z-[9999] w-10 h-10 border-2 border-cyan-400 rounded-full transition-[width,height,background-color,border-width,transform] duration-200 ease-out hidden md:block mix-blend-screen"
+                style={{ left: '-20px', top: '-20px', boxShadow: '0 0 15px rgba(0, 255, 204, 0.4)' }}
+            />
+
+            {/* 
+        Tailwind global styles handle the pointer hiding.
+        Interactive elements like buttons should apply the 'hover' classes
+        globally or locally. In React, since we can't easily query all elements efficiently 
+        every frame, we're building the base styles into the cursor and relying on standard CSS for hover if needed.
+      */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+        * { cursor: none !important; }
+        
+        button:hover ~ .cursor-outline,
+        a:hover ~ .cursor-outline,
+        input:hover ~ .cursor-outline {
+            width: 60px !important;
+            height: 60px !important;
+            background-color: rgba(0, 255, 204, 0.1) !important;
+            border-width: 3px !important;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.6) !important;
+        }
+        
+        @media screen and (max-width: 768px) {
+            * { cursor: auto !important; }
+        }
+      `}} />
+        </>
+    );
+};
