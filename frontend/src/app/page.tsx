@@ -28,7 +28,7 @@ export default function Home() {
       {/* Cinematic Intro Overlay */}
       <div id="intro-overlay" className="overlay">
         <div className="intro-sequence">
-          <div className="intro-text-line" id="intro-line-1">WELCOME USER...</div>
+          <div className="intro-text-line" id="intro-line-1">WELCOME AGENT...</div>
           <div className="intro-text-line" id="intro-line-2">ARRESTING THE MAN...</div>
           <div className="intro-text-line" id="intro-line-3">SETTING UP THE STAGE...</div>
           <div className="intro-text-line" id="intro-line-4">THE MAN NEEDS YOU...</div>
