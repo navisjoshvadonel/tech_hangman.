@@ -37,6 +37,11 @@ let activeEvent = null;
 // Game Config State
 let selectedCategory = null;
 let selectedDifficulty = null;
+let currentMode = "classic"; // classic, story, multiplayer
+let isSoundEnabled = localStorage.getItem("hangman_sound") !== "false";
+let currentWordData = null;
+let storyProgress = 1;
+let currentStoryLevel = null;
 
 // DOM Elements
 const loginOverlay = document.getElementById("login-overlay");
@@ -140,6 +145,7 @@ function applyUserSession(data) {
   currentXp = data.xp || 0;
   currentRank = data.rank || "Beginner";
   currentLevel = data.level || 1;
+  storyProgress = data.story_progress || 1;
   currentScore = 0;
 
   currentUserSpan.innerText = `AGENT: ${currentUser.toUpperCase()}`;
@@ -147,6 +153,7 @@ function applyUserSession(data) {
   currentXpSpan.innerText = `EXP: ${currentXp}`;
   highScoreSpan.innerText = `${highestScore}`;
   updateScoreUI();
+  updateStoryUI();
 
   document.getElementById("selection-title").innerHTML = `Welcome back, <span style="color: #fff">${currentUser.toUpperCase()}</span><br><br>Select Category`;
 
@@ -238,36 +245,129 @@ logoutBtn.addEventListener("click", () => {
   loginOverlay.classList.remove("hidden");
 });
 
-if (hintBtn) {
-  hintBtn.addEventListener("click", () => {
+// === Sound Toggle ===
+const soundToggle = document.getElementById("sound-toggle");
+if (soundToggle) {
+  soundToggle.innerText = isSoundEnabled ? "🔊" : "🔈";
+  soundToggle.addEventListener("click", () => {
+    isSoundEnabled = !isSoundEnabled;
+    localStorage.setItem("hangman_sound", isSoundEnabled);
+    soundToggle.innerText = isSoundEnabled ? "🔊" : "🔈";
+    playSfx("click");
+  });
+}
+
+function playSfx(type) {
+  if (!isSoundEnabled) return;
+  // Synthesized sounds for now since no assets exist
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  if (type === "correct") {
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+  } else if (type === "wrong") {
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.2);
+  } else if (type === "click") {
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.05);
+  } else if (type === "win") {
+    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+    osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.5);
+  }
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+
+  osc.start();
+  osc.stop(ctx.currentTime + 0.2);
+}
+
+// === Mode Selector ===
+const modeBtns = {
+  classic: document.getElementById("mode-classic"),
+  story: document.getElementById("mode-story"),
+  multiplayer: document.getElementById("mode-multiplayer")
+};
+
+const grids = {
+  classic: document.getElementById("classic-categories"),
+  story: document.getElementById("story-levels"),
+  multiplayer: document.getElementById("multiplayer-options")
+};
+
+Object.keys(modeBtns).forEach(mode => {
+  if (modeBtns[mode]) {
+    modeBtns[mode].addEventListener("click", () => {
+      currentMode = mode;
+      Object.keys(modeBtns).forEach(m => modeBtns[m].classList.remove("active"));
+      modeBtns[mode].classList.add("active");
+
+      Object.keys(grids).forEach(g => grids[g].classList.add("hidden"));
+      grids[mode].classList.remove("hidden");
+      playSfx("click");
+    });
+  }
+});
+
+// === Hint System V2 ===
+const hintRevealCat = document.getElementById("hint-reveal-cat");
+const hintRevealDesc = document.getElementById("hint-reveal-desc");
+const hintRevealLetter = document.getElementById("hint-reveal-letter");
+const hintDisplayArea = document.getElementById("hint-display-area");
+const clueDisplayV2 = document.getElementById("clue-display-v2");
+
+if (hintRevealCat) {
+  hintRevealCat.addEventListener("click", () => {
     if (isGameOver) return;
+    clueDisplayV2.innerText = `CATEGORY: ${currentWordData.category}`;
+    hintDisplayArea.classList.remove("hidden");
+    hintRevealCat.classList.add("disabled");
+    hintRevealCat.disabled = true;
+    playSfx("click");
+  });
+}
 
-    if (hintsUsed === 0) {
-      // First hint: Reveal text clue
-      clueDisplay.classList.remove("hidden");
-      hintBtn.innerText = "REVEAL LETTER (-10 SCORE)";
-      hintsUsed++;
-    } else if (hintsUsed === 1) {
-      // Second hint: Reveal a letter for 50 score
-      if (currentScore < 10) {
-        alert("INSUFFICIENT SCORE FOR DECRYPTION (Requires 10)");
-        return;
-      }
+if (hintRevealDesc) {
+  hintRevealDesc.addEventListener("click", async () => {
+    if (isGameOver || currentXp < 20) return;
+    clueDisplayV2.innerText = `INTEL: ${currentWordData.description || currentWordData.clue}`;
+    hintDisplayArea.classList.remove("hidden");
+    hintRevealDesc.classList.add("disabled");
+    hintRevealDesc.disabled = true;
 
-      const unGuessed = currentWord.split("").filter(l => !guessedLetters.includes(l));
-      if (unGuessed.length > 0) {
-        currentScore -= 10; // Hint costs 10 points
-        updateScoreUI();
+    // Deduct XP via API
+    await fetch(`${API_URL}/hints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUserId, type: 'description', word: currentWord })
+    });
+    currentXp -= 20;
+    currentXpSpan.innerText = `EXP: ${currentXp}`;
+    playSfx("click");
+  });
+}
 
-        const randLetter = unGuessed[Math.floor(Math.random() * unGuessed.length)];
-        // Bypass the raw key listener wrapper and hit handleGuess directly
-        handleGuess(randLetter);
+if (hintRevealLetter) {
+  hintRevealLetter.addEventListener("click", async () => {
+    if (isGameOver || currentXp < 50) return;
+    const unGuessed = currentWord.split("").filter(l => !guessedLetters.includes(l));
+    if (unGuessed.length > 0) {
+      const randLetter = unGuessed[Math.floor(Math.random() * unGuessed.length)];
+      handleGuess(randLetter);
 
-        hintBtn.innerText = "MAX HINTS REACHED";
-        hintBtn.classList.add("disabled");
-        hintBtn.disabled = true;
-        hintsUsed++;
-      }
+      // Deduct XP via API
+      await fetch(`${API_URL}/hints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUserId, type: 'letter', word: currentWord })
+      });
+      currentXp -= 50;
+      currentXpSpan.innerText = `EXP: ${currentXp}`;
     }
   });
 }
@@ -283,10 +383,25 @@ async function initGame() {
   gameStartTime = Date.now();
 
   // Reset Hint UI
-  if (hintBtn) {
-    hintBtn.innerText = "GET HINT (FREE)";
-    hintBtn.classList.remove("disabled");
-    hintBtn.disabled = false;
+  if (hintRevealCat) {
+    hintRevealCat.classList.remove("disabled");
+    hintRevealCat.disabled = false;
+  }
+  if (hintRevealDesc) {
+    hintRevealDesc.classList.add("locked");
+    hintRevealDesc.disabled = true; // Initially locked until some progress or specific mode
+    if (currentXp >= 200) { // Example: Unlocks after 200 total XP
+      hintRevealDesc.classList.remove("locked");
+      hintRevealDesc.disabled = false;
+    }
+  }
+  if (hintRevealLetter) {
+    hintRevealLetter.classList.remove("disabled");
+    hintRevealLetter.disabled = false;
+  }
+  if (hintDisplayArea) {
+    hintDisplayArea.classList.add("hidden");
+    clueDisplayV2.innerText = "";
   }
   if (clueDisplay) {
     clueDisplay.classList.add("hidden");
@@ -297,6 +412,9 @@ async function initGame() {
   redOverlay.classList.remove("active");
   popup.classList.remove("show", "popup-win", "popup-loss");
   clueText.innerText = "FETCHING_DATA...";
+
+  const progressBar = document.getElementById("game-progress-bar");
+  if (progressBar) progressBar.style.width = "0%";
 
   // Hide Escape Container
   const escapeContainer = document.getElementById("escape-container");
@@ -318,7 +436,11 @@ async function initGame() {
 
   // Fetch Word from Python Backend (Smart Anti-Repetition)
   try {
-    const res = await fetch(`${API_URL}/word?category=${selectedCategory}&difficulty=${selectedDifficulty}&user_id=${currentUserId}`);
+    let url = `${API_URL}/word?user_id=${currentUserId}`;
+    if (selectedCategory && selectedCategory !== "RANDOM") url += `&category=${selectedCategory}`;
+    if (selectedDifficulty) url += `&difficulty=${selectedDifficulty}`;
+
+    const res = await fetch(url);
     if (!res.ok) throw new Error("API Fetch Failed");
     const data = await res.json();
 
@@ -337,8 +459,9 @@ async function initGame() {
       return; // Halt game initialization here
     }
 
+    currentWordData = data;
     currentWord = data.word.toUpperCase();
-    clueText.innerText = data.clue;
+    clueText.innerText = data.clue || "DECRYPTED_SIGNAL_STABLE";
 
     renderWord();
     renderKeyboard();
@@ -371,7 +494,11 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         xp_added: xpGained * scoreMultiplier,
         is_win: isWin,
         time_taken: timeTaken,
-        wrong_guesses: wrongGuesses  // For Flawless achievement
+        wrong_guesses: wrongGuesses,
+        category: selectedCategory,
+        difficulty: selectedDifficulty,
+        is_story: currentMode === "story",
+        story_level: currentStoryLevel
       })
     });
     const data = await res.json();
@@ -383,8 +510,10 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       currentXp = data.xp;
       currentRank = data.rank;
       currentLevel = data.level;
+      storyProgress = data.story_progress || storyProgress;
       currentXpSpan.innerText = `EXP: ${currentXp}`;
       currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+      updateStoryUI();
     }
     // Show achievement unlock notifications
     if (data.new_achievements && data.new_achievements.length > 0) {
@@ -399,6 +528,14 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
 
 function renderWord() {
   wordDisplay.innerHTML = "";
+  const uniqueLetters = new Set(currentWord.split("")).size;
+  const correctGuessed = currentWord.split("").filter(l => guessedLetters.includes(l));
+  const uniqueCorrect = new Set(correctGuessed).size;
+
+  const progressPercent = (uniqueCorrect / uniqueLetters) * 100;
+  const progressBar = document.getElementById("game-progress-bar");
+  if (progressBar) progressBar.style.width = `${progressPercent}%`;
+
   currentWord.split("").forEach(letter => {
     const box = document.createElement("div");
     box.className = "letter-box";
@@ -445,12 +582,14 @@ function handleGuess(letter) {
     document.getElementById(`key-${letter}`).classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
+    playSfx("correct");
     checkWin();
   } else {
     // Incorrect
     document.getElementById(`key-${letter}`).classList.add("wrong", "disabled");
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
+    playSfx("wrong");
 
     if (wrongGuesses < MAX_MISTAKES) {
       // BUG FIX: Guard against null difficulty (edge case on protocol change mid-game)
@@ -474,6 +613,7 @@ function checkWin() {
     isGameOver = true;
     currentScore += 1000;
     updateScoreUI();
+    playSfx("win");
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(true, 150, timeTaken);
 
@@ -1173,4 +1313,106 @@ document.addEventListener("mouseout", (e) => {
     document.body.classList.remove("cursor-hover");
   }
 });
+
+// ===// === Story Mode Selection Logic ===
+const STORY_LEVELS = {
+  1: { category: "DATABASE", difficulty: "MEDIUM", name: "PRISON BREAK" },
+  2: { category: "NETWORKING", difficulty: "HARD", name: "LOST IN SPACE" },
+  3: { category: "DATA_STRUCTURE", difficulty: "HARD", name: "THE CORE" },
+  4: { category: "ARTIFICIAL_INTELLIGENCE", difficulty: "HARD", name: "AI OVERLORD" }
+};
+
+function updateStoryUI() {
+  const lvlBtns = document.querySelectorAll(".lvl-btn");
+  lvlBtns.forEach(btn => {
+    const lvl = parseInt(btn.getAttribute("data-lvl"));
+    if (lvl <= storyProgress) {
+      btn.classList.remove("locked");
+      btn.innerText = `LEVEL ${lvl}: ${STORY_LEVELS[lvl].name}`;
+    } else {
+      btn.classList.add("locked");
+      btn.innerText = `LEVEL ${lvl}: LOCKED 🔒`;
+    }
+  });
+}
+
+document.querySelectorAll(".lvl-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const lvl = parseInt(btn.getAttribute("data-lvl"));
+    if (lvl > storyProgress) {
+      showToast("🔒 DATA ENCRYPTED", "Complete previous levels to unlock this sector.", "#ff3333");
+      return;
+    }
+
+    selectedCategory = STORY_LEVELS[lvl].category;
+    selectedDifficulty = STORY_LEVELS[lvl].difficulty;
+    currentStoryLevel = lvl;
+
+    MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
+    selectionScreen.classList.add("hidden");
+    gameContainer.classList.remove("hidden");
+    initGame();
+
+    showToast("📜 MISSION BRIEF", `Objective: Escape ${STORY_LEVELS[lvl].name}. Difficulty: ${selectedDifficulty}`, "#00ffcc");
+  });
+});
+
+// Word Duel and Cursor Logic... ===
+const duelSetupOverlay = document.getElementById("duel-setup-overlay");
+const duelWordInput = document.getElementById("duel-word-input");
+const duelStartBtn = document.getElementById("duel-start-btn");
+const duelCancelBtn = document.getElementById("duel-cancel-btn");
+const btnWordDuel = document.getElementById("btn-word-duel");
+
+if (btnWordDuel) {
+  btnWordDuel.addEventListener("click", () => {
+    duelSetupOverlay.classList.remove("hidden");
+    playSfx("click");
+  });
+}
+
+if (duelCancelBtn) {
+  duelCancelBtn.addEventListener("click", () => {
+    duelSetupOverlay.classList.add("hidden");
+    playSfx("click");
+  });
+}
+
+if (duelStartBtn) {
+  duelStartBtn.addEventListener("click", () => {
+    const word = duelWordInput.value.trim().toUpperCase();
+    if (word.length < 3) {
+      document.getElementById("duel-error-msg").innerText = "WORD TOO SHORT (MIN 3)";
+      return;
+    }
+    if (!/^[A-Z]+$/.test(word)) {
+      document.getElementById("duel-error-msg").innerText = "ALPHABET ONLY";
+      return;
+    }
+
+    // Start the game
+    currentWord = word;
+    currentWordData = { word, clue: "DUEL_MODE_TARGET", category: "DUEL", description: "This word was set by another agent." };
+    selectedCategory = "DUEL";
+    selectedDifficulty = "MEDIUM"; // Default to medium mapping for duels
+    MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
+
+    duelSetupOverlay.classList.add("hidden");
+    selectionScreen.classList.add("hidden");
+    gameContainer.classList.remove("hidden");
+
+    // Reset state for new game
+    guessedLetters = [];
+    wrongGuesses = 0;
+    isGameOver = false;
+    hintsUsed = 0;
+    gameStartTime = Date.now();
+
+    renderWord();
+    renderKeyboard();
+
+    showToast("⚔ DUEL ENGAGED", "Agent 1 has set the trap. Agent 2, begin decryption.", "#ff3333");
+  });
+}
+
 

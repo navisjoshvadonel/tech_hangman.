@@ -123,8 +123,15 @@ export default function Home() {
           {/* Right Side: Categories & Difficulties */}
           <div className="selection-right">
             <div id="category-selection">
-              <h2 id="selection-title">Select Category</h2>
-              <div className="selection-grid">
+              <div className="selection-header">
+                <h2 id="selection-title">Select Category</h2>
+                <div className="mode-selector">
+                  <button className="mode-btn active" id="mode-classic">CLASSIC</button>
+                  <button className="mode-btn" id="mode-story">STORY</button>
+                  <button className="mode-btn" id="mode-multiplayer">DUEL</button>
+                </div>
+              </div>
+              <div className="selection-grid" id="classic-categories">
                 <button className="cat-btn" data-cat="DATABASE">DATABASE</button>
                 <button className="cat-btn" data-cat="DATA_STRUCTURE">DATA STRUCTURE</button>
                 <button className="cat-btn" data-cat="JAVA">JAVA</button>
@@ -142,6 +149,20 @@ export default function Home() {
                 <button className="cat-btn" data-cat="LINUX">LINUX</button>
                 <button className="cat-btn" data-cat="CLOUD">CLOUD</button>
                 <button className="cat-btn" data-cat="DATASCIENCE">DATA SCIENCE</button>
+              </div>
+
+              {/* Story Mode Grid */}
+              <div className="selection-grid hidden" id="story-levels">
+                <button className="lvl-btn" data-lvl="1">LEVEL 1: PRISON BREAK</button>
+                <button className="lvl-btn locked" data-lvl="2">LEVEL 2: LOST IN SPACE 🔒</button>
+                <button className="lvl-btn locked" data-lvl="3">LEVEL 3: AI LAB 🔒</button>
+                <button className="lvl-btn locked" data-lvl="4">LEVEL 4: ANCIENT RUINS 🔒</button>
+              </div>
+
+              {/* Multiplayer Grid */}
+              <div className="selection-grid hidden" id="multiplayer-options">
+                <button className="multi-btn" id="btn-word-duel">WORD DUEL (1V1)</button>
+                <button className="multi-btn" id="btn-speed-battle">SPEED BATTLE</button>
               </div>
             </div>
 
@@ -179,9 +200,12 @@ export default function Home() {
               <span id="high-score">0</span>
             </div>
           </div>
-          <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
-          <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
-          <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
+          <div className="top-controls">
+            <button id="sound-toggle" className="icon-btn">🔊</button>
+            <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
+            <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
+            <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
+          </div>
         </div>
         <div className="header">
           <h1>HANG MAN</h1>
@@ -212,12 +236,24 @@ export default function Home() {
           </svg>
         </div>
 
-        <div id="word-display" className="word-display"></div>
+        <div id="word-display-container">
+          <div className="progress-container">
+            <div id="game-progress-bar" className="progress-bar"></div>
+          </div>
+          <div id="word-display" className="word-display"></div>
+        </div>
 
         {/* Clue Section */}
         <div className="clue-container">
-          <div className="hint-controls">
-            <button id="hint-btn" className="text-btn hint-btn">GET HINT (FREE)</button>
+          <div className="hint-system">
+            <div className="hint-buttons">
+              <button id="hint-reveal-cat" className="hint-btn">SHOW CATEGORY (FREE)</button>
+              <button id="hint-reveal-desc" className="hint-btn locked" disabled>SHOW DESCRIPTION (-20 XP)</button>
+              <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
+            </div>
+          </div>
+          <div id="hint-display-area" className="hidden">
+            <p id="clue-display-v2" className="hint-text"></p>
           </div>
           <p id="clue-display" className="hidden">CLUE: <span id="clue-text">waiting for signal...</span></p>
         </div>
@@ -279,6 +315,20 @@ export default function Home() {
           <div id="anomaly-event-name" className="anomaly-event"></div>
           <div id="anomaly-event-desc" className="anomaly-desc"></div>
           <button id="anomaly-confirm-btn">ACKNOWLEDGE</button>
+        </div>
+      </div>
+
+      {/* Word Duel Setup Popup */}
+      <div id="duel-setup-overlay" className="overlay hidden">
+        <div className="login-box">
+          <h3 className="neon-text">ESTABLISH TARGET</h3>
+          <p className="login-subtitle">AGENT 1: ENTER ENCRYPTED WORD</p>
+          <div className="input-row">
+            <input type="text" id="duel-word-input" placeholder="SECRET WORD" autoComplete="off" maxLength={15} />
+            <button id="duel-start-btn">ENGAGE</button>
+          </div>
+          <p className="login-hint" id="duel-error-msg"></p>
+          <button id="duel-cancel-btn" className="text-btn" style={{ marginTop: "15px" }}>CANCEL</button>
         </div>
       </div>
 

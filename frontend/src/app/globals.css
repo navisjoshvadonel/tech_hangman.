@@ -12,6 +12,218 @@
   display: none !important;
 }
 
+/* === Mode Selector === */
+.selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+  padding-bottom: 15px;
+}
+
+.mode-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.mode-btn {
+  background: rgba(0, 255, 204, 0.1);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  padding: 8px 15px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+.mode-btn:hover,
+.mode-btn.active {
+  background: var(--neon-cyan);
+  color: #000;
+  box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+/* === Top Controls & Icons === */
+.top-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--neon-cyan);
+  text-shadow: 0 0 10px var(--neon-cyan);
+}
+
+/* === Hint System === */
+.hint-system {
+  margin: 15px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.hint-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #aaa;
+  padding: 10px 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hint-btn:not(.locked):hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: rgba(0, 255, 204, 0.05);
+}
+
+.hint-btn.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.hint-text {
+  color: var(--neon-cyan);
+  font-style: italic;
+  margin-top: 10px;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% {
+    text-shadow: 0 0 5px var(--neon-cyan);
+  }
+
+  50% {
+    text-shadow: 0 0 15px var(--neon-cyan);
+  }
+
+  100% {
+    text-shadow: 0 0 5px var(--neon-cyan);
+  }
+}
+
+/* === Selection Grids === */
+.lvl-btn,
+.multi-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 15px;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lvl-btn:hover,
+.multi-btn:hover {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 255, 204, 0.1);
+  transform: translateY(-2px);
+}
+
+.lvl-btn.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* === Game Progress Bar === */
+.progress-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 10px var(--neon-cyan);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-text {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
+  text-align: center;
+  margin-bottom: 15px;
+  letter-spacing: 2px;
+}
+
+/* === Key Animations === */
+.key:active {
+  transform: scale(0.9);
+  box-shadow: 0 0 20px var(--neon-cyan);
+}
+
+.key.correct {
+  animation: key-pulse-correct 0.3s ease-out;
+}
+
+.key.wrong {
+  animation: key-pulse-wrong 0.3s ease-out;
+}
+
+@keyframes key-pulse-correct {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0px var(--neon-cyan);
+  }
+
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 25px var(--neon-cyan);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes key-pulse-wrong {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0px var(--neon-red);
+  }
+
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 25px var(--neon-red);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* === Cyber Cursor === */
 * {
   cursor: none !important;
