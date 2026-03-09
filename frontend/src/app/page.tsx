@@ -332,6 +332,24 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Agent Status HUD - Novel Bottom-Right Display */}
+      <div id="agent-hud" className="hidden">
+        <div className="hud-header">AGENT STATUS</div>
+        <div className="hud-body">
+          <div className="hud-line"><span className="label">CALLSIGN:</span> <span id="hud-user">---</span></div>
+          <div className="hud-line"><span className="label">RANK:</span> <span id="hud-rank">---</span></div>
+          <div className="hud-line"><span className="label">LEVEL:</span> <span id="hud-level">1</span></div>
+          <div className="hud-progress-container">
+            <div className="label">XP PROGRESS:</div>
+            <div className="hud-progress-bg">
+              <div id="hud-xp-bar" className="hud-progress-fill"></div>
+            </div>
+            <div id="hud-xp-text" className="hud-val">0 / 0</div>
+          </div>
+          <div className="hud-line story-line"><span className="label">STORY PROGRESS:</span> <span id="hud-story">LVL 1</span></div>
+        </div>
+      </div>
+
       {/* Achievements Modal */}
       <div id="achievements-popup" className="hidden">
         <div className="achievements-content">

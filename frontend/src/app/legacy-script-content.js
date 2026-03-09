@@ -155,6 +155,7 @@ function applyUserSession(data) {
   currentXp = data.xp || 0;
   currentRank = data.rank || "Beginner";
   currentLevel = data.level || 1;
+  currentStoryProgress = data.story_progress || 1;
   currentScore = 0;
 
   currentUserSpan.innerText = `USER: ${currentUser.toUpperCase()}`;
@@ -169,6 +170,37 @@ function applyUserSession(data) {
   selectionScreen.classList.remove("hidden");
   categorySelection.classList.remove("hidden");
   difficultySelection.classList.add("hidden");
+
+  updateAgentHUD();
+}
+
+function updateAgentHUD() {
+  const hud = document.getElementById("agent-hud");
+  if (!hud) return;
+
+  hud.classList.remove("hidden");
+
+  const userEl = document.getElementById("hud-user");
+  const rankEl = document.getElementById("hud-rank");
+  const levelEl = document.getElementById("hud-level");
+  const xpBar = document.getElementById("hud-xp-bar");
+  const xpText = document.getElementById("hud-xp-text");
+  const storyEl = document.getElementById("hud-story");
+
+  if (userEl) userEl.innerText = currentUser.toUpperCase();
+  if (rankEl) rankEl.innerText = currentRank.toUpperCase();
+  if (levelEl) levelEl.innerText = currentLevel;
+  if (storyEl) storyEl.innerText = `LVL ${currentStoryProgress}`;
+
+  // XP Progress Calculation
+  const nextLevelXP = currentLevel * 100;
+  const prevLevelXP = (currentLevel - 1) * 100;
+  const progressInLevel = currentXp - prevLevelXP;
+  const range = nextLevelXP - prevLevelXP;
+  const pct = Math.min(100, Math.max(0, (progressInLevel / range) * 100));
+
+  if (xpBar) xpBar.style.width = `${pct}%`;
+  if (xpText) xpText.innerText = `${currentXp} / ${nextLevelXP} XP`;
 }
 
 // Returning Player Login
@@ -405,8 +437,10 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       currentXp = data.xp;
       currentRank = data.rank;
       currentLevel = data.level;
+      currentStoryProgress = data.story_progress || currentStoryProgress;
       currentXpSpan.innerText = `EXP: ${currentXp}`;
       currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+      updateAgentHUD();
     }
     // Show achievement unlock notifications
     if (data.new_achievements && data.new_achievements.length > 0) {
