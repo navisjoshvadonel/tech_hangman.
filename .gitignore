@@ -1,0 +1,23 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Database files (REMOVED FROM TRACKING TO PREVENT DEPLOY OVERWRITES)
+*.db
+*.db-journal
+*.db-wal
+
+# Frontend builds & dependencies
+node_modules/
+.next/
+out/
+build/
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
