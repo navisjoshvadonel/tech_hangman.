@@ -32,6 +32,8 @@ let gameStartTime = 0;
 let scoreMultiplier = 1;
 let isDailyChallenge = false;
 let activeEvent = null;
+let WORDS_TOTAL = 0;
+let WORDS_REMAINING = 0;
 
 
 // Game Config State
@@ -201,6 +203,18 @@ function updateAgentHUD() {
 
   if (xpBar) xpBar.style.width = `${pct}%`;
   if (xpText) xpText.innerText = `${currentXp} / ${nextLevelXP} XP`;
+
+  // Objective Progress
+  const objectiveEl = document.getElementById("hud-objective");
+  const objBar = document.getElementById("hud-obj-bar");
+  if (objectiveEl && WORDS_TOTAL > 0) {
+    const completed = WORDS_TOTAL - WORDS_REMAINING;
+    objectiveEl.innerText = `${completed} / ${WORDS_TOTAL} UNITS`;
+    if (objBar) {
+      const objPct = (completed / WORDS_TOTAL) * 100;
+      objBar.style.width = `${objPct}%`;
+    }
+  }
 }
 
 // Returning Player Login
@@ -392,6 +406,12 @@ async function initGame() {
 
     currentWord = data.word.toUpperCase();
     clueText.innerText = data.clue;
+    clueDisplay.classList.remove("hidden"); // Show immediately
+
+    // Track category progress
+    WORDS_TOTAL = data.words_total || 0;
+    WORDS_REMAINING = data.words_remaining || 0;
+    updateAgentHUD();
 
     renderWord();
     renderKeyboard();

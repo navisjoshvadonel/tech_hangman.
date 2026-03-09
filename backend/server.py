@@ -246,7 +246,9 @@ def get_word():
         "clue": word_data["hint"],
         "category": word_data["category"],
         "difficulty": difficulty,
-        "description": word_data["description"]
+        "description": word_data["description"],
+        "words_total": len(all_words),
+        "words_remaining": len(available_words)
     })
 
 @app.route('/api/score', methods=['POST'])

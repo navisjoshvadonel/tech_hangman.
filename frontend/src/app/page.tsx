@@ -248,14 +248,12 @@ export default function Home() {
           <div className="hint-system">
             <div className="hint-buttons">
               <button id="hint-reveal-cat" className="hint-btn">SHOW CATEGORY (FREE)</button>
-              <button id="hint-reveal-desc" className="hint-btn locked" disabled>SHOW DESCRIPTION (-20 XP)</button>
               <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
             </div>
           </div>
-          <div id="hint-display-area" className="hidden">
-            <p id="clue-display-v2" className="hint-text"></p>
-          </div>
-          <p id="clue-display" className="hidden">CLUE: <span id="clue-text">waiting for signal...</span></p>
+          <p id="clue-display" className="neon-text" style={{ marginTop: '15px' }}>
+            CLUE: <span id="clue-text" style={{ textTransform: 'uppercase', color: '#fff' }}>waiting for signal...</span>
+          </p>
         </div>
 
         <div id="keyboard" className="keyboard"></div>
@@ -345,6 +343,13 @@ export default function Home() {
               <div id="hud-xp-bar" className="hud-progress-fill"></div>
             </div>
             <div id="hud-xp-text" className="hud-val">0 / 0</div>
+          </div>
+          <div className="hud-progress-container objective-container" style={{ borderTop: '1px dashed rgba(0, 255, 204, 0.2)', paddingTop: '10px' }}>
+            <div className="label">OBJECTIVE PROGRESS:</div>
+            <div className="hud-progress-bg">
+              <div id="hud-obj-bar" className="hud-progress-fill" style={{ background: 'linear-gradient(90deg, #bbff00, #44ff00)' }}></div>
+            </div>
+            <div id="hud-objective" className="hud-val">0 / 0 UNITS</div>
           </div>
           <div className="hud-line story-line"><span className="label">STORY PROGRESS:</span> <span id="hud-story">LVL 1</span></div>
         </div>
