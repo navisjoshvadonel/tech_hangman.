@@ -167,6 +167,12 @@ function applyUserSession(data) {
 
   updateAgentHUD();
   refreshProgressHUD();
+
+  // Restore HUD state
+  const hud = document.getElementById("agent-hud");
+  if (hud && localStorage.getItem("hud_minimized") === "true") {
+    hud.classList.add("minimized");
+  }
 }
 
 function updateAgentHUD() {
@@ -1533,3 +1539,26 @@ async function refreshProgressHUD() {
     console.error("Progress HUD Refresh Error:", err);
   }
 }
+// --- HUD Toggle Logic ---
+document.addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('#hud-toggle-btn');
+  const hud = document.getElementById('agent-hud');
+
+  if (toggleBtn && hud) {
+    const isMinimized = hud.classList.toggle('minimized');
+    localStorage.setItem('hud_minimized', isMinimized);
+
+    // Add effect
+    toggleBtn.style.background = '#00ffcc';
+    setTimeout(() => {
+      toggleBtn.style.background = isMinimized ? '#2a2a2a' : '#2a2a2a';
+    }, 200);
+    return;
+  }
+
+  // Also allow clicking the minimized phone to expand
+  if (hud && hud.classList.contains('minimized') && e.target.closest('#agent-hud')) {
+    hud.classList.remove('minimized');
+    localStorage.setItem('hud_minimized', 'false');
+  }
+});

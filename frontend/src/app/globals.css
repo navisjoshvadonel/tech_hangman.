@@ -2321,13 +2321,13 @@ h2,
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 320px;
+  width: 280px;
   max-height: 85vh;
-  height: 650px;
+  height: 600px;
   background: #050810;
   border: 10px solid #1a1a1a;
   border-radius: 45px;
-  padding: 50px 25px 30px;
+  padding: 45px 20px 25px;
   font-family: "Space Mono", monospace;
   z-index: 100;
   backdrop-filter: blur(20px);
@@ -2338,8 +2338,19 @@ h2,
   display: flex;
   flex-direction: column;
   color: #fff;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
   animation: phone-slide-in 1s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+#agent-hud.minimized {
+  transform: translateY(calc(100% - 100px)) translateX(180px) rotate(5deg);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+#agent-hud.minimized:hover {
+  transform: translateY(calc(100% - 110px)) translateX(170px) rotate(2deg);
+  opacity: 1;
 }
 
 @keyframes phone-slide-in {
@@ -2369,17 +2380,25 @@ h2,
   z-index: 101;
 }
 
-/* Realistic Side Buttons (Right) */
-#agent-hud::after {
-  content: "";
+/* Realistic Side Buttons (Right - Now Toggle) */
+#hud-toggle-btn {
   position: absolute;
-  right: -14px;
+  right: -16px;
   top: 100px;
-  width: 4px;
+  width: 8px;
   height: 60px;
-  background: #1a1a1a;
+  background: #2a2a2a;
+  border: 1px solid #333;
   border-radius: 0 4px 4px 0;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  z-index: 110;
+  transition: background 0.3s;
+}
+
+#hud-toggle-btn:hover {
+  background: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--neon-cyan);
 }
 
 /* Realistic Side Buttons (Left - Volume) */
@@ -2565,4 +2584,38 @@ h2,
   background: #ff00ff;
   border-color: #ff00ff;
   box-shadow: 0 0 20px #ff00ff;
+}
+
+/* laptop height fix */
+@media screen and (max-height: 800px) {
+  #agent-hud {
+    transform: scale(0.85);
+    transform-origin: bottom right;
+  }
+
+  #agent-hud.minimized {
+    transform: scale(0.85) translateY(calc(100% - 100px)) translateX(180px) rotate(5deg);
+  }
+}
+
+@media screen and (max-width: 1400px) {
+  .selection-content-wrapper {
+    max-width: 800px;
+  }
+
+  .cat-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+}
+
+.selection-content-wrapper {
+  margin: 0 auto !important;
+  max-width: 1000px;
+}
+
+@media screen and (min-width: 1600px) {
+  #agent-hud {
+    right: 40px;
+  }
 }

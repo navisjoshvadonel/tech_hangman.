@@ -336,6 +336,7 @@ export default function Home() {
 
       {/* Agent Status HUD - Novel Bottom-Right Display */}
       <div id="agent-hud" className="hidden">
+        <div id="hud-toggle-btn" title="Toggle HUD"></div>
         <div className="hud-header">AGENT STATUS</div>
         <div className="hud-body">
           <div className="hud-line"><span className="label">CALLSIGN:</span> <span id="hud-user">---</span></div>
