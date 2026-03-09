@@ -98,6 +98,19 @@ def init_db():
             FOREIGN KEY(word_id) REFERENCES Words(id)
         )
     ''')
+
+    # NEW: Accurate per-word progress tracking
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS UserWordProgress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            word_id INTEGER,
+            completed_at TEXT,
+            UNIQUE(user_id, word_id),
+            FOREIGN KEY(user_id) REFERENCES Users(id),
+            FOREIGN KEY(word_id) REFERENCES Words(id)
+        )
+    ''')
     
     conn.commit()
     
@@ -198,6 +211,55 @@ def register():
         "story_progress": 1
     })
 
+@app.route('/api/user/progress', methods=['GET'])
+def get_user_progress():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "User ID required"}), 400
+        
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get counts per category
+    c.execute('''
+        SELECT category, COUNT(*) as solved_count 
+        FROM UserWordProgress 
+        JOIN Words ON UserWordProgress.word_id = Words.id 
+        WHERE user_id = ? 
+        GROUP BY category
+    ''', (user_id,))
+    solved_per_category = {row[0]: row[1] for row in c.fetchall()}
+    
+    # Get total words per category
+    c.execute('SELECT category, COUNT(*) FROM Words GROUP BY category')
+    total_per_category = {row[0]: row[1] for row in c.fetchall()}
+    
+    domains_progress = []
+    total_solved = 0
+    total_words = sum(total_per_category.values())
+    
+    all_categories = sorted(list(total_per_category.keys()))
+    for category in all_categories:
+        total = total_per_category[category]
+        solved = solved_per_category.get(category, 0)
+        total_solved += solved
+        domains_progress.append({
+            "category": category,
+            "solved": solved,
+            "total": total,
+            "percentage": round((solved / total) * 100, 2) if total > 0 else 0
+        })
+        
+    total_percentage = round((total_solved / total_words) * 100, 2) if total_words > 0 else 0
+    
+    conn.close()
+    return jsonify({
+        "domains": domains_progress,
+        "total_solved": total_solved,
+        "total_words": total_words,
+        "total_percentage": total_percentage
+    })
+
 @app.route('/api/word', methods=['GET'])
 def get_word():
     # Expect category and difficulty from the query
@@ -227,52 +289,41 @@ def get_word():
         difficulty = "EASY"
     
     # Retrieve all words for this category and difficulty from the database
-    # If category is "RANDOM", pick from all categories
     if category == "RANDOM" or not category:
-        c.execute('SELECT word, hint, category, description FROM Words WHERE difficulty = ?', (difficulty,))
+        c.execute('SELECT id, word, hint, category, description FROM Words WHERE difficulty = ?', (difficulty,))
     else:
-        c.execute('SELECT word, hint, category, description FROM Words WHERE category = ? AND difficulty = ?', (category, difficulty))
+        c.execute('SELECT id, word, hint, category, description FROM Words WHERE category = ? AND difficulty = ?', (category, difficulty))
     
-    all_words = [{"word": row[0], "hint": row[1], "category": row[2], "description": row[3]} for row in c.fetchall()]
+    all_words = [{"id": row[0], "word": row[1], "hint": row[2], "category": row[3], "description": row[4]} for row in c.fetchall()]
 
     if not all_words:
         conn.close()
         return jsonify({"error": f"No words found for {category} / {difficulty}"}), 400
 
-    try:
-        c.execute('SELECT guessed_words FROM Users WHERE id = ?', (user_id,))
-        row = c.fetchone()
-    except sqlite3.OperationalError:
-        row = None
-        
-    if not row:
-        conn.close()
-        return jsonify({"error": "User not found"}), 404
-        
-    guessed_words_json = row[0]
-    guessed_words = json.loads(guessed_words_json) if guessed_words_json else []
+    # Get words already solved by this user (Accurate tracking)
+    c.execute('SELECT word_id FROM UserWordProgress WHERE user_id = ?', (user_id,))
+    solved_word_ids = {row[0] for row in c.fetchall()}
     
     # Filter words that have already been played
-    available_words = [w for w in all_words if w["word"] not in guessed_words]
+    available_words = [w for w in all_words if w["id"] not in solved_word_ids]
     
+    # Fallback to legacy guessed_words column just in case (to avoid repetition for old users)
+    try:
+        c.execute('SELECT guessed_words FROM Users WHERE id = ?', (user_id,))
+        gu_row = c.fetchone()
+        if gu_row and gu_row[0]:
+            legacy_guessed = set(json.loads(gu_row[0]))
+            available_words = [w for w in available_words if w["word"] not in legacy_guessed]
+    except:
+        pass
+
     # If the stack completes a cycle (no available words left)
     if not available_words:
-        category_diff_words = [w["word"] for w in all_words]
-        # Remove these from the user's history so they can replay
-        guessed_words = [w for w in guessed_words if w not in category_diff_words]
-        c.execute('UPDATE Users SET guessed_words = ? WHERE id = ?', (json.dumps(guessed_words), user_id))
-        conn.commit()
         conn.close()
-        # Return exhausted so the frontend knows the category was fully completed
         return jsonify({"status": "exhausted"}), 200
 
     # Pick a random word from the unplayed list
     word_data = random.choice(available_words)
-    
-    # Track it as played
-    guessed_words.append(word_data["word"])
-    c.execute('UPDATE Users SET guessed_words = ? WHERE id = ?', (json.dumps(guessed_words), user_id))
-    conn.commit()
     conn.close()
     
     return jsonify({
@@ -356,6 +407,19 @@ def submit_score():
     # Apply to user
     new_high_score = score if score > current_high else current_high
     new_xp = current_xp + final_xp_added
+    
+    # Record word progress on win
+    word_text = data.get('word')
+    if is_win and word_text:
+        # Resolve word ID
+        c.execute('SELECT id FROM Words WHERE word = ?', (word_text.upper(),))
+        w_row = c.fetchone()
+        if w_row:
+            word_id = w_row[0]
+            try:
+                c.execute('INSERT INTO UserWordProgress (user_id, word_id, completed_at) VALUES (?, ?, ?)', (user_id, word_id, datetime.now().isoformat()))
+            except sqlite3.IntegrityError:
+                pass # Already recorded
     
     # Calculate level and rank based on new XP
     new_level = (new_xp // 100) + 1 

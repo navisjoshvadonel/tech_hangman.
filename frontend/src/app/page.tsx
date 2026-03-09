@@ -205,6 +205,7 @@ export default function Home() {
             <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
             <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
             <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
+            <button id="share-stats-btn" className="text-btn highlight-btn">📢 SHARE STATS</button>
           </div>
         </div>
         <div className="header">
@@ -352,6 +353,15 @@ export default function Home() {
             <div id="hud-objective" className="hud-val">0 / 0 UNITS</div>
           </div>
           <div className="hud-line story-line"><span className="label">STORY PROGRESS:</span> <span id="hud-story">LVL 1</span></div>
+
+          {/* New: Overall Progress across all domains */}
+          <div className="hud-progress-container total-progress-container" style={{ borderTop: '1px solid rgba(0, 255, 204, 0.4)', marginTop: '5px', paddingTop: '5px' }}>
+            <div className="label">OVERALL COMPLETION:</div>
+            <div className="hud-progress-bg">
+              <div id="hud-total-progress-bar" className="hud-progress-fill" style={{ background: 'linear-gradient(90deg, #00f2fe, #4facfe)' }}></div>
+            </div>
+            <div id="hud-total-progress-text" className="hud-val" style={{ color: '#00f2fe', fontWeight: 'bold' }}>OVERALL: 0%</div>
+          </div>
         </div>
       </div>
 

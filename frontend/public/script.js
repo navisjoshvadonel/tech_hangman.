@@ -166,6 +166,7 @@ function applyUserSession(data) {
   difficultySelection.classList.add("hidden");
 
   updateAgentHUD();
+  refreshProgressHUD();
 }
 
 function updateAgentHUD() {
@@ -556,6 +557,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         is_win: isWin,
         time_taken: timeTaken,
         wrong_guesses: wrongGuesses,
+        word: currentWord,
         category: selectedCategory,
         difficulty: selectedDifficulty,
         is_story: currentMode === "story",
@@ -583,6 +585,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         setTimeout(() => showAchievementToast(ach), i * 2000);
       });
     }
+    refreshProgressHUD();
   } catch (err) {
     console.error("Score Submit Error:", err);
   }
@@ -1483,3 +1486,50 @@ if (duelStartBtn) {
 }
 
 
+// === Social Sharing & Progress Dashboard ===
+
+async function shareProgress() {
+  try {
+    const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
+    const data = await res.json();
+
+    const text = `🎮 Tech Hangman Progress: I've mastered ${data.total_percentage}% of the tech world! (${data.total_solved}/${data.total_words} units solved). Can you beat me? #TechHangman #Coding`;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Tech Hangman Progress',
+        text: text,
+        url: window.location.href
+      });
+    } else {
+      await navigator.clipboard.writeText(text);
+      showAchievementToast("Stats Copied to Clipboard!");
+    }
+  } catch (err) {
+    console.error("Share Error:", err);
+  }
+}
+
+// Attach to a share button if it exists
+const shareBtn = document.getElementById("share-stats-btn");
+if (shareBtn) {
+  shareBtn.addEventListener("click", shareProgress);
+}
+
+// Function to refresh the HUD with new detailed progress
+async function refreshProgressHUD() {
+  if (!currentUserId) return;
+  try {
+    const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
+    const data = await res.json();
+
+    // Update total progress bar if it exists
+    const totalBar = document.getElementById("hud-total-progress-bar");
+    const totalText = document.getElementById("hud-total-progress-text");
+    if (totalBar) totalBar.style.width = `${data.total_percentage}%`;
+    if (totalText) totalText.innerText = `OVERALL: ${data.total_percentage}%`;
+
+  } catch (err) {
+    console.error("Progress HUD Refresh Error:", err);
+  }
+}
