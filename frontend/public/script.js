@@ -152,7 +152,7 @@ function applyUserSession(data) {
   currentScore = 0;
 
   currentUserSpan.innerText = `AGENT: ${currentUser.toUpperCase()}`;
-  currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+  if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
   currentXpSpan.innerText = `EXP: ${currentXp}`;
   highScoreSpan.innerText = `${highestScore}`;
   updateScoreUI();

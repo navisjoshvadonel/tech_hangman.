@@ -184,11 +184,13 @@ export default function Home() {
         {/* Top Status Bar */}
         <div className="status-bar">
           <div className="user-info">
-            <span id="current-user">AGENT: ---</span>
-            <span id="current-rank" className="rank-badge">RANK: Beginner</span>
-            <span id="current-xp" className="xp-badge">XP: 0</span>
-            <button id="change-protocol-btn" className="text-btn">CHANGE LEVEL</button>
-            <button id="logout-btn" className="text-btn">LOGOUT</button>
+            <span id="current-user" className="user-badge">AGENT: SNOWJD</span>
+            <span id="current-xp" className="exp-badge">EXP: 0</span>
+            <div className="status-buttons">
+              <button id="sound-toggle" className="icon-btn">🔊</button>
+              <button id="change-protocol-btn" className="text-btn">CHANGE LEVEL</button>
+              <button id="logout-btn" className="text-btn">LOGOUT</button>
+            </div>
           </div>
           <div className="score-info">
             <div className="score-box">
@@ -200,8 +202,9 @@ export default function Home() {
               <span id="high-score">0</span>
             </div>
           </div>
-          <div className="top-controls">
-            <button id="sound-toggle" className="icon-btn">🔊</button>
+        </div>
+        <div className="status-bar action-bar" style={{ marginTop: '10px' }}>
+          <div className="action-buttons">
             <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
             <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
             <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
@@ -363,6 +366,7 @@ export default function Home() {
             <div id="hud-total-progress-text" className="hud-val" style={{ color: '#00f2fe', fontWeight: 'bold' }}>OVERALL: 0%</div>
           </div>
         </div>
+        <div className="home-indicator"></div>
       </div>
 
       {/* Achievements Modal */}
