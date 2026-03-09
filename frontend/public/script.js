@@ -1545,6 +1545,7 @@ document.addEventListener('click', (e) => {
   const hud = document.getElementById('agent-hud');
 
   if (toggleBtn && hud) {
+    toggleBtn.classList.remove('hud-pulse-hint'); // Remove hint once discovered
     const isMinimized = hud.classList.toggle('minimized');
     localStorage.setItem('hud_minimized', isMinimized);
 
