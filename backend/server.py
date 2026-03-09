@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+import words
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -99,6 +100,26 @@ def init_db():
     ''')
     
     conn.commit()
+    
+    # NEW: Self-healing check for words
+    c.execute('SELECT COUNT(*) FROM Words')
+    count = c.fetchone()[0]
+    if count == 0:
+        print("WORDS TABLE EMPTY: Automatically populating from words.py...")
+        from words import CATEGORIZED_WORDS
+        for category, difficulties in CATEGORIZED_WORDS.items():
+            for difficulty, word_list in difficulties.items():
+                for item in word_list:
+                    try:
+                        c.execute('''
+                            INSERT INTO Words (word, hint, category, difficulty, description)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (item['word'], item['clue'], category, difficulty, item.get('description', '')))
+                    except sqlite3.IntegrityError:
+                        continue # Skip duplicates
+        conn.commit()
+        print(f"POPULATION COMPLETE: Added initial words set.")
+        
     conn.close()
 
 init_db()
