@@ -773,6 +773,30 @@ def admin_word_detail(word_id):
         conn.close()
         return jsonify({"message": "Word updated"})
 
+@app.route('/api/admin/nuclear-reset', methods=['POST'])
+def nuclear_reset():
+    """
+    EMERGENCY: Clears ALL user data, achievements, and progress.
+    Requires header 'X-Admin-Reset-Key': 'MISSION_RESTART_2026'
+    """
+    key = request.headers.get('X-Admin-Reset-Key')
+    if key != 'MISSION_RESTART_2026':
+        return jsonify({"error": "Unauthorized Reset Request"}), 401
+        
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('DELETE FROM UserWordProgress')
+        c.execute('DELETE FROM Achievements')
+        c.execute('DELETE FROM DailyChallenges')
+        c.execute('DELETE FROM Users')
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "MISSION RESET: All user data has been purged. System is ready for fresh enlistment."})
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/admin/cleanup', methods=['POST'])
 def cleanup_duplicates():
     """
