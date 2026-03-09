@@ -42,6 +42,9 @@ let isSoundEnabled = localStorage.getItem("hangman_sound") !== "false";
 let currentWordData = null;
 let storyProgress = 1;
 let currentStoryLevel = null;
+let WORDS_TOTAL = 0;
+let WORDS_REMAINING = 0;
+let OBJECTIVE_REVEALED = true;
 
 // DOM Elements
 const loginOverlay = document.getElementById("login-overlay");
@@ -161,6 +164,51 @@ function applyUserSession(data) {
   selectionScreen.classList.remove("hidden");
   categorySelection.classList.remove("hidden");
   difficultySelection.classList.add("hidden");
+
+  updateAgentHUD();
+}
+
+function updateAgentHUD() {
+  const hud = document.getElementById("agent-hud");
+  if (!hud) return;
+
+  hud.classList.remove("hidden");
+
+  const userEl = document.getElementById("hud-user");
+  const rankEl = document.getElementById("hud-rank");
+  const levelEl = document.getElementById("hud-level");
+  const xpBar = document.getElementById("hud-xp-bar");
+  const xpText = document.getElementById("hud-xp-text");
+  const storyEl = document.getElementById("hud-story");
+
+  if (userEl) userEl.innerText = currentUser.toUpperCase();
+  if (rankEl) rankEl.innerText = currentRank.toUpperCase();
+  if (levelEl) levelEl.innerText = currentLevel;
+  if (storyEl) storyEl.innerText = `LVL ${storyProgress}`;
+
+  // XP Progress Calculation
+  const nextLevelXP = currentLevel * 100;
+  const prevLevelXP = (currentLevel - 1) * 100;
+  const progressInLevel = currentXp - prevLevelXP;
+  const range = nextLevelXP - prevLevelXP;
+  const pct = Math.min(100, Math.max(0, (progressInLevel / range) * 100));
+
+  if (xpBar) xpBar.style.width = `${pct}%`;
+  if (xpText) xpText.innerText = `${currentXp} / ${nextLevelXP} XP`;
+
+  // Objective Progress
+  const objectiveEl = document.getElementById("hud-objective");
+  const objBar = document.getElementById("hud-obj-bar");
+  if (objectiveEl && WORDS_TOTAL > 0) {
+    const completed = WORDS_TOTAL - WORDS_REMAINING;
+    // Cap completion at 100% just in case of stale data
+    const safeCompleted = Math.min(completed, WORDS_TOTAL);
+    objectiveEl.innerText = `${safeCompleted} / ${WORDS_TOTAL} UNITS`;
+    if (objBar) {
+      const objPct = (safeCompleted / WORDS_TOTAL) * 100;
+      objBar.style.width = `${objPct}%`;
+    }
+  }
 }
 
 // Returning Player Login
@@ -409,8 +457,10 @@ async function initGame() {
     hintDisplayArea.classList.add("hidden");
     clueDisplayV2.innerText = "";
   }
+  // Clue display should be visible immediately in new layout
   if (clueDisplay) {
-    clueDisplay.classList.add("hidden");
+    clueDisplay.classList.remove("hidden");
+    clueText.innerText = "DECRYPTING...";
   }
 
   // Reset DOM Classes
@@ -469,6 +519,11 @@ async function initGame() {
     currentWord = data.word.toUpperCase();
     clueText.innerText = data.clue || "DECRYPTED_SIGNAL_STABLE";
 
+    // Track category progress
+    WORDS_TOTAL = data.words_total || 0;
+    WORDS_REMAINING = data.words_remaining || 0;
+    updateAgentHUD();
+
     renderWord();
     renderKeyboard();
 
@@ -520,6 +575,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       currentXpSpan.innerText = `EXP: ${currentXp}`;
       currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
       updateStoryUI();
+      updateAgentHUD();
     }
     // Show achievement unlock notifications
     if (data.new_achievements && data.new_achievements.length > 0) {

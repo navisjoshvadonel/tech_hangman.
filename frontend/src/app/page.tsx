@@ -245,15 +245,15 @@ export default function Home() {
 
         {/* Clue Section */}
         <div className="clue-container">
+          <p id="clue-display" className="neon-text" style={{ marginBottom: '15px' }}>
+            CLUE: <span id="clue-text" style={{ textTransform: 'uppercase', color: '#fff' }}>waiting for signal...</span>
+          </p>
           <div className="hint-system">
             <div className="hint-buttons">
               <button id="hint-reveal-cat" className="hint-btn">SHOW CATEGORY (FREE)</button>
               <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
             </div>
           </div>
-          <p id="clue-display" className="neon-text" style={{ marginTop: '15px' }}>
-            CLUE: <span id="clue-text" style={{ textTransform: 'uppercase', color: '#fff' }}>waiting for signal...</span>
-          </p>
         </div>
 
         <div id="keyboard" className="keyboard"></div>
