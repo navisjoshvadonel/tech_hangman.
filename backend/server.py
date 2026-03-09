@@ -9,7 +9,20 @@ import os
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-DB_PATH = os.environ.get('DB_PATH', 'hangman.db')
+# === Config ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, 'hangman.db')
+DB_PATH = os.environ.get('DB_PATH', DEFAULT_DB_PATH)
+
+print(f"DATABASE IDENTITY INITIALIZED: {DB_PATH}")
+
+def get_db_connection():
+    """Returns a robust sqlite3 connection with WAL mode and timeout."""
+    conn = sqlite3.connect(DB_PATH, timeout=20)
+    # Enable WAL mode for better concurrency
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.row_factory = sqlite3.Row # Nice for dict-like access
+    return conn
 
 @app.route('/')
 def index():
@@ -21,7 +34,7 @@ def ping():
 
 # === Database Helpers ===
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS Users (
@@ -100,7 +113,7 @@ def login():
     if not username:
         return jsonify({"error": "Username required"}), 400
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     # Case-insensitive checking
     c.execute('SELECT id, username, highest_score, xp, level, rank, total_wins, total_losses, story_progress FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
@@ -140,7 +153,7 @@ def register():
     if username.isdigit():
         return jsonify({"error": "Username cannot be numbers only"}), 400
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('SELECT id FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
     existing = c.fetchone()
@@ -171,7 +184,7 @@ def get_word():
     difficulty = request.args.get('difficulty', '').upper()
     user_id = request.args.get('user_id')
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
 
     # Determine difficulty automatically if not provided (Adaptive Difficulty)
@@ -263,7 +276,7 @@ def submit_score():
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     
     try:
@@ -417,7 +430,7 @@ def submit_score():
 
 @app.route('/api/highscores', methods=['GET'])
 def get_highscores():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     
     # 1. Highest Score Leaderboard
@@ -453,7 +466,7 @@ def daily_challenge():
     user_id = request.args.get('user_id')
     today = datetime.now().strftime('%Y-%m-%d')
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
 
     # Check if a daily challenge already exists for today
@@ -509,7 +522,7 @@ def get_profile():
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute('''
@@ -558,7 +571,7 @@ def use_hint():
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute('UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
@@ -578,7 +591,7 @@ def complete_daily():
     today = datetime.now().strftime('%Y-%m-%d')
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute('UPDATE Users SET last_daily_date = ? WHERE id = ?', (today, user_id))
@@ -594,7 +607,7 @@ def get_achievements():
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('SELECT achievement_name FROM Achievements WHERE user_id = ? ORDER BY id ASC', (user_id,))
     rows = c.fetchall()
@@ -613,7 +626,7 @@ def award_achievement(c, user_id, name):
 
 @app.route('/api/admin/words', methods=['GET', 'POST'])
 def admin_words():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     
     if request.method == 'GET':
@@ -656,7 +669,7 @@ def admin_words():
 
 @app.route('/api/admin/words/<int:word_id>', methods=['DELETE', 'PUT'])
 def admin_word_detail(word_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     
     if request.method == 'DELETE':
@@ -680,7 +693,7 @@ def cleanup_duplicates():
     """
     Admin cleanup: removes duplicate/ghost zero-score accounts.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('''
         DELETE FROM Users WHERE id IN (

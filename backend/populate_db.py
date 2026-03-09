@@ -12,7 +12,9 @@ except ImportError:
     print("Error: Could not find words.py or server.py in the current directory.")
     sys.exit(1)
 
-DB_PATH = os.environ.get('DB_PATH', 'hangman.db')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, 'hangman.db')
+DB_PATH = os.environ.get('DB_PATH', DEFAULT_DB_PATH)
 
 def populate():
     # Ensure tables are created first

@@ -1,8 +1,12 @@
+import os
 import sqlite3
 import words
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'hangman.db')
+
 def migrate():
-    conn = sqlite3.connect('hangman.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     print("Creating Words table...")
