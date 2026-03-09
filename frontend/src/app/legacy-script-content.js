@@ -90,7 +90,22 @@ const introLogo = document.getElementById("intro-logo");
 
 // === Initialization, Intro & Login ===
 
-document.addEventListener("DOMContentLoaded", playIntroSequence);
+document.addEventListener("DOMContentLoaded", () => {
+  playIntroSequence();
+  startHeartbeat();
+});
+
+function startHeartbeat() {
+  // Ping the backend every 10 minutes (600,000 ms) to prevent Render sleep
+  setInterval(async () => {
+    try {
+      console.log("[KeepAlive] Pinging backend...");
+      await fetch(`${API_URL}/ping`);
+    } catch (err) {
+      console.warn("[KeepAlive] Heartbeat failed:", err);
+    }
+  }, 600000);
+}
 
 function playIntroSequence() {
   // Line 1: 0ms
@@ -179,6 +194,9 @@ async function handleLogin() {
       applyUserSession(data);
     } else {
       errorMsg.innerText = data.error || "LOGIN FAILED.";
+      if (data.hint) {
+        errorMsg.innerText += ` (${data.hint})`;
+      }
     }
   } catch (err) {
     console.error("Login Error:", err);
@@ -213,6 +231,9 @@ async function handleRegister() {
       setTimeout(() => applyUserSession(data), 1200);
     } else {
       errorMsg.innerText = data.error || "REGISTRATION FAILED.";
+      if (data.hint) {
+        errorMsg.innerText += ` (${data.hint})`;
+      }
     }
   } catch (err) {
     console.error("Register Error:", err);

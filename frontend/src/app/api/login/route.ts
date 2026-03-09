@@ -11,16 +11,18 @@ export async function POST(request: Request) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(2000), // 2s timeout
+            signal: AbortSignal.timeout(9000), // 9s timeout for Render cold start
         });
 
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
     } catch (error: any) {
         console.error('Login Proxy Error:', error.message || error);
+        const isTimeout = error.name === 'TimeoutError' || error.message?.includes('timeout');
         return NextResponse.json({
-            error: "BACKEND CONNECTION FAILED",
-            details: error.message || "Unknown error"
+            error: isTimeout ? "BACKEND WAKEUP TIMEOUT" : "BACKEND CONNECTION FAILED",
+            details: error.message || "Unknown error",
+            hint: isTimeout ? "Render is still waking up. Wait 15s and try again." : "Check if PYTHON_API_URL is correct on Vercel."
         }, { status: 503 });
     }
 }

@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get('user_id');
 
     try {
-        const res = await fetch(`${PYTHON_API}/daily_challenge?user_id=${userId}`);
+        const res = await fetch(`${PYTHON_API}/daily_challenge?user_id=${userId}`, { signal: AbortSignal.timeout(9000) });
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
     } catch (error) {

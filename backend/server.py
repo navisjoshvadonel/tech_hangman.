@@ -15,11 +15,9 @@ DB_PATH = os.environ.get('DB_PATH', 'hangman.db')
 def index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('.', path)
-
-
+@app.route('/api/ping')
+def ping():
+    return jsonify({"status": "active", "timestamp": datetime.now().isoformat()}), 200
 
 # === Database Helpers ===
 def init_db():
