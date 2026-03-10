@@ -172,7 +172,8 @@ def init_db():
     
     # NEW: Self-healing check for words
     execute_query(c, 'SELECT COUNT(*) FROM Words')
-    count = c.fetchone()[0]
+    res = c.fetchone()
+    count = res[0] if not isinstance(res, dict) else list(res.values())[0]
     if count == 0:
         print("WORDS TABLE EMPTY: Automatically populating from words.py...")
         from words import CATEGORIZED_WORDS
@@ -213,7 +214,19 @@ def login():
     if not user:
         conn.close()
         return jsonify({"error": f'Callsign "{username}" not found. If you are new, use the NEW RECRUIT tab!'}), 404
+
+    # Handle both dictionary results (MySQL) and tuple results (SQLite)
+    if isinstance(user, dict):
+        user_id = user['id']
+        high_score = user['highest_score']
+        xp = user['xp']
+        level = user['level']
+        rank = user['rank']
+        total_wins = user['total_wins']
+        total_losses = user['total_losses']
+        story_progress = user['story_progress']
     else:
+        # Tuple-based unpacking
         user_id, _, high_score, xp, level, rank, total_wins, total_losses, story_progress = user
         
     conn.close()
@@ -358,7 +371,13 @@ def get_word():
         execute_query(c, 
 'SELECT id, word, hint, category, description FROM Words WHERE category = ? AND difficulty = ?', (category, difficulty))
     
-    all_words = [{"id": row[0], "word": row[1], "hint": row[2], "category": row[3], "description": row[4]} for row in c.fetchall()]
+    raw_rows = c.fetchall()
+    all_words = []
+    for row in raw_rows:
+        if isinstance(row, dict):
+            all_words.append({"id": row['id'], "word": row['word'], "hint": row['hint'], "category": row['category'], "description": row['description']})
+        else:
+            all_words.append({"id": row[0], "word": row[1], "hint": row[2], "category": row[3], "description": row[4]})
 
     if not all_words:
         conn.close()
@@ -367,7 +386,13 @@ def get_word():
     # Get words already solved by this user (Accurate tracking)
     execute_query(c, 
 'SELECT word_id FROM UserWordProgress WHERE user_id = ?', (user_id,))
-    solved_word_ids = {row[0] for row in c.fetchall()}
+    raw_solved = c.fetchall()
+    solved_word_ids = set()
+    for row in raw_solved:
+        if isinstance(row, dict):
+            solved_word_ids.add(row['word_id'])
+        else:
+            solved_word_ids.add(row[0])
     
     # Filter words that have already been played
     available_words = [w for w in all_words if w["id"] not in solved_word_ids]
@@ -432,7 +457,19 @@ def submit_score():
         conn.close()
         return jsonify({"error": "User not found"}), 404
         
-    current_high, current_xp, current_level, current_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress = row
+    if isinstance(row, dict):
+        current_high = row['highest_score']
+        current_xp = row['xp']
+        current_level = row['level']
+        current_rank = row['rank']
+        total_wins = row['total_wins']
+        total_losses = row['total_losses']
+        fastest_win_seconds = row['fastest_win_seconds']
+        current_streak = row['current_streak']
+        longest_streak = row['longest_streak']
+        story_progress = row['story_progress']
+    else:
+        current_high, current_xp, current_level, current_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress = row
     
     # --- MEANINGFUL SCORING SYSTEM ---
     # Multipliers based on difficulty
