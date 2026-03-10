@@ -40,12 +40,13 @@ def get_db_connection():
                 password=url.password,
                 database=url.path.lstrip('/'),
                 auth_plugin='mysql_native_password',
-                ssl_disabled=False # Force SSL for Aiven
+                ssl_disabled=False,
+                connect_timeout=10 # Give it 10 seconds
             )
             return conn
         except Exception as e:
-            print(f"FAILED TO CONNECT TO MYSQL: {e}")
-            # Fallback to SQLite if MySQL fails
+            print(f"!!! CRITICAL MYSQL ERROR !!!: {str(e)}")
+            # Fallback to local SQLite so the site doesn't stay "Dead"
             import sqlite3
             conn = sqlite3.connect(DEFAULT_DB_PATH, timeout=20)
             conn.row_factory = sqlite3.Row
@@ -95,41 +96,40 @@ def init_db():
     # User Table
     execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INT PRIMARY KEY AUTO_INCREMENT,
             username VARCHAR(255) UNIQUE,
-            highest_score INTEGER DEFAULT 0
+            highest_score INT DEFAULT 0
         )
     ''')
     
     # Safe Migrations for Phase 2: Add progression columns if they don't exist
     new_columns = [
-        ("xp", "INTEGER DEFAULT 0"),
-        ("level", "INTEGER DEFAULT 1"),
+        ("xp", "INT DEFAULT 0"),
+        ("level", "INT DEFAULT 1"),
         ("rank", "VARCHAR(255) DEFAULT 'Beginner'"),
-        ("total_wins", "INTEGER DEFAULT 0"),
-        ("total_losses", "INTEGER DEFAULT 0"),
-        ("fastest_win_seconds", "INTEGER DEFAULT 999999"),
-        ("current_streak", "INTEGER DEFAULT 0"),
-        ("longest_streak", "INTEGER DEFAULT 0"),
+        ("total_wins", "INT DEFAULT 0"),
+        ("total_losses", "INT DEFAULT 0"),
+        ("fastest_win_seconds", "INT DEFAULT 999999"),
+        ("current_streak", "INT DEFAULT 0"),
+        ("longest_streak", "INT DEFAULT 0"),
         ("guessed_words", "VARCHAR(255) DEFAULT '[]'"),
         ("last_daily_date", "VARCHAR(255) DEFAULT ''"),
-        ("hints_used", "INTEGER DEFAULT 0"),
-        ("total_games", "INTEGER DEFAULT 0"),
-        ("story_progress", "INTEGER DEFAULT 1")
+        ("hints_used", "INT DEFAULT 0"),
+        ("total_games", "INT DEFAULT 0"),
+        ("story_progress", "INT DEFAULT 1")
     ]
     
     for col_name, col_type in new_columns:
         try:
-            # MySQL uses different ALTER syntax if we want to be safe, but let's try common
             execute_query(c, f'ALTER TABLE Users ADD COLUMN {col_name} {col_type}')
-        except Exception as e:
-            pass # Column likely exists or error in syntax handled by pass
+        except Exception:
+            pass 
             
     # Achievements table
     execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Achievements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            user_id INT,
             achievement_name VARCHAR(255),
             FOREIGN KEY(user_id) REFERENCES Users(id)
         )
@@ -138,7 +138,7 @@ def init_db():
     # NEW: Words table for massive database
     execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Words (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INT PRIMARY KEY AUTO_INCREMENT,
             word VARCHAR(255) UNIQUE,
             hint TEXT,
             category VARCHAR(255),
