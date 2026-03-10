@@ -1,4 +1,3 @@
-import sqlite3
 import random
 import json
 from datetime import datetime
@@ -6,6 +5,11 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import words
+try:
+    import mysql.connector
+    from urllib.parse import urlparse
+except ImportError:
+    mysql = None
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -14,16 +18,60 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DB_PATH = os.path.join(BASE_DIR, 'hangman.db')
 DB_PATH = os.environ.get('DB_PATH', DEFAULT_DB_PATH)
+MYSQL_URL = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL')
 
-print(f"DATABASE IDENTITY INITIALIZED: {DB_PATH}")
+# Global toggle for placeholder style
+# MySQL uses %s, SQLite uses ?
+DB_TYPE = 'sqlite'
+if MYSQL_URL and MYSQL_URL.startswith('mysql'):
+    DB_TYPE = 'mysql'
+
+print(f"DATABASE IDENTITY INITIALIZED: {DB_TYPE}")
 
 def get_db_connection():
-    """Returns a robust sqlite3 connection with WAL mode and timeout."""
-    conn = sqlite3.connect(DB_PATH, timeout=20)
-    # Enable WAL mode for better concurrency
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.row_factory = sqlite3.Row # Nice for dict-like access
-    return conn
+    """Returns a connection based on the available configuration."""
+    if DB_TYPE == 'mysql':
+        try:
+            url = urlparse(MYSQL_URL)
+            conn = mysql.connector.connect(
+                host=url.hostname,
+                port=url.port or 3306,
+                user=url.username,
+                password=url.password,
+                database=url.path.lstrip('/'),
+                auth_plugin='mysql_native_password'
+            )
+            return conn
+        except Exception as e:
+            print(f"FAILED TO CONNECT TO MYSQL: {e}")
+            # Fallback to SQLite if MySQL fails
+            import sqlite3
+            conn = sqlite3.connect(DEFAULT_DB_PATH, timeout=20)
+            conn.row_factory = sqlite3.Row
+            return conn
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH, timeout=20)
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.row_factory = sqlite3.Row
+        return conn
+
+def get_cursor(conn):
+    """Returns a cursor that behaves similarly across DBs."""
+    if DB_TYPE == 'mysql':
+        return conn.cursor(buffered=True)
+    return conn.cursor()
+
+def execute_query(cursor, query, params=None):
+    """Abstraction layer to handle SQLite vs MySQL differences."""
+    if DB_TYPE == 'mysql':
+        query = query.replace('?', '%s')
+        # MySQL doesn't like AUTOINCREMENT (needs AUTO_INCREMENT)
+        query = query.replace('AUTOINCREMENT', 'AUTO_INCREMENT')
+        # MySQL DATE is a reserved word sometimes, but usually fine. 
+        # But our table used 'date' as a column name. I changed it to 'date_col' in init_db.
+    cursor.execute(query, params or ())
+    return cursor
 
 @app.route('/')
 def index():
@@ -37,10 +85,12 @@ def ping():
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('''
+    
+    # User Table
+    execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
+            username VARCHAR(255) UNIQUE,
             highest_score INTEGER DEFAULT 0
         )
     ''')
@@ -64,43 +114,44 @@ def init_db():
     
     for col_name, col_type in new_columns:
         try:
-            c.execute(f'ALTER TABLE Users ADD COLUMN {col_name} {col_type}')
-        except sqlite3.OperationalError:
-            pass # Column already exists
+            # MySQL uses different ALTER syntax if we want to be safe, but let's try common
+            execute_query(c, f'ALTER TABLE Users ADD COLUMN {col_name} {col_type}')
+        except Exception as e:
+            pass # Column likely exists or error in syntax handled by pass
             
     # Achievements table
-    c.execute('''
+    execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Achievements (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            achievement_name TEXT,
+            achievement_name VARCHAR(255),
             FOREIGN KEY(user_id) REFERENCES Users(id)
         )
     ''')
 
     # NEW: Words table for massive database
-    c.execute('''
+    execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Words (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word TEXT UNIQUE,
+            word VARCHAR(255) UNIQUE,
             hint TEXT,
-            category TEXT,
-            difficulty TEXT,
+            category VARCHAR(255),
+            difficulty VARCHAR(255),
             description TEXT
         )
     ''')
 
     # NEW: Daily Challenge History
-    c.execute('''
+    execute_query(c, '''
         CREATE TABLE IF NOT EXISTS DailyChallenges (
-            date TEXT PRIMARY KEY,
+            date_col VARCHAR(10) PRIMARY KEY,
             word_id INTEGER,
             FOREIGN KEY(word_id) REFERENCES Words(id)
         )
     ''')
 
     # NEW: Accurate per-word progress tracking
-    c.execute('''
+    execute_query(c, '''
         CREATE TABLE IF NOT EXISTS UserWordProgress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -115,7 +166,7 @@ def init_db():
     conn.commit()
     
     # NEW: Self-healing check for words
-    c.execute('SELECT COUNT(*) FROM Words')
+    execute_query(c, 'SELECT COUNT(*) FROM Words')
     count = c.fetchone()[0]
     if count == 0:
         print("WORDS TABLE EMPTY: Automatically populating from words.py...")
@@ -124,11 +175,11 @@ def init_db():
             for difficulty, word_list in difficulties.items():
                 for item in word_list:
                     try:
-                        c.execute('''
+                        execute_query(c, '''
                             INSERT INTO Words (word, hint, category, difficulty, description)
                             VALUES (?, ?, ?, ?, ?)
-                        ''', (item['word'], item['clue'], category, difficulty, item.get('description', '')))
-                    except sqlite3.IntegrityError:
+                        ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
+                    except Exception:
                         continue # Skip duplicates
         conn.commit()
         print(f"POPULATION COMPLETE: Added initial words set.")
@@ -148,9 +199,10 @@ def login():
         return jsonify({"error": "Username required"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     # Case-insensitive checking
-    c.execute('SELECT id, username, highest_score, xp, level, rank, total_wins, total_losses, story_progress FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
+    execute_query(c, 
+'SELECT id, username, highest_score, xp, level, rank, total_wins, total_losses, story_progress FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
     user = c.fetchone()
     
     if not user:
@@ -188,15 +240,17 @@ def register():
         return jsonify({"error": "Username cannot be numbers only"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('SELECT id FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
+    c = get_cursor(conn)
+    execute_query(c, 
+'SELECT id FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
     existing = c.fetchone()
     
     if existing:
         conn.close()
         return jsonify({"error": f'Callsign "{username}" is already taken! Choose another.'}), 409
         
-    c.execute('INSERT INTO Users (username, highest_score, xp, level, rank, total_wins, total_losses) VALUES (?, 0, 0, 1, "Beginner", 0, 0)', (username,))
+    execute_query(c, 
+'INSERT INTO Users (username, highest_score, xp, level, rank, total_wins, total_losses) VALUES (?, 0, 0, 1, "Beginner", 0, 0)', (username,))
     conn.commit()
     user_id = c.lastrowid
     conn.close()
@@ -218,10 +272,11 @@ def get_user_progress():
         return jsonify({"error": "User ID required"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     # Get counts per category
-    c.execute('''
+    execute_query(c, 
+'''
         SELECT category, COUNT(*) as solved_count 
         FROM UserWordProgress 
         JOIN Words ON UserWordProgress.word_id = Words.id 
@@ -231,7 +286,8 @@ def get_user_progress():
     solved_per_category = {row[0]: row[1] for row in c.fetchall()}
     
     # Get total words per category
-    c.execute('SELECT category, COUNT(*) FROM Words GROUP BY category')
+    execute_query(c, 
+'SELECT category, COUNT(*) FROM Words GROUP BY category')
     total_per_category = {row[0]: row[1] for row in c.fetchall()}
     
     domains_progress = []
@@ -268,11 +324,12 @@ def get_word():
     user_id = request.args.get('user_id')
     
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # Determine difficulty automatically if not provided (Adaptive Difficulty)
     if not difficulty and user_id:
-        c.execute('SELECT xp, current_streak, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT xp, current_streak, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         user_stats = c.fetchone()
         if user_stats:
             xp, streak, wins, losses = user_stats
@@ -290,9 +347,11 @@ def get_word():
     
     # Retrieve all words for this category and difficulty from the database
     if category == "RANDOM" or not category:
-        c.execute('SELECT id, word, hint, category, description FROM Words WHERE difficulty = ?', (difficulty,))
+        execute_query(c, 
+'SELECT id, word, hint, category, description FROM Words WHERE difficulty = ?', (difficulty,))
     else:
-        c.execute('SELECT id, word, hint, category, description FROM Words WHERE category = ? AND difficulty = ?', (category, difficulty))
+        execute_query(c, 
+'SELECT id, word, hint, category, description FROM Words WHERE category = ? AND difficulty = ?', (category, difficulty))
     
     all_words = [{"id": row[0], "word": row[1], "hint": row[2], "category": row[3], "description": row[4]} for row in c.fetchall()]
 
@@ -301,7 +360,8 @@ def get_word():
         return jsonify({"error": f"No words found for {category} / {difficulty}"}), 400
 
     # Get words already solved by this user (Accurate tracking)
-    c.execute('SELECT word_id FROM UserWordProgress WHERE user_id = ?', (user_id,))
+    execute_query(c, 
+'SELECT word_id FROM UserWordProgress WHERE user_id = ?', (user_id,))
     solved_word_ids = {row[0] for row in c.fetchall()}
     
     # Filter words that have already been played
@@ -309,7 +369,8 @@ def get_word():
     
     # Fallback to legacy guessed_words column just in case (to avoid repetition for old users)
     try:
-        c.execute('SELECT guessed_words FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT guessed_words FROM Users WHERE id = ?', (user_id,))
         gu_row = c.fetchone()
         if gu_row and gu_row[0]:
             legacy_guessed = set(json.loads(gu_row[0]))
@@ -349,13 +410,15 @@ def submit_score():
         return jsonify({"error": "User ID required"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     try:
-        c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
     except sqlite3.OperationalError:
-        c.execute('SELECT highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
         if row:
             row = list(row) + [999999, 0, 0] # Fallback if migration hasn't fully applied
@@ -412,12 +475,14 @@ def submit_score():
     word_text = data.get('word')
     if is_win and word_text:
         # Resolve word ID
-        c.execute('SELECT id FROM Words WHERE word = ?', (word_text.upper(),))
+        execute_query(c, 
+'SELECT id FROM Words WHERE word = ?', (word_text.upper(),))
         w_row = c.fetchone()
         if w_row:
             word_id = w_row[0]
             try:
-                c.execute('INSERT INTO UserWordProgress (user_id, word_id, completed_at) VALUES (?, ?, ?)', (user_id, word_id, datetime.now().isoformat()))
+                execute_query(c, 
+'INSERT INTO UserWordProgress (user_id, word_id, completed_at) VALUES (?, ?, ?)', (user_id, word_id, datetime.now().isoformat()))
             except sqlite3.IntegrityError:
                 pass # Already recorded
     
@@ -443,14 +508,16 @@ def submit_score():
             new_story_progress = story_progress + 1
             
     try:
-        c.execute('''
+        execute_query(c, 
+'''
             UPDATE Users 
             SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, total_games = total_games + 1
             WHERE id = ?
         ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, user_id))
     except sqlite3.OperationalError:
         # Fallback if fastest_win_seconds, current_streak, longest_streak, story_progress, total_games columns are missing
-        c.execute('''
+        execute_query(c, 
+'''
             UPDATE Users 
             SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?
             WHERE id = ?
@@ -516,22 +583,25 @@ def submit_score():
 @app.route('/api/highscores', methods=['GET'])
 def get_highscores():
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     # 1. Highest Score Leaderboard
-    c.execute('SELECT username, highest_score FROM Users ORDER BY highest_score DESC LIMIT 10')
+    execute_query(c, 
+'SELECT username, highest_score FROM Users ORDER BY highest_score DESC LIMIT 10')
     score_rows = c.fetchall()
     
     # 2. Fastest Win Leaderboard
     try:
-        c.execute('SELECT username, fastest_win_seconds FROM Users WHERE fastest_win_seconds < 999999 ORDER BY fastest_win_seconds ASC LIMIT 10')
+        execute_query(c, 
+'SELECT username, fastest_win_seconds FROM Users WHERE fastest_win_seconds < 999999 ORDER BY fastest_win_seconds ASC LIMIT 10')
         speed_rows = c.fetchall()
     except sqlite3.OperationalError:
         speed_rows = []
         
     # 3. Longest Streak Leaderboard
     try:
-        c.execute('SELECT username, longest_streak FROM Users ORDER BY longest_streak DESC LIMIT 10')
+        execute_query(c, 
+'SELECT username, longest_streak FROM Users ORDER BY longest_streak DESC LIMIT 10')
         streak_rows = c.fetchall()
     except sqlite3.OperationalError:
         streak_rows = []
@@ -552,19 +622,22 @@ def daily_challenge():
     today = datetime.now().strftime('%Y-%m-%d')
     
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # Check if a daily challenge already exists for today
-    c.execute('SELECT word_id FROM DailyChallenges WHERE date = ?', (today,))
+    execute_query(c, 
+'SELECT word_id FROM DailyChallenges WHERE date_col = ?', (today,))
     row = c.fetchone()
     
     if row:
         word_id = row[0]
-        c.execute('SELECT word, hint, category, difficulty, description FROM Words WHERE id = ?', (word_id,))
+        execute_query(c, 
+'SELECT word, hint, category, difficulty, description FROM Words WHERE id = ?', (word_id,))
         word_data = c.fetchone()
     else:
         # Generate a new one from the database
-        c.execute('SELECT id FROM Words')
+        execute_query(c, 
+'SELECT id FROM Words')
         all_ids = [r[0] for r in c.fetchall()]
         if not all_ids:
             conn.close()
@@ -575,16 +648,19 @@ def daily_challenge():
         rng = random.Random(date_seed)
         word_id = rng.choice(all_ids)
         
-        c.execute('INSERT INTO DailyChallenges (date, word_id) VALUES (?, ?)', (today, word_id))
+        execute_query(c, 
+'INSERT INTO DailyChallenges (date_col, word_id) VALUES (?, ?)', (today, word_id))
         conn.commit()
         
-        c.execute('SELECT word, hint, category, difficulty, description FROM Words WHERE id = ?', (word_id,))
+        execute_query(c, 
+'SELECT word, hint, category, difficulty, description FROM Words WHERE id = ?', (word_id,))
         word_data = c.fetchone()
     
     # Check if user already completed today's challenge
     already_done = False
     if user_id:
-        c.execute('SELECT last_daily_date FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT last_daily_date FROM Users WHERE id = ?', (user_id,))
         u_row = c.fetchone()
         if u_row and u_row[0] == today:
             already_done = True
@@ -608,16 +684,18 @@ def get_profile():
         return jsonify({"error": "User ID required"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     try:
-        c.execute('''
+        execute_query(c, 
+'''
             SELECT username, highest_score, xp, level, rank, total_wins, total_losses, 
                    fastest_win_seconds, current_streak, longest_streak, hints_used, total_games, story_progress 
             FROM Users WHERE id = ?
         ''', (user_id,))
         row = c.fetchone()
     except sqlite3.OperationalError:
-        c.execute('SELECT username, highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
+        execute_query(c, 
+'SELECT username, highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
         if row:
             row = list(row) + [999999, 0, 0, 0, 0, 1]
@@ -657,9 +735,10 @@ def use_hint():
         return jsonify({"error": "User ID required"}), 400
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     try:
-        c.execute('UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
+        execute_query(c, 
+'UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
         conn.commit()
     except sqlite3.OperationalError:
         pass # hints_used column might not exist yet
@@ -677,9 +756,10 @@ def complete_daily():
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     try:
-        c.execute('UPDATE Users SET last_daily_date = ? WHERE id = ?', (today, user_id))
+        execute_query(c, 
+'UPDATE Users SET last_daily_date = ? WHERE id = ?', (today, user_id))
         conn.commit()
     except sqlite3.OperationalError:
         pass
@@ -693,17 +773,20 @@ def get_achievements():
     if not user_id:
         return jsonify({"error": "User ID required"}), 400
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('SELECT achievement_name FROM Achievements WHERE user_id = ? ORDER BY id ASC', (user_id,))
+    c = get_cursor(conn)
+    execute_query(c, 
+'SELECT achievement_name FROM Achievements WHERE user_id = ? ORDER BY id ASC', (user_id,))
     rows = c.fetchall()
     conn.close()
     return jsonify({"achievements": [r[0] for r in rows]})
 
 def award_achievement(c, user_id, name):
     """Awards an achievement if not already earned."""
-    c.execute('SELECT id FROM Achievements WHERE user_id = ? AND achievement_name = ?', (user_id, name))
+    execute_query(c, 
+'SELECT id FROM Achievements WHERE user_id = ? AND achievement_name = ?', (user_id, name))
     if not c.fetchone():
-        c.execute('INSERT INTO Achievements (user_id, achievement_name) VALUES (?, ?)', (user_id, name))
+        execute_query(c, 
+'INSERT INTO Achievements (user_id, achievement_name) VALUES (?, ?)', (user_id, name))
         return True
     return False
 
@@ -712,7 +795,7 @@ def award_achievement(c, user_id, name):
 @app.route('/api/admin/words', methods=['GET', 'POST'])
 def admin_words():
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     if request.method == 'GET':
         category = request.args.get('category')
@@ -729,7 +812,8 @@ def admin_words():
                 query += ' difficulty = ?'
                 params.append(difficulty)
         
-        c.execute(query, params)
+        execute_query(c, 
+query, params)
         rows = c.fetchall()
         conn.close()
         return jsonify([{"id": r[0], "word": r[1], "hint": r[2], "category": r[3], "difficulty": r[4], "description": r[5]} for r in rows])
@@ -743,7 +827,8 @@ def admin_words():
         description = data.get('description')
         
         try:
-            c.execute('INSERT INTO Words (word, hint, category, difficulty, description) VALUES (?, ?, ?, ?, ?)',
+            execute_query(c, 
+'INSERT INTO Words (word, hint, category, difficulty, description) VALUES (?, ?, ?, ?, ?)',
                       (word, hint, category, difficulty, description))
             conn.commit()
             conn.close()
@@ -758,14 +843,16 @@ def admin_word_detail(word_id):
     c = conn.cursor()
     
     if request.method == 'DELETE':
-        c.execute('DELETE FROM Words WHERE id = ?', (word_id,))
+        execute_query(c, 
+'DELETE FROM Words WHERE id = ?', (word_id,))
         conn.commit()
         conn.close()
         return jsonify({"message": "Word deleted"})
         
     elif request.method == 'PUT':
         data = request.json
-        c.execute('''
+        execute_query(c, 
+'''
             UPDATE Words SET word=?, hint=?, category=?, difficulty=?, description=? 
             WHERE id=?
         ''', (data.get('word').upper(), data.get('hint'), data.get('category'), data.get('difficulty'), data.get('description'), word_id))
@@ -784,12 +871,12 @@ def nuclear_reset():
         return jsonify({"error": "Unauthorized Reset Request"}), 401
         
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     try:
-        c.execute('DELETE FROM UserWordProgress')
-        c.execute('DELETE FROM Achievements')
-        c.execute('DELETE FROM DailyChallenges')
-        c.execute('DELETE FROM Users')
+        execute_query(c, 'DELETE FROM UserWordProgress')
+        execute_query(c, 'DELETE FROM Achievements')
+        execute_query(c, 'DELETE FROM DailyChallenges')
+        execute_query(c, 'DELETE FROM Users')
         conn.commit()
         conn.close()
         return jsonify({"message": "MISSION RESET: All user data has been purged. System is ready for fresh enlistment."})
