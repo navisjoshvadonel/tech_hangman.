@@ -24,6 +24,7 @@ let highestScore = 0;
 let currentXp = 0;
 let currentRank = "Beginner";
 let currentLevel = 1;
+let currentStoryProgress = 1;
 
 // Timing State
 let gameStartTime = 0;
@@ -160,8 +161,8 @@ function applyUserSession(data) {
   currentStoryProgress = data.story_progress || 1;
   currentScore = 0;
 
-  currentUserSpan.innerText = `USER: ${currentUser.toUpperCase()}`;
-  currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+  currentUserSpan.innerText = `USER: ${currentUser.toUpperCase().replace(/_/g, " ")}`;
+  currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
   currentXpSpan.innerText = `EXP: ${currentXp}`;
   highScoreSpan.innerText = `${highestScore}`;
   updateScoreUI();
@@ -189,8 +190,8 @@ function updateAgentHUD() {
   const xpText = document.getElementById("hud-xp-text");
   const storyEl = document.getElementById("hud-story");
 
-  if (userEl) userEl.innerText = currentUser.toUpperCase();
-  if (rankEl) rankEl.innerText = currentRank.toUpperCase();
+  if (userEl) userEl.innerText = currentUser.toUpperCase().replace(/_/g, " ");
+  if (rankEl) rankEl.innerText = currentRank.toUpperCase().replace(/_/g, " ");
   if (levelEl) levelEl.innerText = currentLevel;
   if (storyEl) storyEl.innerText = `LVL ${currentStoryProgress}`;
 
@@ -363,7 +364,7 @@ async function initGame() {
   gameContainer.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
   redOverlay.classList.remove("active");
   popup.classList.remove("show", "popup-win", "popup-loss");
-  clueText.innerText = "FETCHING_DATA...";
+  clueText.innerText = "GENERATING CLUE...";
 
   // Hide Escape Container
   const escapeContainer = document.getElementById("escape-container");
@@ -423,7 +424,7 @@ async function initGame() {
     }
   } catch (err) {
     console.error("Word Fetch Error", err);
-    clueText.innerText = "ERROR_FETCHING_DATA";
+    clueText.innerText = "ERROR GENERATING CLUE";
   }
 }
 

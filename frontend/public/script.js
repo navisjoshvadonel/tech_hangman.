@@ -151,8 +151,8 @@ function applyUserSession(data) {
   storyProgress = data.story_progress || 1;
   currentScore = 0;
 
-  currentUserSpan.innerText = `AGENT: ${currentUser.toUpperCase()}`;
-  if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+  currentUserSpan.innerText = `AGENT: ${currentUser.toUpperCase().replace(/_/g, " ")}`;
+  if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
   currentXpSpan.innerText = `EXP: ${currentXp}`;
   highScoreSpan.innerText = `${highestScore}`;
   updateScoreUI();
@@ -188,8 +188,8 @@ function updateAgentHUD() {
   const xpText = document.getElementById("hud-xp-text");
   const storyEl = document.getElementById("hud-story");
 
-  if (userEl) userEl.innerText = currentUser.toUpperCase();
-  if (rankEl) rankEl.innerText = currentRank.toUpperCase();
+  if (userEl) userEl.innerText = currentUser.toUpperCase().replace(/_/g, " ");
+  if (rankEl) rankEl.innerText = currentRank.toUpperCase().replace(/_/g, " ");
   if (levelEl) levelEl.innerText = currentLevel;
   if (storyEl) storyEl.innerText = `LVL ${storyProgress}`;
 
@@ -385,7 +385,7 @@ const clueDisplayV2 = document.getElementById("clue-display-v2");
 if (hintRevealCat) {
   hintRevealCat.addEventListener("click", () => {
     if (isGameOver) return;
-    clueDisplayV2.innerText = `CATEGORY: ${currentWordData.category}`;
+    clueDisplayV2.innerText = `CATEGORY: ${currentWordData.category.replace(/_/g, " ")}`;
     hintDisplayArea.classList.remove("hidden");
     hintRevealCat.classList.add("disabled");
     hintRevealCat.disabled = true;
@@ -467,14 +467,14 @@ async function initGame() {
   // Clue display should be visible immediately in new layout
   if (clueDisplay) {
     clueDisplay.classList.remove("hidden");
-    clueText.innerText = "DECRYPTING...";
+    clueText.innerText = "GENERATING CLUE...";
   }
 
   // Reset DOM Classes
   gameContainer.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
   redOverlay.classList.remove("active");
   popup.classList.remove("show", "popup-win", "popup-loss");
-  clueText.innerText = "FETCHING_DATA...";
+  clueText.innerText = "GENERATING CLUE...";
 
   const progressBar = document.getElementById("game-progress-bar");
   if (progressBar) progressBar.style.width = "0%";
@@ -541,7 +541,7 @@ async function initGame() {
     }
   } catch (err) {
     console.error("Word Fetch Error", err);
-    clueText.innerText = "ERROR_FETCHING_DATA";
+    clueText.innerText = "ERROR GENERATING CLUE";
   }
 }
 
@@ -581,7 +581,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       currentLevel = data.level;
       storyProgress = data.story_progress || storyProgress;
       currentXpSpan.innerText = `EXP: ${currentXp}`;
-      currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase()}`;
+      currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
       updateStoryUI();
       updateAgentHUD();
     }
