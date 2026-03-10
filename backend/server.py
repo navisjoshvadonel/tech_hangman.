@@ -269,7 +269,7 @@ def register():
         return jsonify({"error": f'Callsign "{username}" is already taken! Choose another.'}), 409
         
     execute_query(c, 
-'INSERT INTO Users (username, highest_score, xp, level, rank, total_wins, total_losses) VALUES (?, 0, 0, 1, "Beginner", 0, 0)', (username,))
+'INSERT INTO Users (username, highest_score, xp, level, rank, total_wins, total_losses) VALUES (?, 0, 0, 1, \'Beginner\', 0, 0)', (username,))
     conn.commit()
     user_id = c.lastrowid
     conn.close()
