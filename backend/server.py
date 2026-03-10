@@ -39,7 +39,8 @@ def get_db_connection():
                 user=url.username,
                 password=url.password,
                 database=url.path.lstrip('/'),
-                auth_plugin='mysql_native_password'
+                auth_plugin='mysql_native_password',
+                ssl_disabled=False # Force SSL for Aiven
             )
             return conn
         except Exception as e:
@@ -104,14 +105,14 @@ def init_db():
     new_columns = [
         ("xp", "INTEGER DEFAULT 0"),
         ("level", "INTEGER DEFAULT 1"),
-        ("rank", "TEXT DEFAULT 'Beginner'"),
+        ("rank", "VARCHAR(255) DEFAULT 'Beginner'"),
         ("total_wins", "INTEGER DEFAULT 0"),
         ("total_losses", "INTEGER DEFAULT 0"),
         ("fastest_win_seconds", "INTEGER DEFAULT 999999"),
         ("current_streak", "INTEGER DEFAULT 0"),
         ("longest_streak", "INTEGER DEFAULT 0"),
-        ("guessed_words", "TEXT DEFAULT '[]'"),
-        ("last_daily_date", "TEXT DEFAULT ''"),
+        ("guessed_words", "VARCHAR(255) DEFAULT '[]'"),
+        ("last_daily_date", "VARCHAR(255) DEFAULT ''"),
         ("hints_used", "INTEGER DEFAULT 0"),
         ("total_games", "INTEGER DEFAULT 0"),
         ("story_progress", "INTEGER DEFAULT 1")
