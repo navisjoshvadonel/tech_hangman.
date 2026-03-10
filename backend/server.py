@@ -41,7 +41,7 @@ def get_db_connection():
                 database=url.path.lstrip('/'),
                 auth_plugin='mysql_native_password',
                 ssl_disabled=False,
-                connect_timeout=10 # Give it 10 seconds
+                connect_timeout=20 # Extra time for slow cold-start cloud DBs
             )
             return conn
         except Exception as e:
@@ -91,7 +91,7 @@ def ping():
 # === Database Helpers ===
 def init_db():
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     # User Table
     execute_query(c, '''
@@ -123,6 +123,12 @@ def init_db():
         try:
             execute_query(c, f'ALTER TABLE Users ADD COLUMN {col_name} {col_type}')
         except Exception:
+            # For MySQL, if column exists, we might need to MODIFY it to fix the VARCHAR type
+            if DB_TYPE == 'mysql':
+                try:
+                    execute_query(c, f'ALTER TABLE Users MODIFY COLUMN {col_name} {col_type}')
+                except:
+                    pass
             pass 
             
     # Achievements table
@@ -649,12 +655,23 @@ def get_highscores():
     except sqlite3.OperationalError:
         streak_rows = []
         
+    def fmt_rows(rows):
+        res = []
+        for r in rows:
+            if isinstance(r, dict):
+                # MySQL returns dict, keys are lowercase usually
+                vals = list(r.values())
+                res.append({"username": vals[0], "val": vals[1]})
+            else:
+                res.append({"username": r[0], "val": r[1]})
+        return res
+
     conn.close()
     
     return jsonify({
-        "score": [{"username": r[0], "val": r[1]} for r in score_rows],
-        "speed": [{"username": r[0], "val": r[1]} for r in speed_rows],
-        "streak": [{"username": r[0], "val": r[1]} for r in streak_rows]
+        "score": fmt_rows(score_rows),
+        "speed": fmt_rows(speed_rows),
+        "streak": fmt_rows(streak_rows)
     })
 
 
@@ -671,6 +688,9 @@ def daily_challenge():
     execute_query(c, 
 'SELECT word_id FROM DailyChallenges WHERE date_col = ?', (today,))
     row = c.fetchone()
+    
+    if row and isinstance(row, dict):
+        row = list(row.values())
     
     if row:
         word_id = row[0]

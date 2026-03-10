@@ -9,7 +9,7 @@ export async function POST(request: Request) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(9000),
+            signal: AbortSignal.timeout(45000),
         });
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
