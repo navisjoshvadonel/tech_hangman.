@@ -39,8 +39,11 @@ def populate():
                     pass
     
     conn.commit()
+    # Final count check
+    execute_query(c, 'SELECT COUNT(*) FROM Words')
+    final_count = c.fetchone()[0]
     conn.close()
-    print(f"Successfully migrated {count} words to the database.")
+    print(f"Migration completed. Total words in DB: {final_count}")
 
 if __name__ == '__main__':
     populate()
