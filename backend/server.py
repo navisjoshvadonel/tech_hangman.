@@ -68,8 +68,13 @@ def execute_query(cursor, query, params=None):
         query = query.replace('?', '%s')
         # MySQL doesn't like AUTOINCREMENT (needs AUTO_INCREMENT)
         query = query.replace('AUTOINCREMENT', 'AUTO_INCREMENT')
-        # MySQL DATE is a reserved word sometimes, but usually fine. 
-        # But our table used 'date' as a column name. I changed it to 'date_col' in init_db.
+        # MySQL reserved keywords: rank, groups, etc.
+        # We wrap them in backticks to avoid syntax errors.
+        keywords = ['rank', 'groups', 'order', 'select', 'table']
+        for kw in keywords:
+            # Replace as a whole word only
+            import re
+            query = re.sub(rf'\b{kw}\b', f'`{kw}`', query, flags=re.IGNORECASE)
     cursor.execute(query, params or ())
     return cursor
 
