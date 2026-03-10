@@ -70,7 +70,7 @@ def execute_query(cursor, query, params=None):
         query = query.replace('AUTOINCREMENT', 'AUTO_INCREMENT')
         # MySQL reserved keywords: rank, groups, etc.
         # We wrap them in backticks to avoid syntax errors.
-        keywords = ['rank', 'groups', 'order', 'select', 'table']
+        keywords = ['rank', 'groups']
         for kw in keywords:
             # Replace as a whole word only
             import re
