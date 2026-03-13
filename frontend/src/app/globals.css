@@ -3402,3 +3402,49 @@ h2,
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.72);
 }
+
+/* --- Novel: Districts Layout Fix (keep map readable) --- */
+
+.districts-content {
+  overflow: hidden;
+}
+
+/* Keep the map tall enough so district nodes don't stack into a thin band */
+.districts-map {
+  flex: 0 0 clamp(240px, 36vh, 380px);
+  min-height: 240px;
+}
+
+/* Put the long intel panel in a scroll area instead of shrinking the map */
+.districts-detail {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.district-pill {
+  padding: 8px 10px;
+  max-width: 260px;
+}
+
+.district-pill .name {
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.district-pill .meta {
+  font-size: 0.7rem;
+}
+
+@media (max-width: 720px) {
+  .districts-map {
+    flex-basis: 220px;
+    min-height: 220px;
+  }
+
+  .district-pill {
+    max-width: 78vw;
+  }
+}

@@ -1788,6 +1788,8 @@
         '<div class="name">' + escapeHtml(prettyCat(cat)) + '</div>' +
         '<div class="meta">' + escapeHtml(String(d.solved || 0)) + '/' + escapeHtml(String(d.total || 0)) + ' nodes | ' + escapeHtml(String(pct)) + '%</div>';
 
+      pill.title = prettyCat(cat) + ' - ' + String(d.solved || 0) + '/' + String(d.total || 0) + ' nodes';
+
       pill.addEventListener('click', () => {
         renderDistrictDetail(d, progress);
         if (typeof playSfx === 'function') playSfx('click');
