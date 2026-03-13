@@ -3500,3 +3500,64 @@ h2,
   overflow: visible;
   text-overflow: clip;
 }
+
+/* --- Fix: Selection Screen Fits Viewport (no page scroll / no clipped Welcome back) --- */
+
+#selection-screen {
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 20px 14px;
+}
+
+#selection-screen .selection-content-wrapper {
+  width: min(1200px, 100%);
+  max-height: calc(100vh - 40px);
+  min-height: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+}
+
+#selection-screen .selection-left {
+  padding: 24px 22px;
+  padding-right: 22px;
+}
+
+#selection-screen .selection-right {
+  padding: 24px 22px;
+  overflow: auto;
+}
+
+@media (max-height: 820px) {
+  #selection-screen {
+    padding: 12px;
+  }
+
+  #selection-screen .selection-left,
+  #selection-screen .selection-right {
+    padding: 16px 14px;
+  }
+
+  #selection-screen .cross-svg {
+    width: 120px;
+    height: 180px;
+  }
+
+  #selection-screen .bible-quote {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  #selection-screen {
+    padding: 12px;
+  }
+
+  #selection-screen .selection-content-wrapper {
+    max-height: none;
+  }
+
+  #selection-screen .selection-right {
+    overflow: visible;
+  }
+}

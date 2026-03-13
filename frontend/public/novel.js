@@ -18,6 +18,95 @@
   let legacyInitGameRef = null;
 
   // -----------------------------
+  // SFX Extensions (Escape / Death)
+  // -----------------------------
+  function soundEnabled() {
+    try {
+      return typeof isSoundEnabled === 'undefined' ? true : !!isSoundEnabled;
+    } catch {
+      return true;
+    }
+  }
+
+  function playExtendedSfx(kind) {
+    if (!soundEnabled()) return;
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    function env(gain, t0, t1, peak) {
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+    }
+
+    if (kind === 'escape') {
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      const g = ctx.createGain();
+      o1.type = 'triangle';
+      o2.type = 'sine';
+
+      o1.frequency.setValueAtTime(420, now);
+      o1.frequency.exponentialRampToValueAtTime(980, now + 0.55);
+
+      o2.frequency.setValueAtTime(140, now);
+      o2.frequency.exponentialRampToValueAtTime(560, now + 0.55);
+
+      o1.connect(g);
+      o2.connect(g);
+      g.connect(ctx.destination);
+      env(g, now, now + 0.65, 0.08);
+
+      o1.start(now);
+      o2.start(now);
+      o1.stop(now + 0.7);
+      o2.stop(now + 0.7);
+
+      setTimeout(() => {
+        try { ctx.close(); } catch {}
+      }, 900);
+      return;
+    }
+
+    if (kind === 'death') {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(180, now);
+      o.frequency.exponentialRampToValueAtTime(48, now + 0.55);
+      o.connect(g);
+      g.connect(ctx.destination);
+      env(g, now, now + 0.65, 0.09);
+      o.start(now);
+      o.stop(now + 0.7);
+
+      setTimeout(() => {
+        try { ctx.close(); } catch {}
+      }, 900);
+      return;
+    }
+
+    try { ctx.close(); } catch {}
+  }
+
+  if (typeof playSfx === 'function' && !playSfx.__novel_extended__) {
+    const legacyPlaySfx = playSfx;
+    const wrapped = function (type) {
+      if (type === 'escape' || type === 'death') {
+        try { playExtendedSfx(type); } catch {}
+        return;
+      }
+      return legacyPlaySfx(type);
+    };
+    wrapped.__novel_extended__ = true;
+    playSfx = wrapped;
+  }
+
+  // -----------------------------
   // DOM
   // -----------------------------
   const tracePanel = document.getElementById('trace-panel');
@@ -1156,6 +1245,10 @@
   const closeMissionBtn = document.getElementById('close-mission-btn');
 
   let pendingMissionConfig = null;
+  let pendingDuelCode = null;
+
+  // Active duel challenge (code-based)
+  let activeDuel = null;
 
   function toB64Url(str) {
     const b64 = btoa(unescape(encodeURIComponent(str)));
@@ -1484,6 +1577,11 @@
       const cfg = parseMission(token);
       if (cfg) pendingMissionConfig = normalizeMission(cfg);
     }
+
+    const duel = params.get('duel');
+    if (duel) {
+      pendingDuelCode = String(duel).trim();
+    }
   } catch {
     // ignore
   }
@@ -1497,6 +1595,12 @@
         const cfg = pendingMissionConfig;
         pendingMissionConfig = null;
         startMission(cfg).catch(() => {});
+      }
+
+      if (pendingDuelCode) {
+        const code = pendingDuelCode;
+        pendingDuelCode = null;
+        startDuelFromCode(code).catch(() => {});
       }
     };
   }
@@ -1536,6 +1640,419 @@
       },
       true
     );
+  }
+
+  // -----------------------------
+  // Duel Codes (Invite / Join)
+  // -----------------------------
+  const duelOverlayEl = document.getElementById('duel-setup-overlay');
+  const duelWordInputEl = document.getElementById('duel-word-input');
+  const duelErrorEl = document.getElementById('duel-error-msg');
+
+  function normalizeDuelCode(raw) {
+    if (!raw) return '';
+    let s = String(raw).trim();
+
+    try {
+      if (s.includes('duel=')) {
+        const u = new URL(s, window.location.origin);
+        const token = u.searchParams.get('duel');
+        if (token) s = token;
+      }
+    } catch {
+      // ignore
+    }
+
+    s = s.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase();
+    return s;
+  }
+
+  function duelToast(title, msg, color) {
+    if (typeof showToast === 'function') showToast(title, msg, color || '#ff3333');
+  }
+
+  function ensureDuelCodePanel() {
+    if (!duelOverlayEl) return null;
+    if (document.getElementById('duel-code-panel')) return document.getElementById('duel-code-panel');
+
+    const anchor = document.getElementById('duel-error-msg');
+    const host = anchor && anchor.parentElement ? anchor.parentElement : duelOverlayEl;
+
+    const panel = document.createElement('div');
+    panel.id = 'duel-code-panel';
+    panel.style.marginTop = '14px';
+    panel.style.borderTop = '1px solid rgba(255,255,255,0.12)';
+    panel.style.paddingTop = '14px';
+
+    panel.innerHTML =
+      '<div style="color: var(--neon-blue); font-weight: 900; letter-spacing: 3px; margin-bottom: 10px;">DUEL CODES</div>' +
+      '<p class="login-subtitle" style="margin:0 0 10px;">Generate a code and share it. Your friend can join from another device.</p>' +
+
+      '<div class="mission-row">' +
+      '<input id="duel-code-input" type="text" placeholder="PASTE DUEL CODE" autocomplete="off" style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(0,255,204,0.25); background: rgba(0,0,0,0.35); color: rgba(255,255,255,0.9); font-family: Space Mono, monospace;" />' +
+      '<button id="duel-join-btn" class="text-btn highlight-btn">JOIN</button>' +
+      '</div>' +
+
+      '<div class="mission-row" style="margin-top:10px;">' +
+      '<button id="duel-generate-btn" class="text-btn">GENERATE (FROM WORD)</button>' +
+      '<button id="duel-random-btn" class="text-btn">RANDOM CODE</button>' +
+      '</div>' +
+
+      '<textarea id="duel-code-output" class="mission-code-output" readonly rows="2" placeholder="DUEL CODE OUTPUT"></textarea>' +
+
+      '<div class="mission-row">' +
+      '<button id="duel-copy-btn" class="text-btn">COPY</button>' +
+      '<button id="duel-share-btn" class="text-btn">SHARE LINK</button>' +
+      '<button id="duel-start-code-btn" class="text-btn highlight-btn">START CODE</button>' +
+      '</div>' +
+
+      '<div id="duel-leaderboard" style="margin-top:14px;"></div>';
+
+    host.insertBefore(panel, document.getElementById('duel-cancel-btn'));
+    return panel;
+  }
+
+  function renderDuelLeaderboard(rows) {
+    const el = document.getElementById('duel-leaderboard');
+    if (!el) return;
+
+    const safe = Array.isArray(rows) ? rows : [];
+    if (safe.length === 0) {
+      el.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-family: Space Mono, monospace; font-size:0.8rem;">No duel runs yet.</div>';
+      return;
+    }
+
+    const htmlRows = safe
+      .slice(0, 10)
+      .map((r, i) => {
+        const name = escapeHtml(String(r.username || 'UNKNOWN').toUpperCase());
+        const score = escapeHtml(String(r.score ?? 0));
+        const time = escapeHtml(String(r.time_seconds ?? ''));
+        const win = (r.is_win === 1 || r.is_win === true) ? 'WIN' : 'LOSS';
+        return (
+          '<tr>' +
+          '<td style="padding:6px;">#' + (i + 1) + '</td>' +
+          '<td style="padding:6px;">' + name + '</td>' +
+          '<td style="padding:6px;">' + score + '</td>' +
+          '<td style="padding:6px;">' + (time ? time + 's' : '-') + '</td>' +
+          '<td style="padding:6px;">' + win + '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+
+    el.innerHTML =
+      '<div style="color: var(--neon-cyan); font-weight: 900; letter-spacing: 2px; margin-bottom: 10px;">DUEL BOARD</div>' +
+      '<div style="overflow:auto; max-height: 180px;">' +
+      '<table style="width:100%; border-collapse: collapse; font-size: 0.8rem;">' +
+      '<thead>' +
+      '<tr style="color: rgba(255,255,255,0.8)">' +
+      '<th style="text-align:left; padding:6px;">RANK</th>' +
+      '<th style="text-align:left; padding:6px;">AGENT</th>' +
+      '<th style="text-align:left; padding:6px;">SCORE</th>' +
+      '<th style="text-align:left; padding:6px;">TIME</th>' +
+      '<th style="text-align:left; padding:6px;">RESULT</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>' +
+      htmlRows +
+      '</tbody>' +
+      '</table>' +
+      '</div>';
+  }
+
+  async function refreshDuelLeaderboard(code) {
+    const c = normalizeDuelCode(code);
+    if (!c) return;
+
+    try {
+      const res = await fetch(API_URL + '/duel/leaderboard?code=' + encodeURIComponent(c));
+      if (!res.ok) throw new Error('leaderboard');
+      const data = await res.json();
+      renderDuelLeaderboard(data.rows || data || []);
+    } catch {
+      renderDuelLeaderboard([]);
+    }
+  }
+
+  async function createDuelCode(payload) {
+    try {
+      const res = await fetch(API_URL + '/duel/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data && data.error ? data.error : 'create failed');
+      return data;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async function getDuelByCode(code) {
+    const c = normalizeDuelCode(code);
+    if (!c) throw new Error('Invalid duel code');
+
+    const res = await fetch(API_URL + '/duel/get?code=' + encodeURIComponent(c));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data && data.error ? data.error : 'Invalid duel code');
+    return data;
+  }
+
+  function startDuelWord(word, meta) {
+    const w = String(word || '').trim().toUpperCase();
+    if (!w) throw new Error('Empty word');
+
+    const diff = String((meta && meta.difficulty) || 'MEDIUM').toUpperCase();
+    selectedCategory = 'DUEL';
+    selectedDifficulty = MISTAKE_MAPPINGS[diff] ? diff : 'MEDIUM';
+    MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
+
+    currentWord = w;
+    currentWordData = {
+      word: w,
+      clue: 'DUEL_CODE_TARGET',
+      category: 'DUEL',
+      description: 'Duel code challenge. Two agents, one target.',
+    };
+
+    if (typeof clueText !== 'undefined' && clueText) {
+      clueText.innerText = 'DUEL TARGET';
+    }
+
+    if (duelOverlayEl) duelOverlayEl.classList.add('hidden');
+    if (typeof selectionScreen !== 'undefined' && selectionScreen) selectionScreen.classList.add('hidden');
+    if (typeof gameContainer !== 'undefined' && gameContainer) gameContainer.classList.remove('hidden');
+
+    guessedLetters = [];
+    wrongGuesses = 0;
+    isGameOver = false;
+    hintsUsed = 0;
+    gameStartTime = Date.now();
+
+    if (typeof renderWord === 'function') renderWord();
+    if (typeof renderKeyboard === 'function') renderKeyboard();
+
+    activeDuel = meta && meta.code ? {
+      code: normalizeDuelCode(meta.code),
+      created_by: meta.created_by || null,
+    } : null;
+
+    duelToast('DUEL ENGAGED', 'Code loaded. Share the same code so both of you crack the same target.', '#ff3333');
+    refreshDuelLeaderboard(activeDuel && activeDuel.code).catch(() => {});
+  }
+
+  async function startDuelFromCode(rawCode) {
+    const panel = ensureDuelCodePanel();
+    const code = normalizeDuelCode(rawCode);
+    if (!code) {
+      duelToast('INVALID CODE', 'Paste a duel code like ABC12345.', '#ff3333');
+      throw new Error('invalid');
+    }
+
+    const data = await getDuelByCode(code);
+    const word = String(data.word || '').toUpperCase();
+
+    startDuelWord(word, {
+      code: code,
+      difficulty: data.difficulty || 'MEDIUM',
+      created_by: data.creator_user_id || null,
+    });
+
+    // Keep the code in the panel for quick sharing
+    const out = document.getElementById('duel-code-output');
+    const inp = document.getElementById('duel-code-input');
+    if (out) out.value = code;
+    if (inp) inp.value = code;
+
+    return true;
+  }
+
+  async function submitDuelRun(isWin) {
+    if (!activeDuel || !activeDuel.code || !currentUserId) return;
+
+    const seconds = Math.floor((Date.now() - gameStartTime) / 1000);
+    try {
+      await fetch(API_URL + '/duel/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          code: activeDuel.code,
+          score: currentScore,
+          time_seconds: seconds,
+          is_win: !!isWin,
+        }),
+      });
+    } catch {
+      // ignore
+    }
+
+    refreshDuelLeaderboard(activeDuel.code).catch(() => {});
+  }
+
+  // Inject UI and wire events
+  const duelPanel = ensureDuelCodePanel();
+  if (duelPanel) {
+    const codeInput = document.getElementById('duel-code-input');
+    const codeOutput = document.getElementById('duel-code-output');
+
+    const joinBtn = document.getElementById('duel-join-btn');
+    const genBtn = document.getElementById('duel-generate-btn');
+    const rndBtn = document.getElementById('duel-random-btn');
+    const copyBtn = document.getElementById('duel-copy-btn');
+    const shareBtn = document.getElementById('duel-share-btn');
+    const startBtn = document.getElementById('duel-start-code-btn');
+
+    if (joinBtn) {
+      joinBtn.addEventListener('click', () => {
+        const raw = codeInput ? codeInput.value : '';
+        startDuelFromCode(raw).catch((e) => {
+          duelToast('DUEL JOIN FAILED', String(e && e.message ? e.message : 'Invalid code'), '#ff3333');
+        });
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+
+    if (genBtn) {
+      genBtn.addEventListener('click', async () => {
+        const word = duelWordInputEl ? duelWordInputEl.value.trim().toUpperCase() : '';
+        if (word.length < 3) {
+          if (duelErrorEl) duelErrorEl.innerText = 'WORD TOO SHORT (MIN 3)';
+          return;
+        }
+        if (!/^[A-Z]+$/.test(word)) {
+          if (duelErrorEl) duelErrorEl.innerText = 'ALPHABET ONLY';
+          return;
+        }
+
+        try {
+          const data = await createDuelCode({ user_id: currentUserId || null, word: word, difficulty: 'MEDIUM' });
+          const code = normalizeDuelCode(data.code || '');
+          if (codeOutput) codeOutput.value = code;
+          if (codeInput) codeInput.value = code;
+          duelToast('DUEL CODE READY', 'Share it. Both of you get the same trap word.', '#00ffcc');
+          refreshDuelLeaderboard(code).catch(() => {});
+        } catch (e) {
+          duelToast('CREATE FAILED', String(e && e.message ? e.message : 'Backend error'), '#ff3333');
+        }
+
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+
+    if (rndBtn) {
+      rndBtn.addEventListener('click', async () => {
+        try {
+          const data = await createDuelCode({ user_id: currentUserId || null, random: true, difficulty: 'MEDIUM' });
+          const code = normalizeDuelCode(data.code || '');
+          if (codeOutput) codeOutput.value = code;
+          if (codeInput) codeInput.value = code;
+          duelToast('RANDOM DUEL CODE', 'Generated. Share it to challenge a friend.', '#00ffcc');
+          refreshDuelLeaderboard(code).catch(() => {});
+        } catch (e) {
+          duelToast('CREATE FAILED', String(e && e.message ? e.message : 'Backend error'), '#ff3333');
+        }
+
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const code = normalizeDuelCode(codeOutput && codeOutput.value ? codeOutput.value : (codeInput ? codeInput.value : ''));
+        if (!code) return;
+        try {
+          await navigator.clipboard.writeText(code);
+          duelToast('COPIED', 'Duel code copied to clipboard.', '#00ffcc');
+        } catch {
+          // ignore
+        }
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+
+    if (shareBtn) {
+      shareBtn.addEventListener('click', async () => {
+        const code = normalizeDuelCode(codeOutput && codeOutput.value ? codeOutput.value : (codeInput ? codeInput.value : ''));
+        if (!code) return;
+
+        const url = window.location.origin + window.location.pathname + '?duel=' + encodeURIComponent(code);
+
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'Tech Hangman Duel', text: 'Join my duel code and crack the same target.', url: url });
+          } catch {
+            // ignore
+          }
+        } else {
+          try {
+            await navigator.clipboard.writeText(url);
+            duelToast('LINK COPIED', 'Duel link copied to clipboard.', '#00ffcc');
+          } catch {
+            // ignore
+          }
+        }
+
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        const code = normalizeDuelCode(codeOutput && codeOutput.value ? codeOutput.value : (codeInput ? codeInput.value : ''));
+        if (!code) return;
+        startDuelFromCode(code).catch((e) => {
+          duelToast('DUEL START FAILED', String(e && e.message ? e.message : 'Invalid code'), '#ff3333');
+        });
+        if (typeof playSfx === 'function') playSfx('click');
+      });
+    }
+  }
+
+  // Hook results for code-based duels
+  if (typeof checkWin === 'function' && !checkWin.__novel_duel__) {
+    const prev = checkWin;
+    const wrapped = function () {
+      const wasOver = isGameOver;
+      prev();
+
+      if (!wasOver && isGameOver) {
+        // Escape sfx slightly after the win sweep
+        setTimeout(() => {
+          if (typeof playSfx === 'function') playSfx('escape');
+        }, 500);
+
+        if (activeDuel && activeDuel.code) {
+          submitDuelRun(true).catch(() => {});
+        }
+      }
+    };
+    wrapped.__novel_duel__ = true;
+    checkWin = wrapped;
+  }
+
+  // Loss sound + duel submit lives in the checkLoss wrapper above; add a second hook for duel submit if needed
+  if (typeof checkLoss === 'function' && !checkLoss.__novel_duel__) {
+    const prevLoss = checkLoss;
+    const wrappedLoss = function () {
+      const wasOver = isGameOver;
+      prevLoss();
+
+      if (!wasOver && isGameOver && wrongGuesses >= MAX_MISTAKES) {
+        // Death sfx near the red overlay flash
+        setTimeout(() => {
+          if (typeof playSfx === 'function') playSfx('death');
+        }, 260);
+
+        if (activeDuel && activeDuel.code) {
+          submitDuelRun(false).catch(() => {});
+        }
+      }
+    };
+    wrappedLoss.__novel_duel__ = true;
+    checkLoss = wrappedLoss;
   }
 
   // -----------------------------

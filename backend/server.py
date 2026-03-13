@@ -195,6 +195,33 @@ def init_db():
         )
     ''')
 
+    # NEW: Duel codes (shareable friend challenges)
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS DuelInvites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code VARCHAR(32) UNIQUE,
+            creator_user_id INT,
+            word VARCHAR(255),
+            category VARCHAR(64),
+            difficulty VARCHAR(16),
+            created_at TEXT
+        )
+    ''')
+
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS DuelRuns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code VARCHAR(32),
+            user_id INT,
+            score INT,
+            time_seconds INT,
+            is_win INT,
+            submitted_at TEXT,
+            UNIQUE(code, user_id),
+            FOREIGN KEY(user_id) REFERENCES Users(id)
+        )
+    ''')
+
     conn.commit()
     
     # NEW: Self-healing check for words
@@ -991,6 +1018,266 @@ def mission_leaderboard():
     except Exception as e:
         conn.close()
         # Leaderboards are non-critical; return empty data instead of failing the client.
+        return jsonify({"rows": [], "error": str(e)}), 200
+
+
+@app.route('/api/duel/create', methods=['POST'])
+def duel_create():
+    data = request.json or {}
+
+    user_id = data.get('user_id')
+    raw_word = (data.get('word') or '').strip().upper()
+    random_pick = bool(data.get('random') or (not raw_word))
+
+    category = (data.get('category') or 'RANDOM').strip().upper()
+    difficulty = (data.get('difficulty') or 'MEDIUM').strip().upper()
+    if difficulty not in ['EASY', 'MEDIUM', 'HARD']:
+        difficulty = 'MEDIUM'
+
+    # Word validation when explicitly provided
+    if not random_pick:
+        if len(raw_word) < 3 or len(raw_word) > 24:
+            return jsonify({"error": "Word length must be 3-24"}), 400
+        import re
+        if not re.match(r'^[A-Z]+$', raw_word):
+            return jsonify({"error": "Alphabet letters only"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        word = raw_word
+
+        if random_pick:
+            # Pull a reasonable pool and choose randomly (portable across SQLite/MySQL).
+            if category and category != 'RANDOM':
+                execute_query(c, 'SELECT word FROM Words WHERE category = ? AND difficulty = ? LIMIT 3000', (category, difficulty))
+            else:
+                execute_query(c, 'SELECT word FROM Words WHERE difficulty = ? LIMIT 3000', (difficulty,))
+
+            rows = c.fetchall()
+            pool = []
+            for r in rows:
+                if isinstance(r, dict):
+                    pool.append(r.get('word'))
+                else:
+                    pool.append(r[0])
+
+            pool = [w for w in pool if w]
+            if not pool:
+                execute_query(c, 'SELECT word FROM Words LIMIT 3000')
+                rows = c.fetchall()
+                for r in rows:
+                    pool.append(r.get('word') if isinstance(r, dict) else r[0])
+                pool = [w for w in pool if w]
+
+            if not pool:
+                conn.close()
+                return jsonify({"error": "No words available"}), 500
+
+            word = random.choice(pool).strip().upper()
+
+        # Generate a duel code
+        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        code = None
+        for _ in range(12):
+            candidate = 'DUL-' + ''.join(random.choice(alphabet) for _ in range(8))
+            execute_query(c, 'SELECT id FROM DuelInvites WHERE code = ?', (candidate,))
+            if not c.fetchone():
+                code = candidate
+                break
+
+        if not code:
+            conn.close()
+            return jsonify({"error": "Could not allocate duel code"}), 500
+
+        now = datetime.now().isoformat()
+
+        execute_query(c, '''
+            INSERT INTO DuelInvites (code, creator_user_id, word, category, difficulty, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (code, user_id, word, category, difficulty, now))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "code": code,
+            "category": category,
+            "difficulty": difficulty,
+            "created_at": now
+        })
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/duel/get', methods=['GET'])
+def duel_get():
+    code = (request.args.get('code') or '').strip().upper()
+    if not code:
+        return jsonify({"error": "code required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, 'SELECT code, creator_user_id, word, category, difficulty, created_at FROM DuelInvites WHERE code = ?', (code,))
+        row = c.fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({"error": "Invalid code"}), 404
+
+        if isinstance(row, dict):
+            return jsonify({
+                "code": row.get('code'),
+                "creator_user_id": row.get('creator_user_id'),
+                "word": row.get('word'),
+                "category": row.get('category'),
+                "difficulty": row.get('difficulty'),
+                "created_at": row.get('created_at'),
+            })
+
+        return jsonify({
+            "code": row[0],
+            "creator_user_id": row[1],
+            "word": row[2],
+            "category": row[3],
+            "difficulty": row[4],
+            "created_at": row[5] if len(row) > 5 else None,
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/duel/submit', methods=['POST'])
+def duel_submit():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    code = (data.get('code') or '').strip().upper()
+
+    if not user_id or not code:
+        return jsonify({"error": "user_id and code required"}), 400
+
+    try:
+        score = int(data.get('score') or 0)
+        time_seconds = int(data.get('time_seconds') or 0)
+        is_win = 1 if bool(data.get('is_win')) else 0
+    except Exception:
+        return jsonify({"error": "Invalid numeric fields"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, 'SELECT score, time_seconds, is_win FROM DuelRuns WHERE code = ? AND user_id = ?', (code, user_id))
+        row = c.fetchone()
+
+        now = datetime.now().isoformat()
+        updated = False
+
+        if not row:
+            execute_query(c, '''
+                INSERT INTO DuelRuns (code, user_id, score, time_seconds, is_win, submitted_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (code, user_id, score, time_seconds, is_win, now))
+            updated = True
+        else:
+            if isinstance(row, dict):
+                old_score = int(row.get('score') or 0)
+                old_time = int(row.get('time_seconds') or 999999999)
+                old_win = int(row.get('is_win') or 0)
+            else:
+                old_score = int(row[0] or 0)
+                old_time = int(row[1] or 999999999)
+                old_win = int(row[2] or 0)
+
+            # Better run: higher score; tie-break by faster time; prefer wins over losses
+            better = False
+            if is_win > old_win and score >= old_score:
+                better = True
+            elif score > old_score:
+                better = True
+            elif score == old_score and time_seconds < old_time:
+                better = True
+
+            if better:
+                execute_query(c, '''
+                    UPDATE DuelRuns
+                    SET score = ?, time_seconds = ?, is_win = ?, submitted_at = ?
+                    WHERE code = ? AND user_id = ?
+                ''', (score, time_seconds, is_win, now, code, user_id))
+                updated = True
+
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Duel run recorded", "updated": updated})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/duel/leaderboard', methods=['GET'])
+def duel_leaderboard():
+    code = (request.args.get('code') or '').strip().upper()
+    if not code:
+        return jsonify({"error": "code required"}), 400
+
+    limit_raw = request.args.get('limit', 10)
+    try:
+        limit = int(limit_raw)
+    except Exception:
+        limit = 10
+    limit = max(1, min(limit, 50))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, '''
+            SELECT Users.username, DuelRuns.score, DuelRuns.time_seconds, DuelRuns.is_win, DuelRuns.submitted_at
+            FROM DuelRuns
+            JOIN Users ON DuelRuns.user_id = Users.id
+            WHERE DuelRuns.code = ?
+            ORDER BY DuelRuns.score DESC, DuelRuns.time_seconds ASC
+            LIMIT ?
+        ''', (code, limit))
+
+        res = c.fetchall()
+        rows = []
+
+        for r in res:
+            if isinstance(r, dict):
+                rows.append({
+                    "username": r.get('username'),
+                    "score": r.get('score'),
+                    "time_seconds": r.get('time_seconds'),
+                    "is_win": r.get('is_win'),
+                    "submitted_at": r.get('submitted_at'),
+                })
+            else:
+                rows.append({
+                    "username": r[0],
+                    "score": r[1],
+                    "time_seconds": r[2],
+                    "is_win": r[3] if len(r) > 3 else 0,
+                    "submitted_at": r[4] if len(r) > 4 else None,
+                })
+
+        conn.close()
+        return jsonify({"rows": rows})
+    except Exception as e:
+        conn.close()
         return jsonify({"rows": [], "error": str(e)}), 200
 
 
