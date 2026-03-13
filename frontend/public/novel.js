@@ -1,4 +1,4 @@
-// Tech Hangman Novel Extensions
+﻿// Tech Hangman Novel Extensions
 // Loaded after /script.js. Intentionally written as an additive layer.
 
 (function () {
@@ -2447,4 +2447,87 @@
     if (e.key === 'Escape') closeDistrictsOverlay();
   });
 
+
+  // -----------------------------
+  // Cyber Cursor (Neon Reticle)
+  // -----------------------------
+  function setupCyberCursor() {
+    try {
+      if (!window.matchMedia) return;
+      const fine =
+        window.matchMedia('(pointer: fine)').matches &&
+        window.matchMedia('(hover: hover)').matches;
+      if (!fine) return;
+
+      if (!document.body) return;
+      if (document.getElementById('cyber-cursor')) return;
+
+      const cursor = document.createElement('div');
+      cursor.id = 'cyber-cursor';
+      cursor.className = 'is-hidden';
+      cursor.innerHTML = '<div class="cyber-cursor-ring"></div><div class="cyber-cursor-dot"></div>';
+      document.body.appendChild(cursor);
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      let x = window.innerWidth / 2;
+      let y = window.innerHeight / 2;
+      let tx = x;
+      let ty = y;
+
+      function isTextTarget(t) {
+        if (!t || !t.closest) return false;
+        return !!t.closest('input,textarea,select');
+      }
+
+      function isInteractiveTarget(t) {
+        if (!t || !t.closest) return false;
+        return !!t.closest('button,a,[role="button"],.pointer,.cat-btn,.diff-btn,.mode-btn,.text-btn,.multi-btn,.icon-btn,.key');
+      }
+
+      function updateClasses(t) {
+        const isText = isTextTarget(t);
+        const isLink = !isText && isInteractiveTarget(t);
+        cursor.classList.toggle('is-text', isText);
+        cursor.classList.toggle('is-link', isLink);
+      }
+
+      function frame() {
+        if (reduce) {
+          x = tx;
+          y = ty;
+        } else {
+          x += (tx - x) * 0.18;
+          y += (ty - y) * 0.18;
+        }
+
+        cursor.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+        window.requestAnimationFrame(frame);
+      }
+
+      function onMove(e) {
+        tx = e.clientX;
+        ty = e.clientY;
+        cursor.classList.remove('is-hidden');
+        updateClasses(e.target);
+      }
+
+      window.addEventListener('mousemove', onMove, { passive: true });
+      document.addEventListener('mouseover', (e) => updateClasses(e.target), { passive: true });
+      window.addEventListener('mousedown', () => cursor.classList.add('is-down'));
+      window.addEventListener('mouseup', () => cursor.classList.remove('is-down'));
+      window.addEventListener('mouseenter', () => cursor.classList.remove('is-hidden'));
+      window.addEventListener('mouseleave', () => cursor.classList.add('is-hidden'));
+
+      window.requestAnimationFrame(frame);
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupCyberCursor);
+  } else {
+    setupCyberCursor();
+  }
 })();
