@@ -1598,8 +1598,17 @@
     return Math.max(0, Math.min(100, Math.round(x)));
   }
 
+  const CAT_LABELS = {
+    SOFTWAREENGINEERING: 'SOFTWARE ENGINEERING',
+    WEBDEVELOPMENT: 'WEB DEVELOPMENT',
+    DATASCIENCE: 'DATA SCIENCE',
+    GENERAL_KNOWLEDGE: 'GENERAL KNOWLEDGE',
+  };
+
   function prettyCat(cat) {
-    return String(cat || '').replace(/_/g, ' ');
+    const key = String(cat || '').toUpperCase();
+    if (CAT_LABELS[key]) return CAT_LABELS[key];
+    return key.replace(/_/g, ' ');
   }
 
   function applyProgressPerks(progress) {
@@ -1728,7 +1737,7 @@
 
     districtsMap.innerHTML = '';
 
-    // Decorative network lines
+    // Decorative network lines (static backdrop)
     try {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'districts-lines');
@@ -1753,40 +1762,81 @@
       // ignore
     }
 
-    // HUD block
+    const grid = document.createElement('div');
+    grid.className = 'districts-grid';
+
     const overallPct = safePct(progress && progress.total_percentage);
     const hud = document.createElement('div');
     hud.className = 'districts-hud';
     hud.innerHTML =
       '<div class="districts-hud-title">MISSION TERRITORY</div>' +
-      '<div class="districts-hud-sub">OVERALL COMPLETION: ' + escapeHtml(String(overallPct)) + '% | CYBERDECK SLOTS: ' + escapeHtml(String(SETTINGS.maxModules)) + '</div>';
-    districtsMap.appendChild(hud);
+      '<div class="districts-hud-sub">OVERALL COMPLETION: ' +
+      escapeHtml(String(overallPct)) +
+      '% | CYBERDECK SLOTS: ' +
+      escapeHtml(String(SETTINGS.maxModules)) +
+      '</div>';
+    grid.appendChild(hud);
 
     if (!domains.length) {
       const empty = document.createElement('div');
       empty.className = 'districts-empty';
       empty.innerText = currentUserId ? 'No progress telemetry yet. Win rounds to light up districts.' : 'Login required.';
-      districtsMap.appendChild(empty);
+      grid.appendChild(empty);
+      districtsMap.appendChild(grid);
       return;
     }
 
-    domains.forEach((d, idx) => {
-      const cat = String(d.category || 'UNKNOWN');
-      const pos = DISTRICT_POS[cat];
+    const DISTRICT_ORDER = [
+      'GENERAL_KNOWLEDGE',
+      'DATABASE',
+      'DATA_STRUCTURE',
+      'PYTHON',
+      'DATASCIENCE',
+      'ARTIFICIAL_INTELLIGENCE',
+      'CODE_OUTPUT',
+      'SOFTWAREENGINEERING',
+      'WEBDEVELOPMENT',
+      'OPERATING_SYSTEM',
+      'LINUX',
+      'NETWORKING',
+      'CYBERSECURITY',
+      'CLOUD',
+      'C',
+      'CPP',
+      'JAVA',
+    ];
+
+    function orderIndex(cat) {
+      const idx = DISTRICT_ORDER.indexOf(cat);
+      return idx >= 0 ? idx : 9999;
+    }
+
+    const sorted = domains
+      .slice()
+      .sort((a, b) => orderIndex(String(a.category || '').toUpperCase()) - orderIndex(String(b.category || '').toUpperCase()));
+
+    sorted.forEach((d) => {
+      const cat = String(d.category || 'UNKNOWN').toUpperCase();
 
       const pill = document.createElement('div');
       pill.className = 'district-pill';
-      pill.style.left = (pos ? pos.x : 50) + '%';
-      pill.style.top = (pos ? pos.y : 50) + '%';
-      pill.style.transform = 'translate(-50%, -50%)';
+      pill.dataset.cat = cat;
 
       const pct = safePct(d.percentage);
       if (pct >= 100) pill.classList.add('complete');
       else if (pct >= 75) pill.classList.add('hot');
 
       pill.innerHTML =
-        '<div class="name">' + escapeHtml(prettyCat(cat)) + '</div>' +
-        '<div class="meta">' + escapeHtml(String(d.solved || 0)) + '/' + escapeHtml(String(d.total || 0)) + ' nodes | ' + escapeHtml(String(pct)) + '%</div>';
+        '<div class="name">' +
+        escapeHtml(prettyCat(cat)) +
+        '</div>' +
+        '<div class="meta">' +
+        escapeHtml(String(d.solved || 0)) +
+        '/' +
+        escapeHtml(String(d.total || 0)) +
+        ' nodes | ' +
+        escapeHtml(String(pct)) +
+        '%</div>';
 
       pill.title = prettyCat(cat) + ' - ' + String(d.solved || 0) + '/' + String(d.total || 0) + ' nodes';
 
@@ -1795,11 +1845,13 @@
         if (typeof playSfx === 'function') playSfx('click');
       });
 
-      districtsMap.appendChild(pill);
+      grid.appendChild(pill);
     });
 
+    districtsMap.appendChild(grid);
+
     // Default: open first district detail
-    renderDistrictDetail(domains[0], progress);
+    renderDistrictDetail(sorted[0], progress);
   }
 
   function openDistrictsOverlay() {

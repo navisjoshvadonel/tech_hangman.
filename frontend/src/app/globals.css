@@ -3448,3 +3448,55 @@ h2,
     max-width: 78vw;
   }
 }
+
+/* --- Novel: Districts Grid Layout (even spacing, no overlap) --- */
+
+.districts-lines {
+  z-index: 0;
+  opacity: 0.28;
+}
+
+.districts-grid {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  align-content: start;
+  overflow: auto;
+  overscroll-behavior: contain;
+  z-index: 2;
+}
+
+.districts-grid .districts-hud {
+  position: relative;
+  left: auto;
+  top: auto;
+  bottom: auto;
+  max-width: none;
+  width: 100%;
+  grid-column: 1 / -1;
+}
+
+.districts-grid .districts-empty {
+  position: relative;
+  inset: auto;
+  grid-column: 1 / -1;
+  min-height: 140px;
+}
+
+.districts-grid .district-pill {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 100%;
+  max-width: none;
+}
+
+.districts-grid .district-pill .name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
