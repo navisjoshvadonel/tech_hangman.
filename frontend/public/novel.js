@@ -2055,6 +2055,34 @@
     checkLoss = wrappedLoss;
   }
 
+
+  // After a code-duel ends, let NEXT open the duel overlay instead of starting a random round.
+  const nextBtnDuelEl = document.getElementById('next-btn');
+  if (nextBtnDuelEl) {
+    nextBtnDuelEl.addEventListener(
+      'click',
+      (e) => {
+        if (!activeDuel || !activeDuel.code || !isGameOver) return;
+        if (activeMission) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (duelOverlayEl) duelOverlayEl.classList.remove('hidden');
+        ensureDuelCodePanel();
+
+        const out = document.getElementById('duel-code-output');
+        const inp = document.getElementById('duel-code-input');
+        if (out) out.value = activeDuel.code;
+        if (inp) inp.value = activeDuel.code;
+
+        refreshDuelLeaderboard(activeDuel.code).catch(() => {});
+        duelToast('VIEW DUEL BOARD', 'Compare runs and share the code again.', '#00ffcc');
+      },
+      true
+    );
+  }
+
   // -----------------------------
   // Tech Districts
   // -----------------------------
