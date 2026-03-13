@@ -1,5 +1,6 @@
 import random
 import json
+import sqlite3
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -175,6 +176,25 @@ def init_db():
         )
     ''')
     
+    # NEW: Seeded Mission leaderboards
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS MissionRuns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mission_key VARCHAR(255),
+            seed VARCHAR(64),
+            mode VARCHAR(32),
+            category VARCHAR(64),
+            difficulty VARCHAR(16),
+            length INT,
+            user_id INT,
+            score INT,
+            time_seconds INT,
+            completed_at TEXT,
+            UNIQUE(mission_key, user_id),
+            FOREIGN KEY(user_id) REFERENCES Users(id)
+        )
+    ''')
+
     conn.commit()
     
     # NEW: Self-healing check for words
@@ -853,6 +873,125 @@ def award_achievement(c, user_id, name):
         return True
     return False
 
+
+
+@app.route('/api/mission/submit', methods=['POST'])
+def mission_submit():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    mission_key = data.get('mission_key')
+
+    if not user_id or not mission_key:
+        return jsonify({"error": "user_id and mission_key required"}), 400
+
+    seed = data.get('seed', '')
+    mode = data.get('mode', '')
+    category = data.get('category', '')
+    difficulty = data.get('difficulty', '')
+
+    try:
+        length = int(data.get('length') or 0)
+        score = int(data.get('score') or 0)
+        time_seconds = int(data.get('time_seconds') or 0)
+    except Exception:
+        return jsonify({"error": "Invalid numeric fields"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, 'SELECT score, time_seconds FROM MissionRuns WHERE mission_key = ? AND user_id = ?', (mission_key, user_id))
+        row = c.fetchone()
+
+        now = datetime.now().isoformat()
+        updated = False
+
+        if not row:
+            execute_query(c, '''
+                INSERT INTO MissionRuns (mission_key, seed, mode, category, difficulty, length, user_id, score, time_seconds, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (mission_key, seed, mode, category, difficulty, length, user_id, score, time_seconds, now))
+            updated = True
+        else:
+            if isinstance(row, dict):
+                old_score = int(row.get('score') or 0)
+                old_time = int(row.get('time_seconds') or 999999999)
+            else:
+                old_score = int(row[0] or 0)
+                old_time = int(row[1] or 999999999)
+
+            # Better run: higher score, or tie with faster time.
+            if score > old_score or (score == old_score and time_seconds < old_time):
+                execute_query(c, '''
+                    UPDATE MissionRuns
+                    SET seed = ?, mode = ?, category = ?, difficulty = ?, length = ?, score = ?, time_seconds = ?, completed_at = ?
+                    WHERE mission_key = ? AND user_id = ?
+                ''', (seed, mode, category, difficulty, length, score, time_seconds, now, mission_key, user_id))
+                updated = True
+
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Mission run recorded", "updated": updated})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/mission/leaderboard', methods=['GET'])
+def mission_leaderboard():
+    mission_key = request.args.get('mission_key')
+    if not mission_key:
+        return jsonify({"error": "mission_key required"}), 400
+
+    limit_raw = request.args.get('limit', 10)
+    try:
+        limit = int(limit_raw)
+    except Exception:
+        limit = 10
+    limit = max(1, min(limit, 50))
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, '''
+            SELECT Users.username, MissionRuns.score, MissionRuns.time_seconds, MissionRuns.completed_at
+            FROM MissionRuns
+            JOIN Users ON MissionRuns.user_id = Users.id
+            WHERE MissionRuns.mission_key = ?
+            ORDER BY MissionRuns.score DESC, MissionRuns.time_seconds ASC
+            LIMIT ?
+        ''', (mission_key, limit))
+
+        res = c.fetchall()
+        rows = []
+
+        for r in res:
+            if isinstance(r, dict):
+                rows.append({
+                    "username": r.get('username'),
+                    "score": r.get('score'),
+                    "time_seconds": r.get('time_seconds'),
+                    "completed_at": r.get('completed_at'),
+                })
+            else:
+                rows.append({
+                    "username": r[0],
+                    "score": r[1],
+                    "time_seconds": r[2],
+                    "completed_at": r[3] if len(r) > 3 else None,
+                })
+
+        conn.close()
+        return jsonify({"rows": rows})
+    except Exception as e:
+        conn.close()
+        # Leaderboards are non-critical; return empty data instead of failing the client.
+        return jsonify({"rows": [], "error": str(e)}), 200
 
 
 @app.route('/api/admin/words', methods=['GET', 'POST'])

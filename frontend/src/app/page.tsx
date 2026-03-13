@@ -129,6 +129,12 @@ export default function Home() {
                   <button className="mode-btn active" id="mode-classic">CLASSIC</button>
                   <button className="mode-btn" id="mode-story">STORY</button>
                   <button className="mode-btn" id="mode-multiplayer">DUEL</button>
+                  <button className="mode-btn" id="mode-codebreaker">CODEBREAKER</button>
+                </div>
+                <div className="selection-tools">
+                  <button className="text-btn" id="open-cyberdeck-btn">CYBERDECK</button>
+                  <button className="text-btn" id="open-mission-btn">MISSION CODE</button>
+                  <button className="text-btn" id="open-districts-btn">DISTRICTS</button>
                 </div>
               </div>
               <div className="selection-grid" id="classic-categories">
@@ -163,6 +169,16 @@ export default function Home() {
               <div className="selection-grid hidden" id="multiplayer-options">
                 <button className="multi-btn" id="btn-word-duel">WORD DUEL (1V1)</button>
                 <button className="multi-btn" id="btn-speed-battle">SPEED BATTLE</button>
+              </div>
+
+              {/* Codebreaker Mode Grid */}
+              <div className="selection-grid hidden" id="codebreaker-categories">
+                <button className="cat-btn" data-cat="DATABASE">DATABASE</button>
+                <button className="cat-btn" data-cat="LINUX">LINUX</button>
+                <button className="cat-btn" data-cat="NETWORKING">NETWORKING</button>
+                <button className="cat-btn" data-cat="WEBDEVELOPMENT">WEB DEVELOPMENT</button>
+                <button className="cat-btn" data-cat="CLOUD">CLOUD</button>
+                <button className="cat-btn" data-cat="RANDOM">RANDOM</button>
               </div>
             </div>
 
@@ -207,12 +223,38 @@ export default function Home() {
           <div className="action-buttons">
             <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
             <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
+            <button id="districts-btn" className="text-btn">DISTRICTS</button>
+            <button id="mission-code-btn" className="text-btn">MISSION CODE</button>
             <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
             <button id="share-stats-btn" className="text-btn highlight-btn">📢 SHARE STATS</button>
           </div>
         </div>
         <div className="header">
           <h1>HANG MAN</h1>
+        </div>
+
+        {/* TRACE / ICE Meter */}
+        <div id="trace-panel" className="trace-panel hidden">
+          <div className="trace-header">
+            <div className="trace-title">
+              <span className="trace-label">TRACE</span>
+              <span className="trace-sep">/</span>
+              <span className="trace-label ice">ICE</span>
+            </div>
+            <div id="trace-metrics" className="trace-metrics">
+              <span id="trace-percent">0%</span>
+              <span className="trace-dot">?</span>
+              <span id="trace-count">0 / 0</span>
+            </div>
+          </div>
+          <div className="trace-bar">
+            <div id="trace-bar-fill" className="trace-bar-fill"></div>
+          </div>
+          <div id="lockdown-row" className="lockdown-row">
+            <span className="lockdown-chip" data-lock="shuffle">KEYBOARD SHUFFLE</span>
+            <span className="lockdown-chip" data-lock="vowels">VOWELS LOCKED</span>
+            <span className="lockdown-chip" data-lock="hints">HINTS THROTTLED</span>
+          </div>
         </div>
 
         <div className="hangman-display">
@@ -238,6 +280,29 @@ export default function Home() {
             {/* 9: Right Leg */}
             <line className="draw-part part-9" pathLength={100} x1="130" y1="150" x2="160" y2="190" />
           </svg>
+
+          {/* Intrusion Diagram (TRACE/ICE visual) */}
+          <svg id="intrusion-svg" className="intrusion-svg hidden" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg">
+            {/* Links */}
+            <line className="net-part net-part-0" pathLength={100} x1="45" y1="60" x2="130" y2="40" />
+            <line className="net-part net-part-1" pathLength={100} x1="130" y1="40" x2="215" y2="60" />
+            <line className="net-part net-part-2" pathLength={100} x1="45" y1="60" x2="70" y2="145" />
+            <line className="net-part net-part-3" pathLength={100} x1="215" y1="60" x2="190" y2="145" />
+            <line className="net-part net-part-4" pathLength={100} x1="70" y1="145" x2="130" y2="185" />
+            <line className="net-part net-part-5" pathLength={100} x1="190" y1="145" x2="130" y2="185" />
+
+            {/* Nodes */}
+            <circle className="net-part net-part-6" pathLength={100} cx="45" cy="60" r="10" />
+            <circle className="net-part net-part-7" pathLength={100} cx="215" cy="60" r="10" />
+            <circle className="net-part net-part-8" pathLength={100} cx="70" cy="145" r="10" />
+            <circle className="net-part net-part-9" pathLength={100} cx="190" cy="145" r="10" />
+
+            {/* Core (always visible) */}
+            <circle className="net-core" cx="130" cy="40" r="14" />
+            <circle className="net-core-ring" cx="130" cy="40" r="26" />
+            <circle className="net-core" cx="130" cy="185" r="12" />
+            <circle className="net-core-ring" cx="130" cy="185" r="22" />
+          </svg>
         </div>
 
         <div id="word-display-container">
@@ -258,6 +323,26 @@ export default function Home() {
               <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
             </div>
           </div>
+        </div>
+
+        
+
+        {/* Codebreaker Panel */}
+        <div id="codebreaker-panel" className="codebreaker-panel hidden">
+          <div className="codebreaker-header">
+            <div className="codebreaker-title">CODEBREAKER</div>
+            <div id="codebreaker-step" className="codebreaker-step">0 / 0</div>
+          </div>
+          <pre id="codebreaker-snippet" className="codebreaker-snippet"></pre>
+          <div id="codebreaker-choices" className="codebreaker-choices"></div>
+          <div id="codebreaker-explain" className="codebreaker-explain hidden"></div>
+        </div>
+
+        {/* Cyberdeck Bar (active modules) */}
+        <div id="cyberdeck-bar" className="cyberdeck-bar hidden">
+          <button id="module-vowel-scan" className="deck-btn">VOWEL SCAN</button>
+          <button id="module-rollback" className="deck-btn">ROLLBACK</button>
+          <button id="module-reroute" className="deck-btn">REROUTE</button>
         </div>
 
         <div id="keyboard" className="keyboard"></div>
@@ -317,6 +402,55 @@ export default function Home() {
           <div id="anomaly-event-name" className="anomaly-event"></div>
           <div id="anomaly-event-desc" className="anomaly-desc"></div>
           <button id="anomaly-confirm-btn">ACKNOWLEDGE</button>
+        </div>
+      </div>
+
+      {/* Cyberdeck Loadout Popup */}
+      <div id="cyberdeck-popup" className="hidden">
+        <div className="cyberdeck-content">
+          <h3>CYBERDECK LOADOUT</h3>
+          <p className="cyberdeck-subtitle">Pick modules. Tradeoffs are real. Builds are identity.</p>
+          <div id="cyberdeck-modules" className="cyberdeck-modules"></div>
+          <div className="cyberdeck-actions">
+            <button id="save-cyberdeck-btn" className="text-btn highlight-btn">SAVE LOADOUT</button>
+            <button id="close-cyberdeck-btn" className="text-btn">CLOSE</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mission Code Popup */}
+      <div id="mission-popup" className="hidden">
+        <div className="mission-content">
+          <h3>MISSION CODE</h3>
+          <p className="mission-subtitle">Share a seeded run. Same sequence for everyone.</p>
+          <div className="mission-row">
+            <input id="mission-seed-input" type="text" placeholder="SEED (optional)" autoComplete="off" maxLength={24} />
+            <button id="generate-mission-btn" className="text-btn highlight-btn">GENERATE</button>
+          </div>
+          <textarea id="mission-code-output" className="mission-code-output" readOnly rows={3}></textarea>
+          <div className="mission-row">
+            <button id="copy-mission-btn" className="text-btn">COPY</button>
+            <button id="share-mission-btn" className="text-btn">SHARE LINK</button>
+          </div>
+          <div className="mission-divider"></div>
+          <p className="mission-subtitle">Load a mission code:</p>
+          <textarea id="mission-code-input" className="mission-code-output" placeholder="PASTE MISSION CODE HERE" rows={3}></textarea>
+          <div className="mission-row">
+            <button id="load-mission-btn" className="text-btn highlight-btn">LOAD</button>
+            <button id="close-mission-btn" className="text-btn">CLOSE</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tech Districts Overlay */}
+      <div id="districts-overlay" className="overlay hidden">
+        <div className="districts-content">
+          <div className="districts-header">
+            <h3>TECH DISTRICTS</h3>
+            <button id="close-districts-btn" className="text-btn">CLOSE</button>
+          </div>
+          <div id="districts-map" className="districts-map"></div>
+          <div id="districts-detail" className="districts-detail hidden"></div>
         </div>
       </div>
 
