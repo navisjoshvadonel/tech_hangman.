@@ -94,6 +94,7 @@
   [modeClassicBtn, modeStoryBtn, modeMultiplayerBtn].forEach((btn) => {
     if (!btn) return;
     btn.addEventListener('click', () => {
+      if (modeCodebreakerBtn) modeCodebreakerBtn.classList.remove('active');
       if (codebreakerGrid) codebreakerGrid.classList.add('hidden');
       if (codebreakerPanel) codebreakerPanel.classList.add('hidden');
     });
@@ -929,8 +930,14 @@
       currentScore = Math.max(0, currentScore - 150);
       if (typeof updateScoreUI === 'function') updateScoreUI();
 
-      handleGuess(pick);
       applyTraceHit('vowel_scan', 1);
+
+      if (isGameOver) {
+        syncCyberdeckBar();
+        return;
+      }
+
+      handleGuess(pick);
 
       if (typeof showToast === 'function') {
         showToast('VOWEL SCAN', 'Injected vowel ' + pick + '. TRACE increased.', '#0088ff');
@@ -973,6 +980,10 @@
       if (typeof playSfx === 'function') playSfx('click');
 
       applyTraceHit('reroute', 1);
+      if (isGameOver) {
+        syncCyberdeckBar();
+        return;
+      }
       await reroutePreservingTrace();
     });
   }
