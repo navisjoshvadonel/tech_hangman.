@@ -50,6 +50,93 @@ let OBJECTIVE_REVEALED = true;
 const loginOverlay = document.getElementById("login-overlay");
 const loginBtn = document.getElementById("login-btn");
 const usernameInput = document.getElementById("username-input");
+const offlineLoginBtn = document.getElementById("offline-login-btn");
+const offlineUsernameInput = document.getElementById("offline-username-input");
+
+// === Offline State Management ===
+window.offlineAgentName = "";
+window.loadOfflineUser = function(username) {
+  const key = `hangman_offline_${username.toLowerCase()}`;
+  const raw = localStorage.getItem(key);
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      return {
+        username: data.username || username,
+        user_id: "offline",
+        highest_score: data.highest_score || 0,
+        xp: data.xp || 0,
+        rank: data.rank || "Beginner",
+        level: data.level || 1,
+        story_progress: data.story_progress || 1,
+        wins: data.wins || 0,
+        losses: data.losses || 0,
+        streak: data.streak || 0,
+        longest_streak: data.longest_streak || 0,
+        hints_used: data.hints_used || 0,
+        achievements: data.achievements || [],
+        solved_words: data.solved_words || [],
+        last_completed_daily_date: data.last_completed_daily_date || ""
+      };
+    } catch (e) {
+      console.error("Failed to parse local offline user", e);
+    }
+  }
+  return {
+    username: username,
+    user_id: "offline",
+    highest_score: 0,
+    xp: 0,
+    rank: "Beginner",
+    level: 1,
+    story_progress: 1,
+    wins: 0,
+    losses: 0,
+    streak: 0,
+    longest_streak: 0,
+    hints_used: 0,
+    achievements: [],
+    solved_words: [],
+    last_completed_daily_date: ""
+  };
+};
+
+window.saveOfflineUser = function(data) {
+  const key = `hangman_offline_${data.username.toLowerCase()}`;
+  localStorage.setItem(key, JSON.stringify(data));
+};
+
+window.checkOfflineAchievements = function(data, isWin) {
+  const currentAchievements = data.achievements || [];
+  const newlyUnlocked = [];
+
+  function tryAward(name, condition) {
+    if (!currentAchievements.includes(name) && condition) {
+      newlyUnlocked.push(name);
+    }
+  }
+
+  if (isWin) {
+    tryAward('First Blood', data.wins >= 1);
+    tryAward('Bronze', data.wins >= 10);
+    tryAward('Silver', data.wins >= 25);
+    tryAward('Gold', data.wins >= 50);
+    tryAward('Platinum', data.wins >= 100);
+    tryAward('One Above All', data.wins >= 200);
+    tryAward('Flawless', wrongGuesses === 0);
+  } else {
+    tryAward('Die Hard', data.losses >= 50);
+    tryAward('One Below All', data.losses >= 100);
+  }
+
+  tryAward('Guru', data.level >= 10);
+  tryAward('Ace', data.level >= 20);
+  tryAward('Ace Master', data.level >= 30);
+  tryAward('Conqueror', data.xp >= 10000);
+  tryAward('Omnipotent', data.xp >= 25000);
+
+  return newlyUnlocked;
+};
 
 const gameContainer = document.getElementById("game-container");
 const currentUserSpan = document.getElementById("current-user");
@@ -127,18 +214,43 @@ function playIntroSequence() {
 }
 
 // === Tab Switching ===
-document.getElementById('tab-returning').addEventListener('click', () => {
-  document.getElementById('tab-returning').classList.add('active');
-  document.getElementById('tab-new').classList.remove('active');
-  document.getElementById('panel-returning').classList.remove('hidden');
-  document.getElementById('panel-new').classList.add('hidden');
-});
-document.getElementById('tab-new').addEventListener('click', () => {
-  document.getElementById('tab-new').classList.add('active');
-  document.getElementById('tab-returning').classList.remove('active');
-  document.getElementById('panel-new').classList.remove('hidden');
-  document.getElementById('panel-returning').classList.add('hidden');
-});
+const tabReturning = document.getElementById('tab-returning');
+const tabNew = document.getElementById('tab-new');
+const tabOffline = document.getElementById('tab-offline');
+const panelReturning = document.getElementById('panel-returning');
+const panelNew = document.getElementById('panel-new');
+const panelOffline = document.getElementById('panel-offline');
+
+if (tabReturning) {
+  tabReturning.addEventListener('click', () => {
+    tabReturning.classList.add('active');
+    if (tabNew) tabNew.classList.remove('active');
+    if (tabOffline) tabOffline.classList.remove('active');
+    if (panelReturning) panelReturning.classList.remove('hidden');
+    if (panelNew) panelNew.classList.add('hidden');
+    if (panelOffline) panelOffline.classList.add('hidden');
+  });
+}
+if (tabNew) {
+  tabNew.addEventListener('click', () => {
+    tabNew.classList.add('active');
+    if (tabReturning) tabReturning.classList.remove('active');
+    if (tabOffline) tabOffline.classList.remove('active');
+    if (panelNew) panelNew.classList.remove('hidden');
+    if (panelReturning) panelReturning.classList.add('hidden');
+    if (panelOffline) panelOffline.classList.add('hidden');
+  });
+}
+if (tabOffline) {
+  tabOffline.addEventListener('click', () => {
+    tabOffline.classList.add('active');
+    if (tabReturning) tabReturning.classList.remove('active');
+    if (tabNew) tabNew.classList.remove('active');
+    if (panelOffline) panelOffline.classList.remove('hidden');
+    if (panelReturning) panelReturning.classList.add('hidden');
+    if (panelNew) panelNew.classList.add('hidden');
+  });
+}
 
 // Shared function to apply login data to the game state
 function applyUserSession(data) {
@@ -222,6 +334,29 @@ function updateAgentHUD() {
 loginBtn.addEventListener("click", handleLogin);
 usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleLogin(); });
 
+// Offline Player Login
+if (offlineLoginBtn) {
+  offlineLoginBtn.addEventListener("click", handleOfflineLogin);
+}
+if (offlineUsernameInput) {
+  offlineUsernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleOfflineLogin(); });
+}
+
+function handleOfflineLogin() {
+  const username = offlineUsernameInput.value.trim();
+  const errorMsg = document.getElementById("offline-error-msg");
+  if (!username) return;
+
+  errorMsg.innerText = "INITIALIZING OFFLINE DECRYPTION...";
+  errorMsg.style.color = "var(--neon-cyan)";
+
+  window.offlineAgentName = username;
+  const localData = window.loadOfflineUser(username);
+  applyUserSession(localData);
+  
+  showToast("💻 LOCAL OFFLINE MODE", `Agent ${username.toUpperCase()} initialized locally.`, "#00ffcc");
+}
+
 async function handleLogin() {
   const username = usernameInput.value.trim();
   const errorMsg = document.getElementById("login-error-msg");
@@ -247,7 +382,14 @@ async function handleLogin() {
     }
   } catch (err) {
     console.error("Login Error:", err);
-    errorMsg.innerText = "BACKEND UNREACHABLE.";
+    errorMsg.innerHTML = `BACKEND OFFLINE. <button id="auto-offline-btn" class="text-btn" style="margin-left: 10px;">BOOT OFFLINE MODE</button>`;
+    const autoBtn = document.getElementById("auto-offline-btn");
+    if (autoBtn) {
+      autoBtn.addEventListener("click", () => {
+        if (offlineUsernameInput) offlineUsernameInput.value = username;
+        handleOfflineLogin();
+      });
+    }
   }
 }
 
@@ -284,23 +426,39 @@ async function handleRegister() {
     }
   } catch (err) {
     console.error("Register Error:", err);
-    errorMsg.innerText = "BACKEND UNREACHABLE.";
+    errorMsg.innerHTML = `BACKEND OFFLINE. <button id="auto-offline-reg-btn" class="text-btn" style="margin-left: 10px;">BOOT OFFLINE MODE</button>`;
+    const autoBtn = document.getElementById("auto-offline-reg-btn");
+    if (autoBtn) {
+      autoBtn.addEventListener("click", () => {
+        if (offlineUsernameInput) offlineUsernameInput.value = username;
+        handleOfflineLogin();
+      });
+    }
   }
 }
 
 logoutBtn.addEventListener("click", () => {
   currentUser = null;
   currentUserId = null;
-  // Clear both login panels
+  window.offlineAgentName = "";
+  // Clear all login panels
   usernameInput.value = "";
   registerInput.value = "";
+  if (offlineUsernameInput) offlineUsernameInput.value = "";
   document.getElementById("login-error-msg").innerText = "";
   document.getElementById("register-error-msg").innerText = "";
+  const offlineError = document.getElementById("offline-error-msg");
+  if (offlineError) {
+    offlineError.innerText = "Saves all progress locally in this browser.";
+    offlineError.style.color = "";
+  }
   // Reset tabs back to Returning Player
-  document.getElementById("tab-returning").classList.add("active");
-  document.getElementById("tab-new").classList.remove("active");
-  document.getElementById("panel-returning").classList.remove("hidden");
-  document.getElementById("panel-new").classList.add("hidden");
+  if (tabReturning) tabReturning.classList.add("active");
+  if (tabNew) tabNew.classList.remove('active');
+  if (tabOffline) tabOffline.classList.remove('active');
+  if (panelReturning) panelReturning.classList.remove("hidden");
+  if (panelNew) panelNew.classList.add("hidden");
+  if (panelOffline) panelOffline.classList.add("hidden");
   gameContainer.classList.add("hidden");
   selectionScreen.classList.add("hidden");
   loginOverlay.classList.remove("hidden");
@@ -401,13 +559,20 @@ if (hintRevealDesc) {
     hintRevealDesc.classList.add("disabled");
     hintRevealDesc.disabled = true;
 
-    // Deduct XP via API
-    await fetch(`${API_URL}/hints`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: currentUserId, type: 'description', word: currentWord })
-    });
-    currentXp -= 20;
+    if (currentUserId === "offline") {
+      const localData = window.loadOfflineUser(window.offlineAgentName);
+      localData.xp = Math.max(0, (localData.xp || 0) - 20);
+      window.saveOfflineUser(localData);
+      currentXp = localData.xp;
+    } else {
+      // Deduct XP via API
+      await fetch(`${API_URL}/hints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUserId, type: 'description', word: currentWord })
+      });
+      currentXp -= 20;
+    }
     currentXpSpan.innerText = `EXP: ${currentXp}`;
     playSfx("click");
   });
@@ -421,13 +586,20 @@ if (hintRevealLetter) {
       const randLetter = unGuessed[Math.floor(Math.random() * unGuessed.length)];
       handleGuess(randLetter);
 
-      // Deduct XP via API
-      await fetch(`${API_URL}/hints`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUserId, type: 'letter', word: currentWord })
-      });
-      currentXp -= 50;
+      if (currentUserId === "offline") {
+        const localData = window.loadOfflineUser(window.offlineAgentName);
+        localData.xp = Math.max(0, (localData.xp || 0) - 50);
+        window.saveOfflineUser(localData);
+        currentXp = localData.xp;
+      } else {
+        // Deduct XP via API
+        await fetch(`${API_URL}/hints`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUserId, type: 'letter', word: currentWord })
+        });
+        currentXp -= 50;
+      }
       currentXpSpan.innerText = `EXP: ${currentXp}`;
     }
   });
@@ -503,6 +675,13 @@ async function initGame() {
     if (selectedCategory && selectedCategory !== "RANDOM") url += `&category=${selectedCategory}`;
     if (selectedDifficulty) url += `&difficulty=${selectedDifficulty}`;
 
+    if (currentUserId === "offline") {
+      const localData = window.loadOfflineUser(window.offlineAgentName);
+      if (localData.solved_words && localData.solved_words.length > 0) {
+        url += `&exclude=${encodeURIComponent(localData.solved_words.join(','))}`;
+      }
+    }
+
     const res = await fetch(url);
     if (!res.ok) throw new Error("API Fetch Failed");
     const data = await res.json();
@@ -552,6 +731,75 @@ function updateScoreUI() {
 async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
   // Always submit on win/loss for XP, streaks, and loss counts
   if (!currentUserId || isWin === null) return;
+  
+  if (currentUserId === "offline") {
+    // Offline storage calculation logic
+    const localData = window.loadOfflineUser(window.offlineAgentName);
+    
+    const xpAdded = xpGained * scoreMultiplier;
+    localData.xp = (localData.xp || 0) + xpAdded;
+    
+    if (isWin) {
+      localData.wins = (localData.wins || 0) + 1;
+      localData.streak = (localData.streak || 0) + 1;
+      if (localData.streak > (localData.longest_streak || 0)) {
+        localData.longest_streak = localData.streak;
+      }
+      if (!localData.solved_words) localData.solved_words = [];
+      if (!localData.solved_words.includes(currentWord)) {
+        localData.solved_words.push(currentWord);
+      }
+    } else {
+      localData.losses = (localData.losses || 0) + 1;
+      localData.streak = 0;
+    }
+
+    if (currentScore > localData.highest_score) {
+      localData.highest_score = currentScore;
+      highestScore = currentScore;
+      highScoreSpan.innerText = `${highestScore}`;
+    }
+
+    const newLevel = Math.floor(localData.xp / 100) + 1;
+    if (newLevel !== localData.level) {
+      localData.level = newLevel;
+      showToast("⚡ LEVEL UP", `Decryption level increased to ${newLevel}!`, "#ffd700");
+    }
+
+    let rank = "Beginner";
+    if (localData.level >= 30) rank = "Elite Decryptor";
+    else if (localData.level >= 20) rank = "Senior Agent";
+    else if (localData.level >= 10) rank = "Specialist";
+    else if (localData.level >= 5) rank = "Operative";
+    localData.rank = rank;
+
+    if (isWin && currentMode === "story" && currentStoryLevel === localData.story_progress) {
+      localData.story_progress = Math.min(4, localData.story_progress + 1);
+      storyProgress = localData.story_progress;
+      updateStoryUI();
+    }
+
+    const newAchievements = window.checkOfflineAchievements(localData, isWin);
+    if (newAchievements.length > 0) {
+      localData.achievements = [...(localData.achievements || []), ...newAchievements];
+      newAchievements.forEach((ach, i) => {
+        setTimeout(() => showAchievementToast(ach), i * 2000);
+      });
+    }
+
+    window.saveOfflineUser(localData);
+
+    currentXp = localData.xp;
+    currentRank = localData.rank;
+    currentLevel = localData.level;
+    currentXpSpan.innerText = `EXP: ${currentXp}`;
+    if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
+    
+    updateAgentHUD();
+    refreshProgressHUD();
+    return;
+  }
+
   try {
     const res = await fetch(`${API_URL}/score`, {
       method: 'POST',
@@ -690,10 +938,17 @@ function checkWin() {
 
     // Mark daily complete if this was a daily challenge
     if (isDailyChallenge && currentUserId) {
-      fetch(`${API_URL}/daily_complete`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUserId })
-      }).catch(() => { });
+      if (currentUserId === "offline") {
+        const localData = window.loadOfflineUser(window.offlineAgentName);
+        const today = new Date().toISOString().split('T')[0];
+        localData.last_completed_daily_date = today;
+        window.saveOfflineUser(localData);
+      } else {
+        fetch(`${API_URL}/daily_complete`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUserId })
+        }).catch(() => { });
+      }
       isDailyChallenge = false;
     }
     // Cinematic Escape Sequence
@@ -1112,10 +1367,23 @@ const dailyBtn = document.getElementById('daily-btn');
 dailyBtn.addEventListener('click', async () => {
   if (!currentUserId) return;
   try {
-    const res = await fetch(`${API_URL}/daily_challenge?user_id=${currentUserId}`);
-    const data = await res.json();
+    let data;
+    let alreadyCompleted = false;
 
-    if (data.already_completed) {
+    if (currentUserId === "offline") {
+      const localData = window.loadOfflineUser(window.offlineAgentName);
+      const today = new Date().toISOString().split('T')[0];
+      alreadyCompleted = (localData.last_completed_daily_date === today);
+
+      const res = await fetch(`${API_URL}/daily_challenge?user_id=offline`);
+      data = await res.json();
+    } else {
+      const res = await fetch(`${API_URL}/daily_challenge?user_id=${currentUserId}`);
+      data = await res.json();
+      alreadyCompleted = data.already_completed;
+    }
+
+    if (alreadyCompleted || data.already_completed) {
       showToast('⭐ DAILY MISSION COMPLETE', 'You already conquered today\'s mission. Come back tomorrow!', '#00ffcc');
       return;
     }
@@ -1143,7 +1411,7 @@ dailyBtn.addEventListener('click', async () => {
     // Reset Hint UI
     if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn.classList.remove('disabled'); hintBtn.disabled = false; }
     if (clueDisplay) clueDisplay.classList.add('hidden');
-    clueText.innerText = `[DAILY] ${data.clue}`;
+    clueText.innerText = `[DAILY] ${data.hint || data.clue}`;
 
     // Reset DOM state
     gameContainer.classList.remove('win-state', 'loss-state', 'game-loss', 'game-container-shake');
@@ -1266,9 +1534,15 @@ const closeAchievementsBtn = document.getElementById('close-achievements-btn');
 trophiesBtn.addEventListener('click', async () => {
   if (!currentUserId) return;
   try {
-    const res = await fetch(`${API_URL}/achievements?user_id=${currentUserId}`);
-    const data = await res.json();
-    const earned = data.achievements || [];
+    let earned = [];
+    if (currentUserId === "offline") {
+      const localData = window.loadOfflineUser(window.offlineAgentName);
+      earned = localData.achievements || [];
+    } else {
+      const res = await fetch(`${API_URL}/achievements?user_id=${currentUserId}`);
+      const data = await res.json();
+      earned = data.achievements || [];
+    }
 
     achievementsList.innerHTML = '';
 
@@ -1288,10 +1562,30 @@ trophiesBtn.addEventListener('click', async () => {
       achievementsList.appendChild(div);
     });
 
-
     achievementsPopup.classList.remove('hidden');
   } catch (err) {
     console.error('Achievements Error', err);
+    // Fallback to local storage if API call fails
+    if (window.offlineAgentName) {
+      const localData = window.loadOfflineUser(window.offlineAgentName);
+      const earned = localData.achievements || [];
+      achievementsList.innerHTML = '';
+      Object.entries(ACHIEVEMENT_DATA).forEach(([name, info]) => {
+        const div = document.createElement('div');
+        const unlocked = earned.includes(name);
+        const tierClass = unlocked ? `tier-${info.tier || 'default'}` : '';
+        div.className = `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${tierClass}`;
+        div.innerHTML = `
+          <span class="ach-icon">${unlocked ? info.icon : '🔒'}</span>
+          <div class="ach-info">
+            <div class="ach-name">${name}</div>
+            <div class="ach-desc">${unlocked ? info.desc : '???'}</div>
+          </div>
+        `;
+        achievementsList.appendChild(div);
+      });
+      achievementsPopup.classList.remove('hidden');
+    }
   }
 });
 
@@ -1496,10 +1790,23 @@ if (duelStartBtn) {
 
 async function shareProgress() {
   try {
-    const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
-    const data = await res.json();
+    let totalPercentage = 0;
+    let totalSolved = 0;
+    let totalWords = 0;
 
-    const text = `🎮 Tech Hangman Progress: I've mastered ${data.total_percentage}% of the tech world! (${data.total_solved}/${data.total_words} units solved). Can you beat me? #TechHangman #Coding`;
+    if (currentUserId === "offline") {
+      totalWords = WORDS_TOTAL || 100;
+      totalSolved = (WORDS_TOTAL - WORDS_REMAINING) || 0;
+      totalPercentage = Math.round((totalSolved / totalWords) * 100) || 0;
+    } else {
+      const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
+      const data = await res.json();
+      totalPercentage = data.total_percentage;
+      totalSolved = data.total_solved;
+      totalWords = data.total_words;
+    }
+
+    const text = `🎮 Tech Hangman Progress: I've mastered ${totalPercentage}% of the tech world! (${totalSolved}/${totalWords} units solved). Can you beat me? #TechHangman #Coding`;
 
     if (navigator.share) {
       await navigator.share({
@@ -1509,7 +1816,7 @@ async function shareProgress() {
       });
     } else {
       await navigator.clipboard.writeText(text);
-      showAchievementToast("Stats Copied to Clipboard!");
+      showToast("📋 SYSTEM STACK", "Stats Copied to Clipboard!", "#00ffcc");
     }
   } catch (err) {
     console.error("Share Error:", err);
@@ -1526,14 +1833,23 @@ if (shareBtn) {
 async function refreshProgressHUD() {
   if (!currentUserId) return;
   try {
-    const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
-    const data = await res.json();
+    let totalPercentage = 0;
+    
+    if (currentUserId === "offline") {
+      const totalWords = WORDS_TOTAL || 0;
+      const totalSolved = (WORDS_TOTAL - WORDS_REMAINING) || 0;
+      totalPercentage = totalWords > 0 ? Math.round((totalSolved / totalWords) * 100) : 0;
+    } else {
+      const res = await fetch(`${API_URL}/user/progress?user_id=${currentUserId}`);
+      const data = await res.json();
+      totalPercentage = data.total_percentage;
+    }
 
     // Update total progress bar if it exists
     const totalBar = document.getElementById("hud-total-progress-bar");
     const totalText = document.getElementById("hud-total-progress-text");
-    if (totalBar) totalBar.style.width = `${data.total_percentage}%`;
-    if (totalText) totalText.innerText = `OVERALL: ${data.total_percentage}%`;
+    if (totalBar) totalBar.style.width = `${totalPercentage}%`;
+    if (totalText) totalText.innerText = `OVERALL: ${totalPercentage}%`;
 
   } catch (err) {
     console.error("Progress HUD Refresh Error:", err);

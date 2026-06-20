@@ -75,6 +75,7 @@ export default function Home() {
             <div className="login-tabs">
               <button className="login-tab active" id="tab-returning">RETURNING PLAYER</button>
               <button className="login-tab" id="tab-new">NEW RECRUIT</button>
+              <button className="login-tab" id="tab-offline">OFFLINE AGENT</button>
             </div>
 
             {/* Returning Player Panel */}
@@ -97,6 +98,17 @@ export default function Home() {
                 <button id="register-btn">ENLIST NOW</button>
               </div>
               <p className="login-hint" id="register-error-msg"></p>
+            </div>
+
+            {/* Offline Player Panel */}
+            <div className="login-panel hidden" id="panel-offline">
+              <p className="login-subtitle">Run local decryption mode.</p>
+              <div className="input-row">
+                <input type="text" id="offline-username-input" placeholder="ENTER CALLSIGN"
+                  autoComplete="off" maxLength={15} />
+                <button id="offline-login-btn">BOOT LOCAL MODE</button>
+              </div>
+              <p className="login-hint" id="offline-error-msg">Saves all progress locally in this browser.</p>
             </div>
           </div>
         </div>

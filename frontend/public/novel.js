@@ -1,4 +1,4 @@
-﻿// Tech Hangman Novel Extensions
+// Tech Hangman Novel Extensions
 // Loaded after /script.js. Intentionally written as an additive layer.
 
 (function () {
@@ -433,17 +433,25 @@
         const randLetter = unGuessed[Math.floor(Math.random() * unGuessed.length)];
         handleGuess(randLetter);
 
-        try {
-          await fetch(API_URL + '/hints', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: currentUserId, type: 'letter', word: currentWord }),
-          });
-        } catch {
-          // Non-fatal
+        if (currentUserId === "offline") {
+          if (typeof window.loadOfflineUser === 'function') {
+            const localData = window.loadOfflineUser(window.offlineAgentName);
+            localData.xp = Math.max(0, (localData.xp || 0) - cost);
+            window.saveOfflineUser(localData);
+            currentXp = localData.xp;
+          }
+        } else {
+          try {
+            await fetch(API_URL + '/hints', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: currentUserId, type: 'letter', word: currentWord }),
+            });
+          } catch {
+            // Non-fatal
+          }
+          currentXp -= cost;
         }
-
-        currentXp -= cost;
         if (typeof currentXpSpan !== 'undefined' && currentXpSpan) {
           currentXpSpan.innerText = 'EXP: ' + String(currentXp);
         }

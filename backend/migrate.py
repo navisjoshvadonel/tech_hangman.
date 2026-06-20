@@ -13,10 +13,11 @@ def migrate():
     c.execute('''
     CREATE TABLE IF NOT EXISTS Words (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        word TEXT UNIQUE,
+        hint TEXT,
         category TEXT,
         difficulty TEXT,
-        word TEXT,
-        clue TEXT
+        description TEXT
     )
     ''')
 
@@ -32,9 +33,12 @@ def migrate():
     for category, diffs in words.CATEGORIZED_WORDS.items():
         for diff, word_list in diffs.items():
             for item in word_list:
-                c.execute('INSERT INTO Words (category, difficulty, word, clue) VALUES (?, ?, ?, ?)',
-                          (category, diff, item["word"], item["clue"]))
-                count += 1
+                try:
+                    c.execute('INSERT INTO Words (word, hint, category, difficulty, description) VALUES (?, ?, ?, ?, ?)',
+                              (item["word"].upper(), item["clue"], category, diff, item.get("description", "")))
+                    count += 1
+                except sqlite3.IntegrityError:
+                    pass
 
     conn.commit()
     conn.close()

@@ -78,6 +78,11 @@ def execute_query(cursor, query, params=None):
             # Replace as a whole word only
             import re
             query = re.sub(rf'\b{kw}\b', f'`{kw}`', query, flags=re.IGNORECASE)
+    else:
+        import re
+        query = re.sub(r'\bINT\s+PRIMARY\s+KEY\s+AUTO_INCREMENT\b', 'INTEGER PRIMARY KEY AUTOINCREMENT', query, flags=re.IGNORECASE)
+        query = re.sub(r'\bINT\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b', 'INTEGER PRIMARY KEY AUTOINCREMENT', query, flags=re.IGNORECASE)
+        query = query.replace('AUTO_INCREMENT', 'AUTOINCREMENT')
     cursor.execute(query, params or ())
     return cursor
 

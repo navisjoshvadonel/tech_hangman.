@@ -123,18 +123,26 @@ export async function GET(request: Request) {
     const pool = buildPool(wordsData, category, difficulty);
 
     if (pool.length === 0) {
-      return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'fallback' });
+      return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'fallback', words_total: 0, words_remaining: 0 });
     }
 
-    const wordObj = pool[Math.floor(Math.random() * pool.length)];
+    const excludeParam = searchParams.get('exclude') || '';
+    const excludeList = excludeParam ? excludeParam.toUpperCase().split(',') : [];
+    const filteredPool = pool.filter(w => !excludeList.includes(String(w.word || '').toUpperCase()));
+
+    const poolToUse = filteredPool.length > 0 ? filteredPool : pool;
+    const wordObj = poolToUse[Math.floor(Math.random() * poolToUse.length)];
+
     return NextResponse.json({
       ...wordObj,
       word: String(wordObj.word || '').toUpperCase(),
       clue: wordObj.clue || wordObj.hint || 'No clue available.',
       status: 'ok',
+      words_total: pool.length,
+      words_remaining: filteredPool.length,
     });
   } catch (error) {
     console.error('Word route error:', error);
-    return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'error' }, { status: 500 });
+    return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'error', words_total: 0, words_remaining: 0 }, { status: 500 });
   }
 }
