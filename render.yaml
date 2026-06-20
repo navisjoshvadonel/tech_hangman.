@@ -3,8 +3,8 @@ services:
     name: hangman-backend
     env: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python populate_db.py
-    startCommand: gunicorn server:app
+    buildCommand: pip install -r requirements.txt
+    startCommand: python populate_db.py && gunicorn server:app
     plan: starter
     envVars:
       - key: DB_PATH
