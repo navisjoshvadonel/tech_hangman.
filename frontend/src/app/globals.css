@@ -1060,18 +1060,22 @@ h1 {
 }
 
 .draw-part {
-  fill: none;
-  stroke: var(--neon-cyan);
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  transition: stroke-dashoffset 0.8s ease-in-out;
+  opacity: 0;
+  transform: scale(0.92);
+  transform-origin: 130px 100px;
+  transition: opacity 0.5s cubic-bezier(0.19, 1, 0.22, 1), transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+
+
+
+
+
+
+
 }
 
 .draw-part.drawn {
-  stroke-dashoffset: 0;
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Loss coloring */
@@ -3760,5 +3764,157 @@ h2,
     #cyber-cursor .cyber-cursor-dot {
       transition: none;
     }
+  }
+}
+
+/* --- Custom Scrollbar Styling (Cyberpunk Theme) --- */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 3, 6, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neon-cyan);
+  border-radius: 4px;
+  box-shadow: 0 0 8px var(--neon-cyan);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00d2ff;
+}
+
+/* --- Laptop / Desktop Full Screen Sizing (min-width: 769px) --- */
+@media (min-width: 769px) {
+  body {
+    overflow: hidden;
+    height: 100vh;
+    padding: 0;
+  }
+
+  #game-container {
+    height: 90vh;
+    max-height: 800px;
+    min-height: 580px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 30px !important;
+    box-sizing: border-box;
+  }
+
+  .hangman-svg {
+    height: 32vh !important;
+    max-height: 240px !important;
+    width: auto !important;
+  }
+
+  .hangman-display {
+    margin: 10px 0 !important;
+  }
+
+  .word-display {
+    margin: 15px 0 !important;
+  }
+
+  .keyboard {
+    margin-top: 10px !important;
+    gap: 6px !important;
+  }
+
+  .key {
+    padding: 10px 14px !important;
+    font-size: 1.25rem !important;
+    min-width: 44px !important;
+  }
+}
+
+/* --- Mobile Adaptive Layout & Scaling (max-width: 768px) --- */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+    overflow-y: auto;
+  }
+
+  #game-container {
+    width: 100% !important;
+    padding: 15px 12px !important;
+    border-width: 2px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 30px rgba(0, 255, 204, 0.2) !important;
+  }
+
+  h1 {
+    font-size: 1.8rem !important;
+    letter-spacing: 2px !important;
+  }
+
+  .status-bar {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    border-radius: 6px !important;
+  }
+
+  .status-bar.action-bar {
+    margin-top: 5px !important;
+  }
+
+  .action-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .action-buttons button {
+    padding: 6px 4px !important;
+    font-size: 0.7rem !important;
+    text-align: center !important;
+  }
+
+  .hangman-svg {
+    height: clamp(140px, 22vh, 200px) !important;
+    width: auto !important;
+  }
+
+  .hangman-display {
+    margin: 10px 0 !important;
+  }
+
+  .word-display {
+    gap: 6px !important;
+    margin: 15px 0 !important;
+    min-height: 30px !important;
+  }
+
+  .letter-box {
+    width: clamp(20px, 6vw, 32px) !important;
+    height: clamp(32px, 8vw, 45px) !important;
+    font-size: clamp(1.1rem, 3.5vw, 1.8rem) !important;
+    border-bottom-width: 3px !important;
+  }
+
+  .keyboard {
+    margin-top: 12px !important;
+    gap: 4px !important;
+  }
+
+  .key {
+    padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 11px) !important;
+    font-size: clamp(0.9rem, 3vw, 1.1rem) !important;
+    border-width: 1px !important;
+    border-radius: 4px !important;
+    min-width: clamp(28px, 7vw, 36px) !important;
+  }
+
+  #popup {
+    padding: 20px !important;
+    width: 90% !important;
+    max-width: 320px !important;
+  }
+
+  #popup-message {
+    font-size: 1.2rem !important;
+    margin-bottom: 15px !important;
   }
 }

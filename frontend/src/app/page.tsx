@@ -271,26 +271,105 @@ export default function Home() {
 
         <div className="hangman-display">
           <svg className="hangman-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
-            {/* 0: Base */}
-            <line className="draw-part part-0" pathLength={100} x1="20" y1="230" x2="180" y2="230" />
-            {/* 1: Pole */}
-            <line className="draw-part part-1" pathLength={100} x1="50" y1="230" x2="50" y2="20" />
-            {/* 2: Top bar */}
-            <line className="draw-part part-2" pathLength={100} x1="50" y1="20" x2="130" y2="20" />
-            {/* 3: Rope */}
-            <line className="draw-part part-3" pathLength={100} x1="130" y1="20" x2="130" y2="50" />
-            {/* 4: Head */}
-            <circle className="draw-part part-4" pathLength={100} cx="130" cy="70" r="20" />
-            {/* 5: Body */}
-            <line className="draw-part part-5" pathLength={100} x1="130" y1="90" x2="130" y2="150" />
-            {/* 6: Left Arm */}
-            <line className="draw-part part-6" pathLength={100} x1="130" y1="100" x2="100" y2="130" />
-            {/* 7: Right Arm */}
-            <line className="draw-part part-7" pathLength={100} x1="130" y1="100" x2="160" y2="130" />
-            {/* 8: Left Leg */}
-            <line className="draw-part part-8" pathLength={100} x1="130" y1="150" x2="100" y2="190" />
-            {/* 9: Right Leg */}
-            <line className="draw-part part-9" pathLength={100} x1="130" y1="150" x2="160" y2="190" />
+            <defs>
+              <linearGradient id="base-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#051026" />
+                <stop offset="50%" stopColor="#00ffcc" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#051026" />
+              </linearGradient>
+              <linearGradient id="column-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#020813" />
+                <stop offset="50%" stopColor="#0088ff" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#020813" />
+              </linearGradient>
+              <linearGradient id="helmet-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#0b3c5d" />
+                <stop offset="100%" stopColor="#00ffcc" />
+              </linearGradient>
+              <linearGradient id="torso-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#051026" />
+                <stop offset="50%" stopColor="#00ffcc" />
+                <stop offset="100%" stopColor="#051026" />
+              </linearGradient>
+              <filter id="cyber-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* 0: Base (Terminal Platform) */}
+            <g className="draw-part part-0">
+              <rect x="20" y="222" width="160" height="12" rx="3" fill="url(#base-grad)" stroke="#00ffcc" strokeWidth="1.5" />
+              <line x1="25" y1="228" x2="175" y2="228" stroke="#00ffcc" strokeWidth="1" strokeDasharray="3 3" />
+            </g>
+
+            {/* 1: Pole (Chassis Column) */}
+            <g className="draw-part part-1">
+              <rect x="46" y="20" width="8" height="202" fill="url(#column-grad)" stroke="#0088ff" strokeWidth="1" />
+              <line x1="50" y1="25" x2="50" y2="218" stroke="#00ffcc" strokeWidth="1" strokeDasharray="1 12" />
+            </g>
+
+            {/* 2: Top bar (Robot Gantry) */}
+            <g className="draw-part part-2">
+              <rect x="54" y="16" width="80" height="8" rx="2" fill="url(#column-grad)" stroke="#0088ff" strokeWidth="1" />
+              <line x1="56" y1="28" x2="80" y2="16" stroke="#00ffcc" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+
+            {/* 3: Rope (Energy Cable) */}
+            <g className="draw-part part-3">
+              <rect x="128" y="24" width="4" height="10" fill="#fff" filter="url(#cyber-glow)" />
+              <line x1="130" y1="34" x2="130" y2="58" stroke="#ffd700" strokeWidth="2.5" strokeDasharray="1 2" filter="url(#cyber-glow)" />
+            </g>
+
+            {/* 4: Head (Visor Helmet) */}
+            <g className="draw-part part-4">
+              <circle cx="130" cy="74" r="14" fill="url(#helmet-grad)" stroke="#00ffcc" strokeWidth="2" filter="url(#cyber-glow)" />
+              <rect x="120" y="69" width="20" height="5" rx="1.5" fill="#ffd700" filter="url(#cyber-glow)" />
+              <circle cx="115" cy="74" r="2.5" fill="#00ffcc" />
+              <circle cx="145" cy="74" r="2.5" fill="#00ffcc" />
+            </g>
+
+            {/* 5: Body (Cyber Torso) */}
+            <g className="draw-part part-5">
+              <path d="M 120,88 L 140,88 L 136,138 L 124,138 Z" fill="url(#torso-grad)" stroke="#00ffcc" strokeWidth="1.5" />
+              <circle cx="130" cy="110" r="5" fill="#00ffcc" filter="url(#cyber-glow)" />
+              <line x1="130" y1="88" x2="130" y2="138" stroke="rgba(0, 255, 204, 0.3)" strokeWidth="1" />
+            </g>
+
+            {/* 6: Left Arm (Robotic Limb) */}
+            <g className="draw-part part-6">
+              <circle cx="118" cy="94" r="3" fill="#00ffcc" />
+              <line x1="118" y1="94" x2="102" y2="112" stroke="#00ffcc" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="102" cy="112" r="2" fill="#ffd700" />
+              <line x1="102" y1="112" x2="94" y2="128" stroke="#00ffcc" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+
+            {/* 7: Right Arm (Robotic Limb) */}
+            <g className="draw-part part-7">
+              <circle cx="142" cy="94" r="3" fill="#00ffcc" />
+              <line x1="142" y1="94" x2="158" y2="112" stroke="#00ffcc" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="158" cy="112" r="2" fill="#ffd700" />
+              <line x1="158" y1="112" x2="166" y2="128" stroke="#00ffcc" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+
+            {/* 8: Left Leg (Robotic Leg) */}
+            <g className="draw-part part-8">
+              <circle cx="123" cy="140" r="3" fill="#00ffcc" />
+              <line x1="123" y1="140" x2="115" y2="168" stroke="#00ffcc" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="115" cy="168" r="2" fill="#ffd700" />
+              <line x1="115" y1="168" x2="106" y2="192" stroke="#00ffcc" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+
+            {/* 9: Right Leg (Robotic Leg) */}
+            <g className="draw-part part-9">
+              <circle cx="137" cy="140" r="3" fill="#00ffcc" />
+              <line x1="137" y1="140" x2="145" y2="168" stroke="#00ffcc" strokeWidth="3.5" strokeLinecap="round" />
+              <circle cx="145" cy="168" r="2" fill="#ffd700" />
+              <line x1="145" y1="168" x2="154" y2="192" stroke="#00ffcc" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
           </svg>
 
           {/* Intrusion Diagram (TRACE/ICE visual) */}
