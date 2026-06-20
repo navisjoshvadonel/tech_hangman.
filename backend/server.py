@@ -31,6 +31,7 @@ print(f"DATABASE IDENTITY INITIALIZED: {DB_TYPE}")
 
 def get_db_connection():
     """Returns a connection based on the available configuration."""
+    global DB_TYPE
     if DB_TYPE == 'mysql':
         try:
             url = urlparse(MYSQL_URL)
@@ -55,6 +56,7 @@ def get_db_connection():
             import sqlite3
             conn = sqlite3.connect(DEFAULT_DB_PATH, timeout=20)
             conn.row_factory = sqlite3.Row
+            DB_TYPE = 'sqlite'
             return conn
     else:
         import sqlite3
