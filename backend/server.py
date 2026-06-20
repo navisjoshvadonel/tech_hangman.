@@ -46,7 +46,11 @@ def get_db_connection():
             )
             return conn
         except Exception as e:
-            print(f"!!! CRITICAL MYSQL ERROR !!!: {str(e)}")
+            try:
+                err_msg = str(e)
+            except Exception:
+                err_msg = "Unknown MySQL connection error (string representation failed)"
+            print(f"!!! CRITICAL MYSQL ERROR !!!: {err_msg}")
             # Fallback to local SQLite so the site doesn't stay "Dead"
             import sqlite3
             conn = sqlite3.connect(DEFAULT_DB_PATH, timeout=20)
