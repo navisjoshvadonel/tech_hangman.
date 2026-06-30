@@ -408,9 +408,15 @@ export default function Home() {
           <p id="clue-display" className="neon-text" style={{ marginBottom: '15px' }}>
             CLUE: <span id="clue-text" style={{ textTransform: 'uppercase', color: '#fff' }}>waiting for signal...</span>
           </p>
+
+          <div id="hint-display-area" className="hidden">
+            <p id="clue-display-v2" className="neon-text" style={{ marginTop: '12px', fontSize: '0.95rem', color: '#fff', textTransform: 'uppercase' }}></p>
+          </div>
+
           <div className="hint-system">
             <div className="hint-buttons">
               <button id="hint-reveal-cat" className="hint-btn">SHOW CATEGORY (FREE)</button>
+              <button id="hint-reveal-desc" className="hint-btn">REVEAL DESCRIPTION (-20 XP)</button>
               <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
             </div>
           </div>

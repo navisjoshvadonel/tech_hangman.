@@ -1410,7 +1410,7 @@ dailyBtn.addEventListener('click', async () => {
 
     // Reset Hint UI
     if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn.classList.remove('disabled'); hintBtn.disabled = false; }
-    if (clueDisplay) clueDisplay.classList.add('hidden');
+    if (clueDisplay) clueDisplay.classList.remove('hidden');
     clueText.innerText = `[DAILY] ${data.hint || data.clue}`;
 
     // Reset DOM state
