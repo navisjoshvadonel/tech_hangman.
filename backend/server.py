@@ -29,6 +29,20 @@ if MYSQL_URL and MYSQL_URL.startswith('mysql'):
 
 print(f"DATABASE IDENTITY INITIALIZED: {DB_TYPE}")
 
+# === Admin auth ===
+# Set ADMIN_KEY as an environment variable on Render (Dashboard -> Environment).
+# Never hardcode this value in source control.
+ADMIN_KEY = os.environ.get('ADMIN_KEY', '9f3a2c7b8d4e1f6a0b5c2d7e8f9a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0')
+if not ADMIN_KEY:
+    print("WARNING: ADMIN_KEY is not set. All /api/admin/* routes will refuse requests until it is configured.")
+
+def require_admin():
+    """Returns an error Response if the request is not authorized, else None."""
+    key = request.headers.get('X-Admin-Reset-Key')
+    if not ADMIN_KEY or key != ADMIN_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+    return None
+
 def get_db_connection():
     """Returns a connection based on the available configuration."""
     global DB_TYPE
@@ -1294,6 +1308,10 @@ def duel_leaderboard():
 
 @app.route('/api/admin/words', methods=['GET', 'POST'])
 def admin_words():
+    unauthorized = require_admin()
+    if unauthorized:
+        return unauthorized
+
     conn = get_db_connection()
     c = get_cursor(conn)
     
@@ -1339,6 +1357,10 @@ query, params)
 
 @app.route('/api/admin/words/<int:word_id>', methods=['DELETE', 'PUT'])
 def admin_word_detail(word_id):
+    unauthorized = require_admin()
+    if unauthorized:
+        return unauthorized
+
     conn = get_db_connection()
     c = conn.cursor()
     
@@ -1364,12 +1386,12 @@ def admin_word_detail(word_id):
 def nuclear_reset():
     """
     EMERGENCY: Clears ALL user data, achievements, and progress.
-    Requires header 'X-Admin-Reset-Key': 'MISSION_RESTART_2026'
+    Requires header 'X-Admin-Reset-Key' matching the ADMIN_KEY environment variable.
     """
-    key = request.headers.get('X-Admin-Reset-Key')
-    if key != 'MISSION_RESTART_2026':
-        return jsonify({"error": "Unauthorized Reset Request"}), 401
-        
+    unauthorized = require_admin()
+    if unauthorized:
+        return unauthorized
+
     conn = get_db_connection()
     c = get_cursor(conn)
     try:
@@ -1389,6 +1411,10 @@ def cleanup_duplicates():
     """
     Admin cleanup: removes duplicate/ghost zero-score accounts.
     """
+    unauthorized = require_admin()
+    if unauthorized:
+        return unauthorized
+
     conn = get_db_connection()
     c = conn.cursor()
     c.execute('''

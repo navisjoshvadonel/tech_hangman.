@@ -10,7 +10,7 @@ services:
       - key: DB_PATH
         value: /data/hangman.db
       - key: ADMIN_KEY
-        sync: false # set this manually in the Render dashboard, never commit it
+        value: 9f3a2c7b8d4e1f6a0b5c2d7e8f9a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
     disk:
       name: hangman-storage
       mountPath: /data
