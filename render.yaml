@@ -9,7 +9,9 @@ services:
     envVars:
       - key: DB_PATH
         value: /data/hangman.db
+      - key: ADMIN_KEY
+        sync: false # set this manually in the Render dashboard, never commit it
     disk:
       name: hangman-storage
       mountPath: /data
-      sizeGB: 1
+      sizeGB: 1  # this is new render fix
