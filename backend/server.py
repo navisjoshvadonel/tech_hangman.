@@ -249,13 +249,16 @@ def init_db():
 
     conn.commit()
     
-    # NEW: Self-healing check for words
+    # NEW: Self-healing check for words (Always sync to guarantee all words are reflected)
+    from words import CATEGORIZED_WORDS
+    total_in_script = sum(len(word_list) for cat in CATEGORIZED_WORDS.values() for word_list in cat.values())
+    
     execute_query(c, 'SELECT COUNT(*) FROM Words')
     res = c.fetchone()
     count = res[0] if not isinstance(res, dict) else list(res.values())[0]
-    if count == 0:
-        print("WORDS TABLE EMPTY: Automatically populating from words.py...")
-        from words import CATEGORIZED_WORDS
+    
+    if count < total_in_script:
+        print(f"WORDS SYNC: DB has {count}, Script has {total_in_script}. Syncing...")
         for category, difficulties in CATEGORIZED_WORDS.items():
             for difficulty, word_list in difficulties.items():
                 for item in word_list:
@@ -267,7 +270,7 @@ def init_db():
                     except Exception:
                         continue # Skip duplicates
         conn.commit()
-        print(f"POPULATION COMPLETE: Added initial words set.")
+        print(f"POPULATION COMPLETE: Words synced.")
         
     conn.close()
 

@@ -826,7 +826,9 @@ body {
   max-width: 1200px;
   /* Expand footprint */
   width: 95vw;
-  min-height: 700px;
+  min-height: 70vh;
+  max-height: 95vh;
+  overflow-y: auto;
   /* Force minimum vertical space */
 }
 
@@ -1014,6 +1016,8 @@ body {
   z-index: 10;
   width: 95%;
   max-width: 900px;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 @keyframes float-idle {

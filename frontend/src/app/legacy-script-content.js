@@ -6,12 +6,12 @@ let guessedLetters = [];
 let wrongGuesses = 0;
 let MAX_MISTAKES = 10;
 const MISTAKE_MAPPINGS = {
-  // 12 mistakes: Some misses do not draw any new limbs
-  EASY: [[0], [1], [], [2], [3], [], [4], [5], [6], [7], [8], [9]],
-  // 9 mistakes: Left and Right Arm drawn simultaneously on mistake 7
-  MEDIUM: [[0], [1], [2], [3], [4], [5], [6], [7, 8], [9]],
-  // 6 mistakes: Multi-limb rendering
-  HARD: [[0, 1], [2, 3], [4], [5], [6, 7], [8, 9]]
+  // 10 mistakes: One part per mistake
+  EASY: [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]],
+  // 7 mistakes: Accelerated drawing
+  MEDIUM: [[0, 1], [2], [3], [4], [5], [6, 7], [8, 9]],
+  // 5 mistakes: Fast punishment
+  HARD: [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]
 };
 let isGameOver = false;
 let hintsUsed = 0;
@@ -767,7 +767,8 @@ const domainQuotes = {
   "SOFTWAREENGINEERING": '"Software is a great combination between artistry and engineering."\n- Bill Gates',
   "LINUX": '"In a world without fences and walls, who needs Gates and Windows?"\n- Unknown',
   "CLOUD": '"There is no cloud, it\'s just someone else\'s computer."\n- Unknown',
-  "DATASCIENCE": '"Data is the new oil."\n- Clive Humby'
+  "DATASCIENCE": '"Data is the new oil."\n- Clive Humby',
+  "RANDOM": '"Everything happens for a reason."\n- Unknown'
 };
 
 
@@ -870,11 +871,12 @@ const domainLogos = {
 };
 
 function formatQuoteForLeftPanel(text) {
+  if (!text) return `"For the Son of Man came to seek and to save the lost." <br><span class="quote-ref">- Luke 19:10</span>`;
   const parts = text.split('\n');
   if (parts.length > 1) {
     return `${parts[0]} <br><span class="quote-ref">${parts[1]}</span>`;
   }
-  return text;
+  return `${text} <br><span class="quote-ref">- Unknown</span>`;
 }
 
 const quoteTransitionOverlay = document.getElementById("quote-transition-overlay");
