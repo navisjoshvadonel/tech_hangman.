@@ -829,7 +829,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       currentLevel = data.level;
       storyProgress = data.story_progress || storyProgress;
       currentXpSpan.innerText = `EXP: ${currentXp}`;
-      currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
+      if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
       updateStoryUI();
       updateAgentHUD();
     }
@@ -1140,23 +1140,23 @@ document.addEventListener("keydown", (e) => {
 
 // === Selection & Navigation Logic ===
 const domainQuotes = {
-  "DATABASE": '"Without data, you\'re just another person with an opinion."\n- W. Edwards Deming',
+  "DATABASE": '"Data is the new oil, and databases are the engines that refine it."\n- Clive Humby',
   "DATA_STRUCTURE": '"Bad programmers worry about the code. Good programmers worry about data structures."\n- Linus Torvalds',
-  "JAVA": '"Java is C++ without the guns, clubs and knives."\n- James Gosling',
-  "PYTHON": '"Readability counts. Beautiful is better than ugly."\n- The Zen of Python',
+  "JAVA": '"Java is to JavaScript what car is to carpet."\n- Chris Heilmann',
+  "PYTHON": '"Beautiful is better than ugly. Explicit is better than implicit."\n- Tim Peters',
   "C": '"C is quirky, flawed, and an enormous success."\n- Dennis Ritchie',
-  "CPP": '"In C++ it\'s harder to shoot yourself in the foot, but when you do, you blow off your whole leg."\n- Bjarne Stroustrup',
-  "GENERAL_KNOWLEDGE": '"An investment in knowledge pays the best interest."\n- Benjamin Franklin',
-  "ARTIFICIAL_INTELLIGENCE": '"Artificial intelligence is the new electricity."\n- Andrew Ng',
-  "OPERATING_SYSTEM": '"The art of programming is the art of organizing complexity."\n- Edsger W. Dijkstra',
-  "CODE_OUTPUT": '"First, solve the problem. Then, write the code."\n- John Johnson',
-  "NETWORKING": '"Success is the result of preparation, hard work, and learning from failure."\n- Colin Powell',
-  "CYBERSECURITY": '"The only truly secure system is one that is powered off, cast in a block of concrete and sealed in a lead-lined room."\n- Gene Spafford',
-  "WEBDEVELOPMENT": '"Websites should look good from the inside and out."\n- Paul Cookson',
-  "SOFTWAREENGINEERING": '"Software is a great combination between artistry and engineering."\n- Bill Gates',
-  "LINUX": '"In a world without fences and walls, who needs Gates and Windows?"\n- Unknown',
-  "CLOUD": '"There is no cloud, it\'s just someone else\'s computer."\n- Unknown',
-  "DATASCIENCE": '"Data is the new oil."\n- Clive Humby'
+  "CPP": '"C makes it easy to shoot yourself in the foot; C++ blows your whole leg off."\n- Bjarne Stroustrup',
+  "GENERAL_KNOWLEDGE": '"The only true wisdom is in knowing you know nothing."\n- Socrates',
+  "ARTIFICIAL_INTELLIGENCE": '"We can only see a short distance ahead, but we can see plenty to be done."\n- Alan Turing',
+  "OPERATING_SYSTEM": '"The Unix philosophy is to design programs to do one thing and do it well."\n- Ken Thompson',
+  "CODE_OUTPUT": '"Talk is cheap. Show me the code."\n- Linus Torvalds',
+  "NETWORKING": '"The network is the computer."\n- John Gage',
+  "CYBERSECURITY": '"If you think technology can solve your security problems, you don\'t understand them."\n- Bruce Schneier',
+  "WEBDEVELOPMENT": '"The Web does not just connect machines, it connects people."\n- Tim Berners-Lee',
+  "SOFTWAREENGINEERING": '"Simplicity is the soul of efficiency."\n- Austin Freeman',
+  "LINUX": '"Linux is not about being better than anyone else, it is about being free."\n- Linus Torvalds',
+  "CLOUD": '"Everything fails, all the time. Plan for it."\n- Werner Vogels',
+  "DATASCIENCE": '"In God we trust. All others must bring data."\n- W. Edwards Deming'
 };
 
 
@@ -1167,7 +1167,7 @@ const defaultLogo = `
 </svg>
 `;
 
-const defaultQuote = `"For the Son of Man came to seek and to save the lost." <br><span class="quote-ref">- Luke 19:10</span>`;
+const defaultQuote = `"Design is not just what it looks like and feels like. Design is how it works." <br><span class="quote-ref">- Steve Jobs</span>`;
 
 const domainLogos = {
   "DATABASE": `<svg class="domain-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -1294,8 +1294,8 @@ catBtns.forEach(btn => {
       categorySelection.classList.add("hidden");
       difficultySelection.classList.remove("hidden");
 
-      // Update Left Panel
-      document.getElementById("left-logo-container").innerHTML = domainLogos[selectedCategory] || defaultLogo;
+      // Update Left Panel - Keep the Cross (defaultLogo) as the logo of the game application
+      document.getElementById("left-logo-container").innerHTML = defaultLogo;
       document.getElementById("left-quote-container").innerHTML = formatQuoteForLeftPanel(domainQuotes[selectedCategory] || defaultQuote);
     }, 3500);
   });

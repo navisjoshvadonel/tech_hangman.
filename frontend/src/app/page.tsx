@@ -47,27 +47,10 @@ export default function Home() {
       {/* Login Overlay */}
       <div id="login-overlay" className="overlay hidden">
         <div className="login-content-wrapper">
-          <div className="cyber-core-container">
-            <svg className="cyber-core-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-              {/* Base structural rings */}
-              <circle cx="150" cy="75" r="50" className="core-ring core-ring-outer" />
-              <circle cx="150" cy="75" r="35" className="core-ring core-ring-middle" />
-              <circle cx="150" cy="75" r="20" className="core-ring core-ring-inner" />
-
-              {/* Pulsing Data Core */}
-              <circle cx="150" cy="75" r="8" className="core-node" />
-
-              {/* Decorative HUD elements */}
-              <path className="hud-bracket" d="M 90,45 L 80,45 L 80,105 L 90,105" />
-              <path className="hud-bracket" d="M 210,45 L 220,45 L 220,105 L 210,105" />
-
-              <line className="hud-line" x1="150" y1="10" x2="150" y2="20" />
-              <line className="hud-line" x1="150" y1="130" x2="150" y2="140" />
-              <line className="hud-line" x1="85" y1="75" x2="95" y2="75" />
-              <line className="hud-line" x1="205" y1="75" x2="215" y2="75" />
-
-              {/* Scanning Laser Beam */}
-              <rect className="cyber-scanner-laser" x="70" y="20" width="160" height="2" />
+          <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <svg className="cross-svg" style={{ height: '140px', width: 'auto', marginBottom: '20px' }} viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+              <line x1="50" y1="10" x2="50" y2="140" className="cross-line" />
+              <line x1="20" y1="40" x2="80" y2="40" className="cross-line" />
             </svg>
           </div>
 

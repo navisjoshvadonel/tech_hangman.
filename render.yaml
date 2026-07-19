@@ -14,4 +14,4 @@ services:
     disk:
       name: hangman-storage
       mountPath: /data
-      sizeGB: 1  # this is new render fix
+      sizeGB: 1 
