@@ -48,11 +48,40 @@ export default function Home() {
       <div id="login-overlay" className="overlay hidden">
         <div className="login-content-wrapper">
           <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <svg className="cross-svg" style={{ height: '140px', width: 'auto', marginBottom: '20px' }} viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
-              <line x1="50" y1="10" x2="50" y2="140" className="cross-line" />
-              <line x1="20" y1="40" x2="80" y2="40" className="cross-line" />
+            <svg id="login-man-svg" style={{ height: '160px', width: 'auto', marginBottom: '10px' }} viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+              {/* Gallows pole for leaning */}
+              <line x1="20" y1="170" x2="20" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
+              <line x1="20" y1="20" x2="60" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
+              <line x1="60" y1="20" x2="60" y2="35" stroke="var(--neon-cyan)" strokeWidth="2" strokeDasharray="3,3" opacity="0.6" />
+              
+              {/* Leaning waiting stickman */}
+              <g id="login-man-group" style={{ transformOrigin: '20px 170px' }}>
+                {/* Leaning Body */}
+                <line x1="60" y1="70" x2="45" y2="120" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
+                
+                {/* Legs (casual waiting posture) */}
+                <line x1="45" y1="120" x2="35" y2="165" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
+                <line x1="45" y1="120" x2="55" y2="165" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
+                
+                {/* Arms (leaning arm against post + relaxed arm) */}
+                <line x1="57" y1="80" x2="20" y2="70" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" />
+                <line x1="57" y1="80" x2="72" y2="105" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" />
+                
+                {/* Interactive Eye-Tracking Head */}
+                <g id="login-man-head" style={{ transformOrigin: '60px 50px', transition: 'transform 0.1s ease-out' }}>
+                  <circle cx="60" cy="50" r="18" fill="#080d1a" stroke="var(--neon-cyan)" strokeWidth="4" />
+                  
+                  {/* Eyes following cursor */}
+                  <g id="login-man-eyes">
+                    <circle id="pupil-left" cx="54" cy="48" r="3" fill="var(--neon-cyan)" />
+                    <circle id="pupil-right" cx="66" cy="48" r="3" fill="var(--neon-cyan)" />
+                  </g>
+                </g>
+              </g>
             </svg>
+            <div className="login-waiting-tag" style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', letterSpacing: '2px', fontFamily: 'Space Mono, monospace', opacity: 0.8 }}>SAVIOUR AWAITING YOUR COMMAND...</div>
           </div>
+
 
           <div className="login-box">
             <div className="login-tabs">

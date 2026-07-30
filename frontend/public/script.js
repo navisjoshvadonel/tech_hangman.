@@ -213,7 +213,43 @@ function playIntroSequence() {
   }, 10000);
 }
 
+// === Interactive Mouse-Tracking for Leaning Stickman on Login Page ===
+document.addEventListener("mousemove", (e) => {
+  const loginOverlay = document.getElementById("login-overlay");
+  if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
+
+  const pupilLeft = document.getElementById("pupil-left");
+  const pupilRight = document.getElementById("pupil-right");
+  const manHead = document.getElementById("login-man-head");
+  const manSvg = document.getElementById("login-man-svg");
+
+  if (!pupilLeft || !pupilRight || !manSvg) return;
+
+  const rect = manSvg.getBoundingClientRect();
+  const eyeCenterX = rect.left + rect.width * 0.5;
+  const eyeCenterY = rect.top + rect.height * 0.28;
+
+  const dx = e.clientX - eyeCenterX;
+  const dy = e.clientY - eyeCenterY;
+  const angle = Math.atan2(dy, dx);
+  const distance = Math.min(4, Math.hypot(dx, dy) / 40);
+
+  const offsetX = Math.cos(angle) * distance;
+  const offsetY = Math.sin(angle) * distance;
+
+  pupilLeft.setAttribute("cx", (54 + offsetX).toFixed(2));
+  pupilLeft.setAttribute("cy", (48 + offsetY).toFixed(2));
+  pupilRight.setAttribute("cx", (66 + offsetX).toFixed(2));
+  pupilRight.setAttribute("cy", (48 + offsetY).toFixed(2));
+
+  if (manHead) {
+    const headRotation = (dx / window.innerWidth) * 15;
+    manHead.style.transform = `rotate(${headRotation.toFixed(2)}deg)`;
+  }
+});
+
 // === Tab Switching ===
+
 const tabReturning = document.getElementById('tab-returning');
 const tabNew = document.getElementById('tab-new');
 const tabOffline = document.getElementById('tab-offline');
