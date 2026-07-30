@@ -2032,3 +2032,28 @@ CATEGORIZED_WORDS["DATASCIENCE"]["HARD"].extend([
     {"word": "FEATURE_ENGINEERING", "clue": "The process of using domain knowledge to extract features from raw data."},
 ])
 
+CATEGORIZED_WORDS["TAMIL_MOVIES"] = {
+    "EASY": [
+        {"word": "GHILLI", "clue": "Vijay's iconic sports action movie featuring Kabaddi and Prakash Raj's Chellam."},
+        {"word": "BAASHA", "clue": "Rajinikanth's legendary auto driver turned underworld don blockbuster."},
+        {"word": "ENTHIRAN", "clue": "Shankar's sci-fi epic starring Rajinikanth as Chitti the Robot."},
+        {"word": "ANNIYAN", "clue": "Vikram plays a consumer activist with multiple personality disorder."},
+        {"word": "MASTER", "clue": "Vijay plays an alcoholic professor facing off against Vijay Sethupathi's Bhavani."}
+    ],
+    "MEDIUM": [
+        {"word": "VIKRAM", "clue": "Lokesh Kanagaraj's high-octane action thriller starring Kamal Haasan, Vijay Sethupathi, and Fahadh Faasil."},
+        {"word": "THUPPAKKI", "clue": "AR Murugadoss action thriller where Vijay plays an army officer busting sleeper cells."},
+        {"word": "MANKATHA", "clue": "Ajith Kumar's 50th film featuring a heist during IPL cricket betting."},
+        {"word": "PADAYAPPA", "clue": "Rajinikanth classic featuring Ramya Krishnan's famous Neelambari role."},
+        {"word": "VADA CHENNAI", "clue": "Vetrimaaran's gangster chronicle starring Dhanush as a carrom player."}
+    ],
+    "HARD": [
+        {"word": "NAAYAGAN", "clue": "Mani Ratnam's masterpiece starring Kamal Haasan inspired by Varadarajan Mudaliar."},
+        {"word": "SUPER DELUXE", "clue": "Thiagarajan Kumararaja's neo-noir hyperlink drama featuring Vijay Sethupathi as Shilpa."},
+        {"word": "HEY RAM", "clue": "Kamal Haasan's period drama exploring partition and historical conflict."},
+        {"word": "AYUTHA EZHUTHU", "clue": "Mani Ratnam's political thriller connecting youth, gangsters, and politicians."},
+        {"word": "PUDHUPETTAI", "clue": "Selvaraghavan's cult gangster drama starring Dhanush as Kokki Kumar."}
+    ]
+}
+
+

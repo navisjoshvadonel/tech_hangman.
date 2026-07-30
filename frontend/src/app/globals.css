@@ -811,6 +811,30 @@ body {
   transform: translateY(-2px);
 }
 
+.cat-btn.relax-btn {
+  background: linear-gradient(135deg, rgba(255, 180, 0, 0.15), rgba(255, 0, 128, 0.15));
+  border: 1px solid rgba(255, 180, 0, 0.6);
+  color: #ffda66;
+  font-weight: bold;
+  animation: relax-pulse 3s infinite ease-in-out;
+}
+
+.cat-btn.relax-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 180, 0, 0.35), rgba(255, 0, 128, 0.35));
+  border-color: #ffda66;
+  box-shadow: 0 0 20px rgba(255, 180, 0, 0.6), 0 0 30px rgba(255, 0, 128, 0.4);
+}
+
+@keyframes relax-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 180, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(255, 0, 128, 0.5);
+  }
+}
+
+
 .diff-btn {
   width: 100%;
 }

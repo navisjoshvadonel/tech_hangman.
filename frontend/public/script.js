@@ -1156,8 +1156,10 @@ const domainQuotes = {
   "SOFTWAREENGINEERING": '"Simplicity is the soul of efficiency."\n- Austin Freeman',
   "LINUX": '"Linux is not about being better than anyone else, it is about being free."\n- Linus Torvalds',
   "CLOUD": '"Everything fails, all the time. Plan for it."\n- Werner Vogels',
-  "DATASCIENCE": '"In God we trust. All others must bring data."\n- W. Edwards Deming'
+  "DATASCIENCE": '"In God we trust. All others must bring data."\n- W. Edwards Deming',
+  "TAMIL_MOVIES": '"Nanba, life-ah enjoy pannoanum chill pannoanum!"\n- Tamil Cinema Vibe'
 };
+
 
 
 const defaultLogo = `
@@ -1255,7 +1257,16 @@ const domainLogos = {
     <rect x="30" y="50" width="10" height="30" class="logo-stroke" fill="none"/>
     <rect x="45" y="35" width="10" height="45" class="logo-stroke" fill="none"/>
     <rect x="60" y="20" width="10" height="60" class="logo-stroke" fill="none"/>
+</svg>`,
+  "TAMIL_MOVIES": `<svg class="domain-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="15" y="25" width="70" height="50" rx="6" class="logo-stroke" fill="none"/>
+    <path d="M 15 38 L 85 38" class="logo-stroke"/>
+    <path d="M 35 25 L 35 38" class="logo-stroke"/>
+    <path d="M 55 25 L 55 38" class="logo-stroke"/>
+    <path d="M 75 25 L 75 38" class="logo-stroke"/>
+    <polygon points="43,45 62,50 43,55" class="logo-stroke" fill="var(--neon-cyan)"/>
 </svg>`
+
 };
 
 function formatQuoteForLeftPanel(text) {

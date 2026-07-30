@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Database, Network, ShieldAlert, Code2,
     Settings, Cpu, Terminal, Cloud,
-    BarChart, Gamepad2, Laptop, Hash, BookOpen
+    BarChart, Gamepad2, Laptop, Hash, BookOpen, Film
 } from 'lucide-react';
 
 export const CATEGORIES = [
@@ -22,8 +22,10 @@ export const CATEGORIES = [
     { id: "SOFTWAREENGINEERING", name: "SOFTWARE ENG.", icon: Gamepad2 },
     { id: "LINUX", name: "LINUX", icon: Terminal },
     { id: "CLOUD", name: "CLOUD", icon: Cloud },
-    { id: "DATASCIENCE", name: "DATA SCIENCE", icon: BarChart }
+    { id: "DATASCIENCE", name: "DATA SCIENCE", icon: BarChart },
+    { id: "TAMIL_MOVIES", name: "TAMIL MOVIES", icon: Film }
 ];
+
 
 interface CategorySelectorProps {
     onSelect: (categoryId: string) => void;

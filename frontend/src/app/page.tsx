@@ -150,7 +150,9 @@ export default function Home() {
                 <button className="cat-btn" data-cat="LINUX">LINUX</button>
                 <button className="cat-btn" data-cat="CLOUD">CLOUD</button>
                 <button className="cat-btn" data-cat="DATASCIENCE">DATA SCIENCE</button>
+                <button className="cat-btn relax-btn" data-cat="TAMIL_MOVIES">🎬 TAMIL MOVIES</button>
               </div>
+
 
               {/* Story Mode Grid */}
               <div className="selection-grid hidden" id="story-levels">
