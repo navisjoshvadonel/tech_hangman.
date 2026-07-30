@@ -213,40 +213,134 @@ function playIntroSequence() {
   }, 10000);
 }
 
-// === Interactive Mouse-Tracking for Leaning Stickman on Login Page ===
-document.addEventListener("mousemove", (e) => {
-  const loginOverlay = document.getElementById("login-overlay");
-  if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
-
-  const pupilLeft = document.getElementById("pupil-left");
-  const pupilRight = document.getElementById("pupil-right");
-  const manHead = document.getElementById("login-man-head");
-  const manSvg = document.getElementById("login-man-svg");
-
-  if (!pupilLeft || !pupilRight || !manSvg) return;
-
-  const rect = manSvg.getBoundingClientRect();
-  const eyeCenterX = rect.left + rect.width * 0.5;
-  const eyeCenterY = rect.top + rect.height * 0.28;
-
-  const dx = e.clientX - eyeCenterX;
-  const dy = e.clientY - eyeCenterY;
-  const angle = Math.atan2(dy, dx);
-  const distance = Math.min(4, Math.hypot(dx, dy) / 40);
-
-  const offsetX = Math.cos(angle) * distance;
-  const offsetY = Math.sin(angle) * distance;
-
-  pupilLeft.setAttribute("cx", (54 + offsetX).toFixed(2));
-  pupilLeft.setAttribute("cy", (48 + offsetY).toFixed(2));
-  pupilRight.setAttribute("cx", (66 + offsetX).toFixed(2));
-  pupilRight.setAttribute("cy", (48 + offsetY).toFixed(2));
-
-  if (manHead) {
-    const headRotation = (dx / window.innerWidth) * 15;
-    manHead.style.transform = `rotate(${headRotation.toFixed(2)}deg)`;
+// === Interactive Decryption & Popping Hangman Matrix Animation for Login Page ===
+(function initLoginHangmanMatrix() {
+  const container = document.getElementById("matrix-popping-words");
+  if (!container) {
+    setTimeout(initLoginHangmanMatrix, 200);
+    return;
   }
-});
+
+  // Looping stickman parts sequence
+  const parts = [
+    document.getElementById("matrix-man-head"),
+    document.getElementById("matrix-man-body"),
+    document.getElementById("matrix-man-arm-l"),
+    document.getElementById("matrix-man-arm-r"),
+    document.getElementById("matrix-man-leg-l"),
+    document.getElementById("matrix-man-leg-r")
+  ];
+
+  let currentPartIndex = 0;
+  let glitchMode = false;
+
+  // Animate stickman parts loop
+  setInterval(() => {
+    const loginOverlay = document.getElementById("login-overlay");
+    if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
+
+    if (glitchMode) {
+      // Clear glitch mode, hide all parts, reset index
+      parts.forEach(p => {
+        if (p) {
+          p.classList.remove("visible", "glitch-fail");
+          p.classList.add("hidden");
+        }
+      });
+      glitchMode = false;
+      currentPartIndex = 0;
+    } else {
+      if (currentPartIndex < parts.length) {
+        // Show next part
+        const part = parts[currentPartIndex];
+        if (part) {
+          part.classList.remove("hidden");
+          part.classList.add("visible");
+        }
+        currentPartIndex++;
+      } else {
+        // All parts shown, trigger glitch fail state
+        parts.forEach(p => {
+          if (p) p.classList.add("glitch-fail");
+        });
+        glitchMode = true;
+      }
+    }
+  }, 1200);
+
+  // Pop-words list
+  const matrixWordsList = [
+    "PYTHON", "DOCKER", "KUBERNETES", "REACT", "CYBERPUNK",
+    "HANGMAN", "DATABASE", "RELAX", "GHILLI", "BAASHA",
+    "VIKRAM", "SIVAJI", "NETWORKING", "ALGORITHM", "COMPILER"
+  ];
+
+  // Spawn popping words or letters
+  setInterval(() => {
+    const loginOverlay = document.getElementById("login-overlay");
+    if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
+
+    // Spawn either a full decrypting word (45% chance) or single letters (55% chance)
+    if (Math.random() < 0.45) {
+      const word = matrixWordsList[Math.floor(Math.random() * matrixWordsList.length)];
+      spawnMatrixWord(word);
+    } else {
+      const randomChar = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
+      spawnMatrixLetter(randomChar);
+    }
+  }, 700);
+
+  function spawnMatrixWord(word) {
+    const wordEl = document.createElement("div");
+    wordEl.className = "matrix-word";
+    
+    // Position randomly within container
+    const x = Math.random() * 65 + 5; // 5% to 70%
+    const y = Math.random() * 55 + 25; // 25% to 80%
+    wordEl.style.left = `${x}%`;
+    wordEl.style.top = `${y}%`;
+
+    // Redacted start (e.g. D_C_K_R)
+    let obscured = "";
+    for (let i = 0; i < word.length; i++) {
+      if (i % 2 === 1 || Math.random() > 0.6) {
+        obscured += "_";
+      } else {
+        obscured += word[i];
+      }
+    }
+
+    wordEl.innerText = obscured;
+    container.appendChild(wordEl);
+
+    // After 1 second, resolve/solve the word to fully decrypted state
+    setTimeout(() => {
+      wordEl.innerText = word;
+      wordEl.classList.add("solved");
+    }, 1000);
+
+    // Remove element after animation finishes
+    setTimeout(() => {
+      wordEl.remove();
+    }, 3000);
+  }
+
+  function spawnMatrixLetter(char) {
+    const letterEl = document.createElement("div");
+    letterEl.className = "matrix-word single-letter";
+    const x = Math.random() * 85 + 5;
+    const y = Math.random() * 70 + 15;
+    letterEl.style.left = `${x}%`;
+    letterEl.style.top = `${y}%`;
+    letterEl.innerText = char;
+    container.appendChild(letterEl);
+
+    setTimeout(() => {
+      letterEl.remove();
+    }, 3000);
+  }
+})();
+
 
 // === Tab Switching ===
 

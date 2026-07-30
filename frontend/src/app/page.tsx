@@ -47,40 +47,46 @@ export default function Home() {
       {/* Login Overlay */}
       <div id="login-overlay" className="overlay hidden">
         <div className="login-content-wrapper">
-          <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <svg id="login-man-svg" style={{ height: '160px', width: 'auto', marginBottom: '10px' }} viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
-              {/* Gallows pole for leaning */}
-              <line x1="20" y1="170" x2="20" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-              <line x1="20" y1="20" x2="60" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-              <line x1="60" y1="20" x2="60" y2="35" stroke="var(--neon-cyan)" strokeWidth="2" strokeDasharray="3,3" opacity="0.6" />
+          <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '320px', height: '240px', margin: '0 auto 20px' }}>
+            <div id="login-hangman-matrix" className="login-hangman-matrix" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', border: '1px solid rgba(0, 255, 204, 0.15)', borderRadius: '8px', background: 'rgba(5, 12, 24, 0.4)' }}>
               
-              {/* Leaning waiting stickman */}
-              <g id="login-man-group" style={{ transformOrigin: '20px 170px' }}>
-                {/* Leaning Body */}
-                <line x1="60" y1="70" x2="45" y2="120" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
-                
-                {/* Legs (casual waiting posture) */}
-                <line x1="45" y1="120" x2="35" y2="165" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
-                <line x1="45" y1="120" x2="55" y2="165" stroke="var(--neon-cyan)" strokeWidth="5" strokeLinecap="round" />
-                
-                {/* Arms (leaning arm against post + relaxed arm) */}
-                <line x1="57" y1="80" x2="20" y2="70" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" />
-                <line x1="57" y1="80" x2="72" y2="105" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" />
-                
-                {/* Interactive Eye-Tracking Head */}
-                <g id="login-man-head" style={{ transformOrigin: '60px 50px', transition: 'transform 0.1s ease-out' }}>
-                  <circle cx="60" cy="50" r="18" fill="#080d1a" stroke="var(--neon-cyan)" strokeWidth="4" />
-                  
-                  {/* Eyes following cursor */}
-                  <g id="login-man-eyes">
-                    <circle id="pupil-left" cx="54" cy="48" r="3" fill="var(--neon-cyan)" />
-                    <circle id="pupil-right" cx="66" cy="48" r="3" fill="var(--neon-cyan)" />
-                  </g>
-                </g>
-              </g>
-            </svg>
-            <div className="login-waiting-tag" style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', letterSpacing: '2px', fontFamily: 'Space Mono, monospace', opacity: 0.8 }}>SAVIOUR AWAITING YOUR COMMAND...</div>
+              {/* Floating words & characters container */}
+              <div id="matrix-popping-words" style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}></div>
+
+              <svg id="login-man-svg" style={{ height: '150px', width: 'auto', position: 'absolute', top: '35px', left: '50%', transform: 'translateX(-50%)', zIndex: 2 }} viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+                {/* Gallows base / structure */}
+                <line x1="20" y1="160" x2="100" y2="160" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                <line x1="40" y1="160" x2="40" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                <line x1="40" y1="20" x2="80" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                <line x1="80" y1="20" x2="80" y2="40" stroke="var(--neon-cyan)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+
+                {/* Gallows rope ring */}
+                <circle cx="80" cy="45" r="7" stroke="var(--neon-cyan)" strokeWidth="2" fill="none" opacity="0.6" />
+
+                {/* Looping decryption stickman parts */}
+                <circle id="matrix-man-head" cx="80" cy="62" r="10" stroke="var(--neon-cyan)" strokeWidth="3" fill="none" className="matrix-part hidden" />
+                <line id="matrix-man-body" x1="80" y1="72" x2="80" y2="110" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                <line id="matrix-man-arm-l" x1="80" y1="85" x2="60" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                <line id="matrix-man-arm-r" x1="80" y1="85" x2="100" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                <line id="matrix-man-leg-l" x1="80" y1="110" x2="65" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                <line id="matrix-man-leg-r" x1="80" y1="110" x2="95" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+              </svg>
+
+              {/* Glowing horizontal laser scanning effect */}
+              <div className="laser-scanner" style={{
+                position: 'absolute',
+                width: '100%',
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.6), transparent)',
+                boxShadow: '0 0 10px rgba(0, 255, 204, 0.5), 0 0 20px rgba(0, 255, 204, 0.3)',
+                animation: 'matrix-laser-scan 4s linear infinite',
+                pointerEvents: 'none',
+                zIndex: 3
+              }}></div>
+            </div>
+            <div className="login-waiting-tag" style={{ color: 'var(--neon-cyan)', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'Space Mono, monospace', opacity: 0.8, marginTop: '8px' }}>SYSTEM READY: DECIPHER TO GAIN ACCESS...</div>
           </div>
+
 
 
           <div className="login-box">
