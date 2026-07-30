@@ -642,8 +642,16 @@ async function initGame() {
     clueText.innerText = "GENERATING CLUE...";
   }
 
+  // Apply custom theme for Tamil Movies
+  if (selectedCategory === "TAMIL_MOVIES") {
+    document.body.classList.add("tamil-theme");
+  } else {
+    document.body.classList.remove("tamil-theme");
+  }
+
   // Reset DOM Classes
   gameContainer.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
+
   redOverlay.classList.remove("active");
   popup.classList.remove("show", "popup-win", "popup-loss");
   clueText.innerText = "GENERATING CLUE...";
@@ -1286,6 +1294,13 @@ catBtns.forEach(btn => {
     selectedCategory = btn.getAttribute("data-cat");
     const displayCategory = selectedCategory.replace("_", " ");
 
+    // Toggle ambient theme class for Tamil Movies
+    if (selectedCategory === "TAMIL_MOVIES") {
+      document.body.classList.add("tamil-theme");
+    } else {
+      document.body.classList.remove("tamil-theme");
+    }
+
     // Set text
     domainCategoryName.innerText = displayCategory;
     domainQuoteText.innerText = domainQuotes[selectedCategory] || '"Knowledge is power."';
@@ -1316,9 +1331,11 @@ backToCatBtn.addEventListener("click", () => {
   difficultySelection.classList.add("hidden");
   categorySelection.classList.remove("hidden");
   selectedCategory = null;
+  document.body.classList.remove("tamil-theme");
   document.getElementById("left-logo-container").innerHTML = defaultLogo;
   document.getElementById("left-quote-container").innerHTML = defaultQuote;
 });
+
 
 diffBtns.forEach(btn => {
   btn.addEventListener("click", () => {

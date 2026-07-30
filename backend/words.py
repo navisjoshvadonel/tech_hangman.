@@ -2038,22 +2038,53 @@ CATEGORIZED_WORDS["TAMIL_MOVIES"] = {
         {"word": "BAASHA", "clue": "Rajinikanth's legendary auto driver turned underworld don blockbuster."},
         {"word": "ENTHIRAN", "clue": "Shankar's sci-fi epic starring Rajinikanth as Chitti the Robot."},
         {"word": "ANNIYAN", "clue": "Vikram plays a consumer activist with multiple personality disorder."},
-        {"word": "MASTER", "clue": "Vijay plays an alcoholic professor facing off against Vijay Sethupathi's Bhavani."}
+        {"word": "MASTER", "clue": "Vijay plays an alcoholic professor facing off against Vijay Sethupathi's Bhavani."},
+        {"word": "ROJA", "clue": "Mani Ratnam's patriotic romance set in Kashmir with AR Rahman's debut soundtrack."},
+        {"word": "THUPPAKKI", "clue": "Vijay plays an Indian Army officer Jagadish busting sleeper cells in Mumbai."},
+        {"word": "THERI", "clue": "Vijay plays a former honest cop Vijay Kumar protecting his daughter in Kerala."},
+        {"word": "SIVAJI", "clue": "Rajinikanth plays a software architect fighting white-money corruption."},
+        {"word": "MERSAL", "clue": "Vijay in a triple role as a magician, doctor, and village leader fighting medical crime."},
+        {"word": "GOAT", "clue": "Vijay's sci-fi action film featuring SATS team members and de-aging technology."},
+        {"word": "JELAR", "clue": "Rajinikanth as Tiger Muthuvel Pandian, a retired jailer taking on idol smugglers."},
+        {"word": "KANCHANA", "clue": "Raghava Lawrence's hit comedy horror franchise centered around ghost possession."},
+        {"word": "SINGAM", "clue": "Suriya's fiery cop character Duraisingam from Nallur fighting extortionists."},
+        {"word": "BILLAA", "clue": "Ajith Kumar's stylish remake of the classic underworld don saga in Malaysia."}
     ],
     "MEDIUM": [
         {"word": "VIKRAM", "clue": "Lokesh Kanagaraj's high-octane action thriller starring Kamal Haasan, Vijay Sethupathi, and Fahadh Faasil."},
-        {"word": "THUPPAKKI", "clue": "AR Murugadoss action thriller where Vijay plays an army officer busting sleeper cells."},
-        {"word": "MANKATHA", "clue": "Ajith Kumar's 50th film featuring a heist during IPL cricket betting."},
-        {"word": "PADAYAPPA", "clue": "Rajinikanth classic featuring Ramya Krishnan's famous Neelambari role."},
-        {"word": "VADA CHENNAI", "clue": "Vetrimaaran's gangster chronicle starring Dhanush as a carrom player."}
+        {"word": "MANKATHA", "clue": "Ajith Kumar's 50th film featuring a 500-crore heist during IPL cricket betting."},
+        {"word": "PADAYAPPA", "clue": "Rajinikanth classic featuring Ramya Krishnan's famous fiercely proud Neelambari role."},
+        {"word": "VADA CHENNAI", "clue": "Vetrimaaran's gangster chronicle starring Dhanush as a skilled carrom player Anbu."},
+        {"word": "LEO", "clue": "Bloody action thriller starring Vijay as Parthiban running a cozy bakery in Himachal."},
+        {"word": "KAITHI", "clue": "Karthi plays Dilli, an ex-convict driving a truck full of poisoned cops to safety in one night."},
+        {"word": "PIZZA", "clue": "Karthik Subbaraj's thriller starring Vijay Sethupathi as a delivery boy trapped in a haunted bungalow."},
+        {"word": "SOORARAI POTTRU", "clue": "Suriya stars as Maara inspired by the life of Simply Fly founder Captain G. R. Gopinath."},
+        {"word": "ASURAN", "clue": "Vetrimaaran's gritty drama featuring Dhanush protecting his family from land-grabbing upper-castes."},
+        {"word": "INDIAN", "clue": "Shankar's vigilante saga with Kamal Haasan playing Senapathy, a freedom fighter fighting corruption."},
+        {"word": "MOOKUTHI AMMAN", "clue": "RJ Balaji and Nayanthara's satirical fantasy comedy about a local deity visiting a news anchor."},
+        {"word": "SUBRAMANIAPURAM", "clue": "Sasikumar's landmark 1980s Madurai period drama of friendship, betrayal, and revenge."},
+        {"word": "96", "clue": "Trisha and Vijay Sethupathi as Jaanu and Ram reuniting at a nostalgic high school reunion."},
+        {"word": "VINNAITHANDI VARUVAYA", "clue": "Gautham Vasudev Menon's romantic classic starring Silambarasan TR and Trisha as Jessie."},
+        {"word": "JEANS", "clue": "Shankar's romantic comedy starring Prashanth and Aishwarya Rai featuring Seven Wonders of the World."}
     ],
     "HARD": [
-        {"word": "NAAYAGAN", "clue": "Mani Ratnam's masterpiece starring Kamal Haasan inspired by Varadarajan Mudaliar."},
+        {"word": "NAAYAGAN", "clue": "Mani Ratnam's masterpiece starring Kamal Haasan inspired by Bombay don Varadarajan Mudaliar."},
         {"word": "SUPER DELUXE", "clue": "Thiagarajan Kumararaja's neo-noir hyperlink drama featuring Vijay Sethupathi as Shilpa."},
-        {"word": "HEY RAM", "clue": "Kamal Haasan's period drama exploring partition and historical conflict."},
-        {"word": "AYUTHA EZHUTHU", "clue": "Mani Ratnam's political thriller connecting youth, gangsters, and politicians."},
-        {"word": "PUDHUPETTAI", "clue": "Selvaraghavan's cult gangster drama starring Dhanush as Kokki Kumar."}
+        {"word": "HEY RAM", "clue": "Kamal Haasan's period political drama exploring partition and historical conflict."},
+        {"word": "AYUTHA EZHUTHU", "clue": "Mani Ratnam's political thriller connecting three youths from different strata in Chennai."},
+        {"word": "PUDHUPETTAI", "clue": "Selvaraghavan's cult gangster drama starring Dhanush as Kokki Kumar rising through slums."},
+        {"word": "JIGARTHANDA", "clue": "Karthik Subbaraj's meta gangster comedy starring Bobby Simha as Assault Sethu."},
+        {"word": "PARUTHIVEERAN", "clue": "Ameer's raw rural romance drama starring Karthi in his rustic debut role."},
+        {"word": "MANUMAN", "clue": "Sci-fi comedy featuring time travel via an ancient hourglass starring Vishnu Vishal."},
+        {"word": "AAYIRATHIL ORUVAN", "clue": "Selvaraghavan's epic fantasy adventure discovering the lost Chola kingdom in Vietnam."},
+        {"word": "MAHAAN", "clue": "Karthik Subbaraj's action drama starring Vikram as Gandhi Mahaan alongside Dhruv Vikram."},
+        {"word": "VIRUMANDI", "clue": "Kamal Haasan's Rashomon-style narrative drama centered on capital punishment and Jallikattu."},
+        {"word": "MADRAS", "clue": "Pa. Ranjith's political drama centered around a controversial wall in North Chennai starring Karthi."},
+        {"word": "SARPATTA PARAMPARAI", "clue": "Pa. Ranjith's period sports drama starring Arya as Kabilan set in 1970s North Madras boxing culture."},
+        {"word": "MAANAGARAM", "clue": "Lokesh Kanagaraj's directorial debut hyperlink thriller set in fast-paced Chennai."},
+        {"word": "THANI ORUVAN", "clue": "Jayam Ravi as Mithran, an IPS officer fighting Arvind Swamy's suave corporate criminal Siddharth Abhimanyu."}
     ]
 }
+
 
 
