@@ -1177,7 +1177,8 @@ const defaultLogo = `
 </svg>
 `;
 
-const defaultQuote = `"Design is not just what it looks like and feels like. Design is how it works." <br><span class="quote-ref">- Steve Jobs</span>`;
+const defaultQuote = `"For the Son of Man came to seek and to save the lost." <br><span class="quote-ref">- Luke 19:10</span>`;
+
 
 const domainLogos = {
   "DATABASE": `<svg class="domain-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -1320,10 +1321,11 @@ catBtns.forEach(btn => {
       categorySelection.classList.add("hidden");
       difficultySelection.classList.remove("hidden");
 
-      // Update Left Panel - Keep the Cross (defaultLogo) as the logo of the game application
-      document.getElementById("left-logo-container").innerHTML = defaultLogo;
+      // Update Left Panel: Show domain logo & domain quote when inside a domain
+      document.getElementById("left-logo-container").innerHTML = domainLogos[selectedCategory] || defaultLogo;
       document.getElementById("left-quote-container").innerHTML = formatQuoteForLeftPanel(domainQuotes[selectedCategory] || defaultQuote);
     }, 3500);
+
   });
 });
 
@@ -1332,6 +1334,7 @@ backToCatBtn.addEventListener("click", () => {
   categorySelection.classList.remove("hidden");
   selectedCategory = null;
   document.body.classList.remove("tamil-theme");
+  // Restore Cross Logo and Bible quote in main lobby
   document.getElementById("left-logo-container").innerHTML = defaultLogo;
   document.getElementById("left-quote-container").innerHTML = defaultQuote;
 });
