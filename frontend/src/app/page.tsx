@@ -46,87 +46,90 @@ export default function Home() {
 
       {/* Login Overlay */}
       <div id="login-overlay" className="overlay hidden">
-        <div className="login-content-wrapper">
-          <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '320px', height: '240px', margin: '0 auto 20px' }}>
-            <div id="login-hangman-matrix" className="login-hangman-matrix" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', border: '1px solid rgba(0, 255, 204, 0.15)', borderRadius: '8px', background: 'rgba(5, 12, 24, 0.4)' }}>
-              
-              {/* Floating words & characters container */}
-              <div id="matrix-popping-words" style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}></div>
-
-              <svg id="login-man-svg" style={{ height: '150px', width: 'auto', position: 'absolute', top: '35px', left: '50%', transform: 'translateX(-50%)', zIndex: 2 }} viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
-                {/* Gallows base / structure */}
-                <line x1="20" y1="160" x2="100" y2="160" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
-                <line x1="40" y1="160" x2="40" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
-                <line x1="40" y1="20" x2="80" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
-                <line x1="80" y1="20" x2="80" y2="40" stroke="var(--neon-cyan)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-
-                {/* Gallows rope ring */}
-                <circle cx="80" cy="45" r="7" stroke="var(--neon-cyan)" strokeWidth="2" fill="none" opacity="0.6" />
-
-                {/* Looping decryption stickman parts */}
-                <circle id="matrix-man-head" cx="80" cy="62" r="10" stroke="var(--neon-cyan)" strokeWidth="3" fill="none" className="matrix-part hidden" />
-                <line id="matrix-man-body" x1="80" y1="72" x2="80" y2="110" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
-                <line id="matrix-man-arm-l" x1="80" y1="85" x2="60" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
-                <line id="matrix-man-arm-r" x1="80" y1="85" x2="100" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
-                <line id="matrix-man-leg-l" x1="80" y1="110" x2="65" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
-                <line id="matrix-man-leg-r" x1="80" y1="110" x2="95" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
-              </svg>
-
-              {/* Glowing horizontal laser scanning effect */}
-              <div className="laser-scanner" style={{
-                position: 'absolute',
-                width: '100%',
-                height: '2px',
-                background: 'linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.6), transparent)',
-                boxShadow: '0 0 10px rgba(0, 255, 204, 0.5), 0 0 20px rgba(0, 255, 204, 0.3)',
-                animation: 'matrix-laser-scan 4s linear infinite',
-                pointerEvents: 'none',
-                zIndex: 3
-              }}></div>
-            </div>
-            <div className="login-waiting-tag" style={{ color: 'var(--neon-cyan)', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'Space Mono, monospace', opacity: 0.8, marginTop: '8px' }}>SYSTEM READY: DECIPHER TO GAIN ACCESS...</div>
+        <div className="login-wrapper">
+          <div className="login-header-main">
+            <h1 className="login-main-title">HANG MAN</h1>
+            <p className="login-main-subtitle">LOGIN TO SAVE YOUR MAN</p>
           </div>
+          <div className="login-content-wrapper">
+            <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '420px', height: '320px', margin: '0 auto' }}>
+              <div id="login-hangman-matrix" className="login-hangman-matrix" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', border: '1px solid rgba(0, 255, 204, 0.15)', borderRadius: '8px', background: 'rgba(5, 12, 24, 0.4)' }}>
+                
+                {/* Floating words & characters container */}
+                <div id="matrix-popping-words" style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}></div>
 
+                <svg id="login-man-svg" style={{ height: '210px', width: 'auto', position: 'absolute', top: '45px', left: '50%', transform: 'translateX(-50%)', zIndex: 2 }} viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+                  {/* Gallows base / structure */}
+                  <line x1="20" y1="160" x2="100" y2="160" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                  <line x1="40" y1="160" x2="40" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                  <line x1="40" y1="20" x2="80" y2="20" stroke="var(--neon-cyan)" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
+                  <line x1="80" y1="20" x2="80" y2="40" stroke="var(--neon-cyan)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
 
+                  {/* Gallows rope ring */}
+                  <circle cx="80" cy="45" r="7" stroke="var(--neon-cyan)" strokeWidth="2" fill="none" opacity="0.6" />
 
-          <div className="login-box">
-            <div className="login-tabs">
-              <button className="login-tab active" id="tab-returning">RETURNING PLAYER</button>
-              <button className="login-tab" id="tab-new">NEW RECRUIT</button>
-              <button className="login-tab" id="tab-offline">OFFLINE AGENT</button>
+                  {/* Looping decryption stickman parts */}
+                  <circle id="matrix-man-head" cx="80" cy="62" r="10" stroke="var(--neon-cyan)" strokeWidth="3" fill="none" className="matrix-part hidden" />
+                  <line id="matrix-man-body" x1="80" y1="72" x2="80" y2="110" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                  <line id="matrix-man-arm-l" x1="80" y1="85" x2="60" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                  <line id="matrix-man-arm-r" x1="80" y1="85" x2="100" y2="70" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                  <line id="matrix-man-leg-l" x1="80" y1="110" x2="65" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                  <line id="matrix-man-leg-r" x1="80" y1="110" x2="95" y2="140" stroke="var(--neon-cyan)" strokeWidth="3" strokeLinecap="round" className="matrix-part hidden" />
+                </svg>
+
+                {/* Glowing horizontal laser scanning effect */}
+                <div className="laser-scanner" style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '2px',
+                  background: 'linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.6), transparent)',
+                  boxShadow: '0 0 10px rgba(0, 255, 204, 0.5), 0 0 20px rgba(0, 255, 204, 0.3)',
+                  animation: 'matrix-laser-scan 4s linear infinite',
+                  pointerEvents: 'none',
+                  zIndex: 3
+                }}></div>
+              </div>
             </div>
 
-            {/* Returning Player Panel */}
-            <div className="login-panel" id="panel-returning">
-              <p className="login-subtitle">Welcome back, Agent.</p>
-              <div className="input-row">
-                <input type="text" id="username-input" placeholder="ENTER YOUR CALLSIGN" autoComplete="off"
-                  maxLength={15} />
-                <button id="login-btn">RESUME MISSION</button>
+            <div className="login-box">
+              <div className="login-tabs">
+                <button className="login-tab active" id="tab-returning">RETURNING PLAYER</button>
+                <button className="login-tab" id="tab-new">NEW RECRUIT</button>
+                <button className="login-tab" id="tab-offline">OFFLINE AGENT</button>
               </div>
-              <p className="login-hint" id="login-error-msg"></p>
-            </div>
 
-            {/* New Player Panel */}
-            <div className="login-panel hidden" id="panel-new">
-              <p className="login-subtitle">Create your identity, Recruit.</p>
-              <div className="input-row">
-                <input type="text" id="register-username-input" placeholder="CHOOSE A CALLSIGN"
-                  autoComplete="off" maxLength={15} />
-                <button id="register-btn">ENLIST NOW</button>
+              {/* Returning Player Panel */}
+              <div className="login-panel" id="panel-returning">
+                <p className="login-subtitle">Welcome back, Agent.</p>
+                <div className="input-row">
+                  <input type="text" id="username-input" placeholder="ENTER YOUR CALLSIGN" autoComplete="off"
+                    maxLength={15} />
+                  <button id="login-btn">RESUME MISSION</button>
+                </div>
+                <p className="login-hint" id="login-error-msg"></p>
               </div>
-              <p className="login-hint" id="register-error-msg"></p>
-            </div>
 
-            {/* Offline Player Panel */}
-            <div className="login-panel hidden" id="panel-offline">
-              <p className="login-subtitle">Run local decryption mode.</p>
-              <div className="input-row">
-                <input type="text" id="offline-username-input" placeholder="ENTER CALLSIGN"
-                  autoComplete="off" maxLength={15} />
-                <button id="offline-login-btn">BOOT LOCAL MODE</button>
+              {/* New Player Panel */}
+              <div className="login-panel hidden" id="panel-new">
+                <p className="login-subtitle">Create your identity, Recruit.</p>
+                <div className="input-row">
+                  <input type="text" id="register-username-input" placeholder="CHOOSE A CALLSIGN"
+                    autoComplete="off" maxLength={15} />
+                  <button id="register-btn">ENLIST NOW</button>
+                </div>
+                <p className="login-hint" id="register-error-msg"></p>
               </div>
-              <p className="login-hint" id="offline-error-msg">Saves all progress locally in this browser.</p>
+
+              {/* Offline Player Panel */}
+              <div className="login-panel hidden" id="panel-offline">
+                <p className="login-subtitle">Run local decryption mode.</p>
+                <div className="input-row">
+                  <input type="text" id="offline-username-input" placeholder="ENTER CALLSIGN"
+                    autoComplete="off" maxLength={15} />
+                  <button id="offline-login-btn">BOOT LOCAL MODE</button>
+                </div>
+                <p className="login-hint" id="offline-error-msg">Saves all progress locally in this browser.</p>
+              </div>
             </div>
           </div>
         </div>

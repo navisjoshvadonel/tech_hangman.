@@ -284,7 +284,11 @@ body {
 }
 
 /* Floating aesthetic container */
-.hidden {
+.hidden,
+#game-container.hidden,
+#selection-screen.hidden,
+#login-overlay.hidden,
+#quote-transition-overlay.hidden {
   display: none !important;
 }
 
@@ -4217,5 +4221,139 @@ body.tamil-theme .clue-box {
   0% { transform: translate(1px, 0); }
   100% { transform: translate(-1px, 0.5px); }
 }
+
+/* --- Login Overlay Refactoring & Responsive Polish --- */
+
+.overlay {
+  overflow-y: auto !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.login-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vh, 35px);
+  width: 100%;
+  max-width: 1040px;
+  margin: auto; /* enables natural centering with scrolling */
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.login-header-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.login-main-title {
+  color: #fff;
+  font-size: clamp(2.5rem, 6vw, 4.2rem);
+  font-weight: 900;
+  letter-spacing: clamp(6px, 1.5vw, 14px);
+  text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px rgba(0, 255, 204, 0.4);
+  text-transform: uppercase;
+  margin: 0;
+  font-family: 'Space Mono', monospace;
+  animation: login-neon-pulse 2s infinite alternate;
+}
+
+.login-main-subtitle {
+  color: var(--neon-cyan);
+  font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+  letter-spacing: 4px;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+  text-transform: uppercase;
+  margin: 10px 0 0 0;
+  font-family: 'Space Mono', monospace;
+  opacity: 0.8;
+}
+
+@keyframes login-neon-pulse {
+  from {
+    text-shadow: 0 0 15px var(--neon-cyan), 0 0 30px rgba(0, 255, 204, 0.3);
+  }
+  to {
+    text-shadow: 0 0 25px var(--neon-cyan), 0 0 50px rgba(0, 255, 204, 0.6), 0 0 80px rgba(0, 255, 204, 0.3);
+  }
+}
+
+/* Adjust layout container inside login overlay */
+.login-content-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 50px);
+  width: 100%;
+}
+
+/* Fix login-box and cyber-core container sizes for responsiveness - enlarged sizes */
+.cyber-core-container {
+  flex-shrink: 0;
+  width: 420px !important;
+  height: 320px !important;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 540px !important; /* Increased from 420px to 540px */
+  box-sizing: border-box;
+  padding: 50px 40px !important; /* More breathing room */
+}
+
+/* Make inputs, buttons, and tab fonts inside login box larger */
+.login-tab {
+  font-size: 0.95rem !important; /* Increased from 0.75rem */
+  padding: 12px 10px !important;
+  letter-spacing: 1.5px !important;
+}
+
+.login-subtitle {
+  font-size: 0.95rem !important; /* Increased from 0.75rem */
+  margin-bottom: 20px !important;
+}
+
+#username-input,
+#register-username-input,
+#offline-username-input {
+  font-size: 1.15rem !important; /* Increased from 1rem */
+  padding: 12px 15px !important; /* Larger padding */
+  width: 100% !important; /* Ensure it matches parent container width */
+}
+
+#login-btn,
+#register-btn,
+#offline-login-btn {
+  font-size: 1.15rem !important; /* Increased from 1rem */
+  padding: 12px 25px !important;
+}
+
+.login-panel .input-row {
+  gap: 15px !important;
+}
+
+.login-hint {
+  font-size: 0.85rem !important;
+  margin-top: 15px !important;
+}
+
+/* Responsive adjustment for tablets/mobile screens */
+@media screen and (max-width: 900px) {
+  .login-content-wrapper {
+    flex-direction: column !important;
+    gap: 30px !important;
+  }
+  .cyber-core-container {
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    max-width: 420px !important;
+  }
+}
+
 
 
