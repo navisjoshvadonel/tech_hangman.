@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     const wordsData = await loadWordsJson();
     
     // Flatten all categories and difficulties into a single list
-    let pool: { word: string; hint: string; category: string; description: string }[] = [];
+    const pool: { word: string; hint: string; category: string; description: string }[] = [];
     for (const cat of Object.keys(wordsData)) {
       const diffs = wordsData[cat] || {};
       for (const diff of Object.keys(diffs)) {

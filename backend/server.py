@@ -13,7 +13,11 @@ except ImportError:
     mysql = None
 
 app = Flask(__name__, static_folder='.')
-CORS(app)
+FRONTEND_URL = os.environ.get('FRONTEND_URL')
+if FRONTEND_URL:
+    CORS(app, origins=[FRONTEND_URL])
+else:
+    CORS(app)
 
 # === Config ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +36,7 @@ print(f"DATABASE IDENTITY INITIALIZED: {DB_TYPE}")
 # === Admin auth ===
 # Set ADMIN_KEY as an environment variable on Render (Dashboard -> Environment).
 # Never hardcode this value in source control.
-ADMIN_KEY = os.environ.get('ADMIN_KEY', '9f3a2c7b8d4e1f6a0b5c2d7e8f9a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0')
+ADMIN_KEY = os.environ.get('ADMIN_KEY')
 if not ADMIN_KEY:
     print("WARNING: ADMIN_KEY is not set. All /api/admin/* routes will refuse requests until it is configured.")
 

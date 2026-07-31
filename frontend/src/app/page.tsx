@@ -40,7 +40,7 @@ export default function Home() {
       <div id="quote-transition-overlay" className="overlay hidden">
         <div className="quote-content">
           <h3 id="domain-category-name">PROTOCOL</h3>
-          <p id="domain-quote-text">"Quote"</p>
+          <p id="domain-quote-text">&quot;Quote&quot;</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export default function Home() {
               </svg>
             </div>
             <div id="left-quote-container" className="bible-quote">
-              "For the Son of Man came to seek and to save the lost." <br /><span className="quote-ref">- Luke
+              &quot;For the Son of Man came to seek and to save the lost.&quot; <br /><span className="quote-ref">- Luke
                 19:10</span>
             </div>
           </div>
