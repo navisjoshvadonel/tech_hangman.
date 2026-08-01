@@ -326,6 +326,35 @@ def init_db():
         )
     ''')
 
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS LiveDuelQueue (
+            user_id INT PRIMARY KEY,
+            joined_at TEXT
+        )
+    ''')
+
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS LiveDuels (
+            id VARCHAR(64) PRIMARY KEY,
+            player1_id INT,
+            player2_id INT,
+            word VARCHAR(255),
+            category VARCHAR(255),
+            difficulty VARCHAR(255),
+            player1_progress INT,
+            player2_progress INT,
+            player1_errors INT,
+            player2_errors INT,
+            player1_state VARCHAR(32),
+            player2_state VARCHAR(32),
+            winner_id INT,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY(player1_id) REFERENCES Users(id),
+            FOREIGN KEY(player2_id) REFERENCES Users(id)
+        )
+    ''')
+
     conn.commit()
     
     # NEW: Self-healing check for words (Always sync to guarantee all words are reflected)
@@ -1325,6 +1354,319 @@ def duel_submit():
         try:
             conn.rollback()
         except Exception:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================
+# NEW: Live Multiplayer Matchmaking & Duel
+# ==========================================
+
+import uuid
+
+@app.route('/api/multiplayer/queue/join', methods=['POST'])
+def join_matchmaking_queue():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        # Clean up entries older than 30 seconds
+        execute_query(c, 'SELECT user_id, joined_at FROM LiveDuelQueue')
+        queue_items = c.fetchall()
+        for item in queue_items:
+            item_d = row_to_dict(item, c)
+            u_id = item_d.get('user_id')
+            joined_at_str = item_d.get('joined_at')
+            if joined_at_str:
+                try:
+                    joined_dt = datetime.fromisoformat(joined_at_str)
+                    diff = (datetime.utcnow() - joined_dt).total_seconds()
+                    if diff > 30:
+                        execute_query(c, 'DELETE FROM LiveDuelQueue WHERE user_id = ?', (u_id,))
+                except Exception:
+                    pass
+
+        # Add this user to queue (or update joined_at)
+        try:
+            execute_query(c, 'INSERT OR REPLACE INTO LiveDuelQueue (user_id, joined_at) VALUES (?, ?)', (user_id, now_str))
+        except Exception:
+            # Fallback for mysql
+            execute_query(c, 'DELETE FROM LiveDuelQueue WHERE user_id = ?', (user_id,))
+            execute_query(c, 'INSERT INTO LiveDuelQueue (user_id, joined_at) VALUES (?, ?)', (user_id, now_str))
+
+        # Check if there is an opponent in the queue
+        execute_query(c, 'SELECT user_id FROM LiveDuelQueue WHERE user_id != ? ORDER BY joined_at ASC LIMIT 1', (user_id,))
+        opponent_row = c.fetchone()
+
+        if opponent_row:
+            opponent_tup = row_to_tuple(opponent_row)
+            opponent_id = opponent_tup[0]
+
+            # Remove both from queue
+            execute_query(c, 'DELETE FROM LiveDuelQueue WHERE user_id IN (?, ?)', (user_id, opponent_id))
+
+            # Select a random word
+            execute_query(c, 'SELECT word, category, difficulty FROM Words')
+            all_words = c.fetchall()
+            if all_words:
+                chosen = random.choice(all_words)
+                chosen_d = row_to_dict(chosen, c)
+                word = chosen_d.get('word')
+                category = chosen_d.get('category')
+                difficulty = chosen_d.get('difficulty')
+            else:
+                word = "MULTIPLAYER"
+                category = "TEST"
+                difficulty = "MEDIUM"
+
+            # Create live duel
+            duel_id = str(uuid.uuid4())
+            execute_query(c, '''
+                INSERT INTO LiveDuels (
+                    id, player1_id, player2_id, word, category, difficulty, 
+                    player1_progress, player2_progress, player1_errors, player2_errors, 
+                    player1_state, player2_state, winner_id, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'playing', 'playing', NULL, ?, ?)
+            ''', (duel_id, user_id, opponent_id, word, category, difficulty, now_str, now_str))
+
+            conn.commit()
+            conn.close()
+            return jsonify({
+                "status": "matched",
+                "duel_id": duel_id,
+                "opponent_id": opponent_id
+            })
+
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "waiting"})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/multiplayer/queue/status', methods=['GET'])
+def get_matchmaking_status():
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        # Check if matched in a fresh active duel (created in last 30 seconds)
+        execute_query(c, '''
+            SELECT id, player1_id, player2_id, created_at FROM LiveDuels 
+            WHERE (player1_id = ? OR player2_id = ?) AND winner_id IS NULL
+            ORDER BY created_at DESC LIMIT 1
+        ''', (user_id, user_id))
+        
+        duel_row = c.fetchone()
+        if duel_row:
+            duel_d = row_to_dict(duel_row, c)
+            duel_id = duel_d.get('id')
+            created_at_str = duel_d.get('created_at')
+            if created_at_str:
+                try:
+                    created_dt = datetime.fromisoformat(created_at_str)
+                    diff = (datetime.utcnow() - created_dt).total_seconds()
+                    if diff < 30:
+                        opponent_id = duel_d.get('player2_id') if int(duel_d.get('player1_id')) == int(user_id) else duel_d.get('player1_id')
+                        conn.close()
+                        return jsonify({
+                            "status": "matched",
+                            "duel_id": duel_id,
+                            "opponent_id": opponent_id
+                        })
+                except Exception:
+                    pass
+
+        # Check if still in queue
+        execute_query(c, 'SELECT user_id FROM LiveDuelQueue WHERE user_id = ?', (user_id,))
+        in_queue = c.fetchone()
+        conn.close()
+
+        if in_queue:
+            return jsonify({"status": "waiting"})
+        else:
+            return jsonify({"status": "idle"})
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/multiplayer/queue/leave', methods=['POST'])
+def leave_matchmaking_queue():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    try:
+        execute_query(c, 'DELETE FROM LiveDuelQueue WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "left"})
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/multiplayer/duel/<duel_id>', methods=['GET'])
+def get_live_duel_status(duel_id):
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+
+    try:
+        execute_query(c, 'SELECT * FROM LiveDuels WHERE id = ?', (duel_id,))
+        duel_row = c.fetchone()
+        if not duel_row:
+            conn.close()
+            return jsonify({"error": "duel not found"}), 404
+
+        duel_d = row_to_dict(duel_row, c)
+        
+        p1_id = duel_d.get('player1_id')
+        p2_id = duel_d.get('player2_id')
+
+        # Fetch usernames
+        execute_query(c, 'SELECT id, username FROM Users WHERE id IN (?, ?)', (p1_id, p2_id))
+        user_rows = c.fetchall()
+        usernames = {}
+        for r in user_rows:
+            r_d = row_to_dict(r, c)
+            usernames[int(r_d.get('id'))] = r_d.get('username')
+
+        p1_name = usernames.get(int(p1_id), "Player 1")
+        p2_name = usernames.get(int(p2_id), "Player 2")
+
+        conn.close()
+
+        # Build response
+        role = "player1" if int(user_id) == int(p1_id) else "player2"
+        opponent_name = p2_name if role == "player1" else p1_name
+        
+        return jsonify({
+            "id": duel_d.get('id'),
+            "role": role,
+            "opponent_name": opponent_name,
+            "word": duel_d.get('word'),
+            "category": duel_d.get('category'),
+            "difficulty": duel_d.get('difficulty'),
+            "player1_progress": duel_d.get('player1_progress'),
+            "player2_progress": duel_d.get('player2_progress'),
+            "player1_errors": duel_d.get('player1_errors'),
+            "player2_errors": duel_d.get('player2_errors'),
+            "player1_state": duel_d.get('player1_state'),
+            "player2_state": duel_d.get('player2_state'),
+            "winner_id": duel_d.get('winner_id')
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/multiplayer/duel/<duel_id>/update', methods=['POST'])
+def update_live_duel_status(duel_id):
+    data = request.json or {}
+    user_id = data.get('user_id')
+    progress = data.get('progress', 0)
+    errors = data.get('errors', 0)
+    state = data.get('state', 'playing')
+
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'SELECT * FROM LiveDuels WHERE id = ?', (duel_id,))
+        duel_row = c.fetchone()
+        if not duel_row:
+            conn.close()
+            return jsonify({"error": "duel not found"}), 404
+
+        duel_d = row_to_dict(duel_row, c)
+        p1_id = int(duel_d.get('player1_id'))
+        p2_id = int(duel_d.get('player2_id'))
+        current_winner = duel_d.get('winner_id')
+
+        # Determine which player we are updating
+        if int(user_id) == p1_id:
+            execute_query(c, '''
+                UPDATE LiveDuels 
+                SET player1_progress = ?, player1_errors = ?, player1_state = ?, updated_at = ?
+                WHERE id = ?
+            ''', (progress, errors, state, now_str, duel_id))
+            p1_state = state
+            p2_state = duel_d.get('player2_state')
+        elif int(user_id) == p2_id:
+            execute_query(c, '''
+                UPDATE LiveDuels 
+                SET player2_progress = ?, player2_errors = ?, player2_state = ?, updated_at = ?
+                WHERE id = ?
+            ''', (progress, errors, state, now_str, duel_id))
+            p1_state = duel_d.get('player1_state')
+            p2_state = state
+        else:
+            conn.close()
+            return jsonify({"error": "user not participant in this duel"}), 403
+
+        # Recalculate winner if not set
+        winner_id = current_winner
+        if winner_id is None:
+            if state == 'solved':
+                winner_id = int(user_id)
+                execute_query(c, 'UPDATE LiveDuels SET winner_id = ? WHERE id = ?', (winner_id, duel_id))
+            elif p1_state in ('solved', 'dead') and p2_state in ('solved', 'dead'):
+                execute_query(c, 'SELECT * FROM LiveDuels WHERE id = ?', (duel_id,))
+                fresh_d = row_to_dict(c.fetchone(), c)
+                p1_prog = fresh_d.get('player1_progress', 0)
+                p2_prog = fresh_d.get('player2_progress', 0)
+                p1_err = fresh_d.get('player1_errors', 0)
+                p2_err = fresh_d.get('player2_errors', 0)
+                
+                if p1_prog > p2_prog:
+                    winner_id = p1_id
+                elif p2_prog > p1_prog:
+                    winner_id = p2_id
+                else:
+                    if p1_err < p2_err:
+                        winner_id = p1_id
+                    elif p2_err < p1_err:
+                        winner_id = p2_id
+                    else:
+                        winner_id = -1
+
+                execute_query(c, 'UPDATE LiveDuels SET winner_id = ? WHERE id = ?', (winner_id, duel_id))
+
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "updated", "winner_id": winner_id})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
             pass
         conn.close()
         return jsonify({"error": str(e)}), 500
