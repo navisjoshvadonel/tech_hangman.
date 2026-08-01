@@ -6,11 +6,17 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import words
+DB_INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
 try:
     import mysql.connector
     from urllib.parse import urlparse, unquote, parse_qs
+    try:
+        DB_INTEGRITY_ERRORS = (sqlite3.IntegrityError, mysql.connector.errors.IntegrityError)
+    except AttributeError:
+        DB_INTEGRITY_ERRORS = (sqlite3.IntegrityError, mysql.connector.Error)
 except ImportError:
     mysql = None
+
 
 app = Flask(__name__, static_folder='.')
 FRONTEND_URL = os.environ.get('FRONTEND_URL')
@@ -110,24 +116,44 @@ def execute_query(cursor, query, params=None):
     cursor_class_name = cursor.__class__.__name__
     is_mysql = 'mysql' in cursor_class_name.lower() or 'CMySQL' in cursor_class_name
 
+    import re
     if is_mysql:
         query = query.replace('?', '%s')
         # MySQL doesn't like AUTOINCREMENT (needs AUTO_INCREMENT)
-        query = query.replace('AUTOINCREMENT', 'AUTO_INCREMENT')
+        query = re.sub(r'\bAUTOINCREMENT\b', 'AUTO_INCREMENT', query, flags=re.IGNORECASE)
         # MySQL reserved keywords: rank, groups, etc.
         # We wrap them in backticks to avoid syntax errors.
         keywords = ['rank', 'groups']
         for kw in keywords:
-            # Replace as a whole word only
-            import re
             query = re.sub(rf'\b{kw}\b', f'`{kw}`', query, flags=re.IGNORECASE)
     else:
-        import re
         query = re.sub(r'\bINT\s+PRIMARY\s+KEY\s+AUTO_INCREMENT\b', 'INTEGER PRIMARY KEY AUTOINCREMENT', query, flags=re.IGNORECASE)
         query = re.sub(r'\bINT\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b', 'INTEGER PRIMARY KEY AUTOINCREMENT', query, flags=re.IGNORECASE)
-        query = query.replace('AUTO_INCREMENT', 'AUTOINCREMENT')
+        query = re.sub(r'\bAUTO_INCREMENT\b', 'AUTOINCREMENT', query, flags=re.IGNORECASE)
     cursor.execute(query, params or ())
     return cursor
+
+def row_to_tuple(row):
+    """Converts a database row (sqlite3.Row, dict, or tuple) into a standard Python tuple of values."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return tuple(row.values())
+    return tuple(row)
+
+def row_to_dict(row, cursor=None):
+    """Converts a database row (sqlite3.Row, dict, or tuple) into a standard Python dictionary."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, 'keys'): # sqlite3.Row
+        return dict(row)
+    if cursor and hasattr(cursor, 'description') and cursor.description:
+        cols = [col[0] for col in cursor.description]
+        return dict(zip(cols, row))
+    return {}
+
 
 @app.route('/')
 def index():
@@ -310,7 +336,7 @@ def init_db():
     res = c.fetchone()
     count = 0
     if res:
-        count = res[0] if not isinstance(res, dict) else list(res.values())[0]
+        count = row_to_tuple(res)[0]
     
     if count < total_in_script:
         print(f"WORDS SYNC: DB has {count}, Script has {total_in_script}. Syncing...")
@@ -438,12 +464,18 @@ def get_user_progress():
         WHERE user_id = ? 
         GROUP BY category
     ''', (user_id,))
-    solved_per_category = {row[0]: row[1] for row in c.fetchall()}
+    solved_per_category = {}
+    for row in c.fetchall():
+        row_tup = row_to_tuple(row)
+        solved_per_category[row_tup[0]] = row_tup[1]
     
     # Get total words per category
     execute_query(c, 
 'SELECT category, COUNT(*) FROM Words GROUP BY category')
-    total_per_category = {row[0]: row[1] for row in c.fetchall()}
+    total_per_category = {}
+    for row in c.fetchall():
+        row_tup = row_to_tuple(row)
+        total_per_category[row_tup[0]] = row_tup[1]
     
     domains_progress = []
     total_solved = 0
@@ -487,7 +519,8 @@ def get_word():
 'SELECT xp, current_streak, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         user_stats = c.fetchone()
         if user_stats:
-            xp, streak, wins, losses = user_stats
+            stats_tup = row_to_tuple(user_stats)
+            xp, streak, wins, losses = stats_tup
             # Simple adaptive logic:
             if xp > 5000 or streak > 5:
                 difficulty = "HARD"
@@ -511,10 +544,14 @@ def get_word():
     raw_rows = c.fetchall()
     all_words = []
     for row in raw_rows:
-        if isinstance(row, dict):
-            all_words.append({"id": row['id'], "word": row['word'], "hint": row['hint'], "category": row['category'], "description": row['description']})
-        else:
-            all_words.append({"id": row[0], "word": row[1], "hint": row[2], "category": row[3], "description": row[4]})
+        row_d = row_to_dict(row, c)
+        all_words.append({
+            "id": row_d.get('id'),
+            "word": row_d.get('word'),
+            "hint": row_d.get('hint') or row_d.get('clue'),
+            "category": row_d.get('category'),
+            "description": row_d.get('description')
+        })
 
     if not all_words:
         conn.close()
@@ -526,10 +563,7 @@ def get_word():
     raw_solved = c.fetchall()
     solved_word_ids = set()
     for row in raw_solved:
-        if isinstance(row, dict):
-            solved_word_ids.add(row['word_id'])
-        else:
-            solved_word_ids.add(row[0])
+        solved_word_ids.add(row_to_tuple(row)[0])
     
     # Filter words that have already been played
     available_words = [w for w in all_words if w["id"] not in solved_word_ids]
@@ -539,9 +573,11 @@ def get_word():
         execute_query(c, 
 'SELECT guessed_words FROM Users WHERE id = ?', (user_id,))
         gu_row = c.fetchone()
-        if gu_row and gu_row[0]:
-            legacy_guessed = set(json.loads(gu_row[0]))
-            available_words = [w for w in available_words if w["word"] not in legacy_guessed]
+        if gu_row:
+            val = row_to_tuple(gu_row)[0]
+            if val:
+                legacy_guessed = set(json.loads(val))
+                available_words = [w for w in available_words if w["word"] not in legacy_guessed]
     except:
         pass
 
@@ -583,30 +619,27 @@ def submit_score():
         execute_query(c, 
 'SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
-    except sqlite3.OperationalError:
+    except Exception as e:
+        print(f"DATABASE WARNING: submit_score read fallback triggered: {e}")
         execute_query(c, 
 'SELECT highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
-        if row:
-            row = list(row) + [999999, 0, 0] # Fallback if migration hasn't fully applied
     
     if not row:
         conn.close()
         return jsonify({"error": "User not found"}), 404
         
-    if isinstance(row, dict):
-        current_high = row['highest_score']
-        current_xp = row['xp']
-        current_level = row['level']
-        current_rank = row['rank']
-        total_wins = row['total_wins']
-        total_losses = row['total_losses']
-        fastest_win_seconds = row['fastest_win_seconds']
-        current_streak = row['current_streak']
-        longest_streak = row['longest_streak']
-        story_progress = row['story_progress']
-    else:
-        current_high, current_xp, current_level, current_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress = row
+    row_d = row_to_dict(row, c)
+    current_high = row_d.get('highest_score') or 0
+    current_xp = row_d.get('xp') or 0
+    current_level = row_d.get('level') or 1
+    current_rank = row_d.get('rank') or 'Beginner'
+    total_wins = row_d.get('total_wins') or 0
+    total_losses = row_d.get('total_losses') or 0
+    fastest_win_seconds = row_d.get('fastest_win_seconds') if row_d.get('fastest_win_seconds') is not None else 999999
+    current_streak = row_d.get('current_streak') or 0
+    longest_streak = row_d.get('longest_streak') or 0
+    story_progress = row_d.get('story_progress') or 1
     
     # --- MEANINGFUL SCORING SYSTEM ---
     # Multipliers based on difficulty
@@ -658,11 +691,11 @@ def submit_score():
 'SELECT id FROM Words WHERE word = ?', (word_text.upper(),))
         w_row = c.fetchone()
         if w_row:
-            word_id = w_row[0]
+            word_id = row_to_tuple(w_row)[0]
             try:
                 execute_query(c, 
 'INSERT INTO UserWordProgress (user_id, word_id, completed_at) VALUES (?, ?, ?)', (user_id, word_id, datetime.now().isoformat()))
-            except sqlite3.IntegrityError:
+            except DB_INTEGRITY_ERRORS:
                 pass # Already recorded
     
     # Calculate level and rank based on new XP
@@ -693,7 +726,8 @@ def submit_score():
             SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, total_games = total_games + 1
             WHERE id = ?
         ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, user_id))
-    except sqlite3.OperationalError:
+    except Exception as e:
+        print(f"DATABASE WARNING: submit_score write fallback triggered: {e}")
         # Fallback if fastest_win_seconds, current_streak, longest_streak, story_progress, total_games columns are missing
         execute_query(c, 
 '''
@@ -774,7 +808,8 @@ def get_highscores():
         execute_query(c, 
 'SELECT username, fastest_win_seconds FROM Users WHERE fastest_win_seconds < 999999 ORDER BY fastest_win_seconds ASC LIMIT 10')
         speed_rows = c.fetchall()
-    except sqlite3.OperationalError:
+    except Exception as e:
+        print(f"DATABASE WARNING: fastest_win highscores failed: {e}")
         speed_rows = []
         
     # 3. Longest Streak Leaderboard
@@ -782,18 +817,15 @@ def get_highscores():
         execute_query(c, 
 'SELECT username, longest_streak FROM Users ORDER BY longest_streak DESC LIMIT 10')
         streak_rows = c.fetchall()
-    except sqlite3.OperationalError:
+    except Exception as e:
+        print(f"DATABASE WARNING: longest_streak highscores failed: {e}")
         streak_rows = []
         
     def fmt_rows(rows):
         res = []
         for r in rows:
-            if isinstance(r, dict):
-                # MySQL returns dict, keys are lowercase usually
-                vals = list(r.values())
-                res.append({"username": vals[0], "val": vals[1]})
-            else:
-                res.append({"username": r[0], "val": r[1]})
+            row_t = row_to_tuple(r)
+            res.append({"username": row_t[0], "val": row_t[1]})
         return res
 
     conn.close()
@@ -819,11 +851,8 @@ def daily_challenge():
 'SELECT word_id FROM DailyChallenges WHERE date_col = ?', (today,))
     row = c.fetchone()
     
-    if row and isinstance(row, dict):
-        row = list(row.values())
-    
     if row:
-        word_id = row[0]
+        word_id = row_to_tuple(row)[0]
         execute_query(c, 
 'SELECT word, hint, category, difficulty, description FROM Words WHERE id = ?', (word_id,))
         word_data = c.fetchone()
@@ -831,7 +860,7 @@ def daily_challenge():
         # Generate a new one from the database
         execute_query(c, 
 'SELECT id FROM Words')
-        all_ids = [r[0] for r in c.fetchall()]
+        all_ids = [row_to_tuple(r)[0] for r in c.fetchall()]
         if not all_ids:
             conn.close()
             return jsonify({"error": "No words in database"}), 500
@@ -855,17 +884,20 @@ def daily_challenge():
         execute_query(c, 
 'SELECT last_daily_date FROM Users WHERE id = ?', (user_id,))
         u_row = c.fetchone()
-        if u_row and u_row[0] == today:
-            already_done = True
+        if u_row:
+            u_tup = row_to_tuple(u_row)
+            if u_tup[0] == today:
+                already_done = True
     
+    word_tup = row_to_tuple(word_data)
     conn.close()
     
     return jsonify({
-        "word": word_data[0],
-        "clue": word_data[1],
-        "category": word_data[2],
-        "difficulty": word_data[3],
-        "description": word_data[4],
+        "word": word_tup[0],
+        "clue": word_tup[1],
+        "category": word_tup[2],
+        "difficulty": word_tup[3],
+        "description": word_tup[4],
         "date": today,
         "already_completed": already_done
     })
@@ -886,32 +918,43 @@ def get_profile():
             FROM Users WHERE id = ?
         ''', (user_id,))
         row = c.fetchone()
-    except sqlite3.OperationalError:
+    except Exception as e:
+        print(f"DATABASE WARNING: get_profile read fallback triggered: {e}")
         execute_query(c, 
 'SELECT username, highest_score, xp, level, rank, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
         if row:
-            row = list(row) + [999999, 0, 0, 0, 0, 1]
+            row_d = row_to_dict(row, c)
+            row_d.update({
+                'fastest_win_seconds': 999999,
+                'current_streak': 0,
+                'longest_streak': 0,
+                'hints_used': 0,
+                'total_games': (row_d.get('total_wins') or 0) + (row_d.get('total_losses') or 0),
+                'story_progress': 1
+            })
+            row = row_d
 
     if not row:
         conn.close()
         return jsonify({"error": "User not found"}), 404
         
+    row_d = row_to_dict(row, c)
     profile = {
-        "username": row[0],
-        "highest_score": row[1],
-        "xp": row[2],
-        "level": row[3],
-        "rank": row[4],
-        "total_wins": row[5],
-        "total_losses": row[6],
-        "win_rate": round(row[5] / (row[5] + row[6]) * 100, 1) if (row[5] + row[6]) > 0 else 0,
-        "fastest_win": row[7] if row[7] < 999999 else None,
-        "current_streak": row[8],
-        "longest_streak": row[9],
-        "hints_used": row[10],
-        "total_games": row[11],
-        "story_progress": row[12]
+        "username": row_d.get('username'),
+        "highest_score": row_d.get('highest_score') or 0,
+        "xp": row_d.get('xp') or 0,
+        "level": row_d.get('level') or 1,
+        "rank": row_d.get('rank') or 'Beginner',
+        "total_wins": row_d.get('total_wins') or 0,
+        "total_losses": row_d.get('total_losses') or 0,
+        "win_rate": round((row_d.get('total_wins') or 0) / ((row_d.get('total_wins') or 0) + (row_d.get('total_losses') or 0)) * 100, 1) if ((row_d.get('total_wins') or 0) + (row_d.get('total_losses') or 0)) > 0 else 0,
+        "fastest_win": row_d.get('fastest_win_seconds') if (row_d.get('fastest_win_seconds') is not None and row_d.get('fastest_win_seconds') < 999999) else None,
+        "current_streak": row_d.get('current_streak') or 0,
+        "longest_streak": row_d.get('longest_streak') or 0,
+        "hints_used": row_d.get('hints_used') or 0,
+        "total_games": row_d.get('total_games') or 0,
+        "story_progress": row_d.get('story_progress') or 1
     }
     
     conn.close()
@@ -933,8 +976,8 @@ def use_hint():
         execute_query(c, 
 'UPDATE Users SET hints_used = hints_used + 1 WHERE id = ?', (user_id,))
         conn.commit()
-    except sqlite3.OperationalError:
-        pass # hints_used column might not exist yet
+    except Exception as e:
+        print(f"DATABASE WARNING: hints_used update failed: {e}")
     conn.close()
     
     # Logic for hint generation can be complex, for now just acknowledge use
@@ -954,8 +997,8 @@ def complete_daily():
         execute_query(c, 
 'UPDATE Users SET last_daily_date = ? WHERE id = ?', (today, user_id))
         conn.commit()
-    except sqlite3.OperationalError:
-        pass
+    except Exception as e:
+        print(f"DATABASE WARNING: daily_complete failed: {e}")
     conn.close()
     return jsonify({"message": "Daily challenge recorded!"})
 
@@ -971,7 +1014,7 @@ def get_achievements():
 'SELECT achievement_name FROM Achievements WHERE user_id = ? ORDER BY id ASC', (user_id,))
     rows = c.fetchall()
     conn.close()
-    return jsonify({"achievements": [r[0] for r in rows]})
+    return jsonify({"achievements": [row_to_tuple(r)[0] for r in rows]})
 
 def award_achievement(c, user_id, name):
     """Awards an achievement if not already earned."""
@@ -1023,12 +1066,9 @@ def mission_submit():
             ''', (mission_key, seed, mode, category, difficulty, length, user_id, score, time_seconds, now))
             updated = True
         else:
-            if isinstance(row, dict):
-                old_score = int(row.get('score') or 0)
-                old_time = int(row.get('time_seconds') or 999999999)
-            else:
-                old_score = int(row[0] or 0)
-                old_time = int(row[1] or 999999999)
+            row_d = row_to_dict(row, c)
+            old_score = int(row_d.get('score') or 0)
+            old_time = int(row_d.get('time_seconds') or 999999999)
 
             # Better run: higher score, or tie with faster time.
             if score > old_score or (score == old_score and time_seconds < old_time):
@@ -1081,20 +1121,13 @@ def mission_leaderboard():
         rows = []
 
         for r in res:
-            if isinstance(r, dict):
-                rows.append({
-                    "username": r.get('username'),
-                    "score": r.get('score'),
-                    "time_seconds": r.get('time_seconds'),
-                    "completed_at": r.get('completed_at'),
-                })
-            else:
-                rows.append({
-                    "username": r[0],
-                    "score": r[1],
-                    "time_seconds": r[2],
-                    "completed_at": r[3] if len(r) > 3 else None,
-                })
+            row_d = row_to_dict(r, c)
+            rows.append({
+                "username": row_d.get('username'),
+                "score": row_d.get('score'),
+                "time_seconds": row_d.get('time_seconds'),
+                "completed_at": row_d.get('completed_at'),
+            })
 
         conn.close()
         return jsonify({"rows": rows})
@@ -1216,23 +1249,14 @@ def duel_get():
         if not row:
             return jsonify({"error": "Invalid code"}), 404
 
-        if isinstance(row, dict):
-            return jsonify({
-                "code": row.get('code'),
-                "creator_user_id": row.get('creator_user_id'),
-                "word": row.get('word'),
-                "category": row.get('category'),
-                "difficulty": row.get('difficulty'),
-                "created_at": row.get('created_at'),
-            })
-
+        row_d = row_to_dict(row, c)
         return jsonify({
-            "code": row[0],
-            "creator_user_id": row[1],
-            "word": row[2],
-            "category": row[3],
-            "difficulty": row[4],
-            "created_at": row[5] if len(row) > 5 else None,
+            "code": row_d.get('code'),
+            "creator_user_id": row_d.get('creator_user_id'),
+            "word": row_d.get('word'),
+            "category": row_d.get('category'),
+            "difficulty": row_d.get('difficulty'),
+            "created_at": row_d.get('created_at')
         })
     except Exception as e:
         conn.close()
@@ -1272,14 +1296,10 @@ def duel_submit():
             ''', (code, user_id, score, time_seconds, is_win, now))
             updated = True
         else:
-            if isinstance(row, dict):
-                old_score = int(row.get('score') or 0)
-                old_time = int(row.get('time_seconds') or 999999999)
-                old_win = int(row.get('is_win') or 0)
-            else:
-                old_score = int(row[0] or 0)
-                old_time = int(row[1] or 999999999)
-                old_win = int(row[2] or 0)
+            row_d = row_to_dict(row, c)
+            old_score = int(row_d.get('score') or 0)
+            old_time = int(row_d.get('time_seconds') or 999999999)
+            old_win = int(row_d.get('is_win') or 0)
 
             # Better run: higher score; tie-break by faster time; prefer wins over losses
             better = False
@@ -1340,22 +1360,14 @@ def duel_leaderboard():
         rows = []
 
         for r in res:
-            if isinstance(r, dict):
-                rows.append({
-                    "username": r.get('username'),
-                    "score": r.get('score'),
-                    "time_seconds": r.get('time_seconds'),
-                    "is_win": r.get('is_win'),
-                    "submitted_at": r.get('submitted_at'),
-                })
-            else:
-                rows.append({
-                    "username": r[0],
-                    "score": r[1],
-                    "time_seconds": r[2],
-                    "is_win": r[3] if len(r) > 3 else 0,
-                    "submitted_at": r[4] if len(r) > 4 else None,
-                })
+            row_d = row_to_dict(r, c)
+            rows.append({
+                "username": row_d.get('username'),
+                "score": row_d.get('score'),
+                "time_seconds": row_d.get('time_seconds'),
+                "is_win": row_d.get('is_win'),
+                "submitted_at": row_d.get('submitted_at'),
+            })
 
         conn.close()
         return jsonify({"rows": rows})
@@ -1388,11 +1400,22 @@ def admin_words():
                 query += ' difficulty = ?'
                 params.append(difficulty)
         
-        execute_query(c, 
-query, params)
+        execute_query(c, query, params)
         rows = c.fetchall()
         conn.close()
-        return jsonify([{"id": r[0], "word": r[1], "hint": r[2], "category": r[3], "difficulty": r[4], "description": r[5]} for r in rows])
+        
+        res_list = []
+        for r in rows:
+            row_d = row_to_dict(r, c)
+            res_list.append({
+                "id": row_d.get("id"),
+                "word": row_d.get("word"),
+                "hint": row_d.get("hint") or row_d.get("clue"),
+                "category": row_d.get("category"),
+                "difficulty": row_d.get("difficulty"),
+                "description": row_d.get("description")
+            })
+        return jsonify(res_list)
         
     elif request.method == 'POST':
         data = request.json
@@ -1409,7 +1432,7 @@ query, params)
             conn.commit()
             conn.close()
             return jsonify({"message": "Word added successfully"})
-        except sqlite3.IntegrityError:
+        except DB_INTEGRITY_ERRORS:
             conn.close()
             return jsonify({"error": "Word already exists"}), 400
 
@@ -1420,7 +1443,7 @@ def admin_word_detail(word_id):
         return unauthorized
 
     conn = get_db_connection()
-    c = conn.cursor()
+    c = get_cursor(conn)
     
     if request.method == 'DELETE':
         execute_query(c, 
@@ -1474,8 +1497,8 @@ def cleanup_duplicates():
         return unauthorized
 
     conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('''
+    c = get_cursor(conn)
+    execute_query(c, '''
         DELETE FROM Users WHERE id IN (
             SELECT u1.id FROM Users u1
             INNER JOIN Users u2 ON LOWER(u1.username) = LOWER(u2.username)
