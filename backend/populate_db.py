@@ -41,7 +41,10 @@ def populate():
     conn.commit()
     # Final count check
     execute_query(c, 'SELECT COUNT(*) FROM Words')
-    final_count = c.fetchone()[0]
+    res = c.fetchone()
+    final_count = 0
+    if res:
+        final_count = res[0] if not isinstance(res, dict) else list(res.values())[0]
     conn.close()
     print(f"Migration completed. Total words in DB: {final_count}")
 

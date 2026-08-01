@@ -62,6 +62,10 @@ def get_db_connection():
                     ssl_mode_val = v[0]
                     break
             
+            ssl_disabled = False
+            if ssl_mode_val and ssl_mode_val.upper() == 'DISABLED':
+                ssl_disabled = True
+            
             connect_kwargs = {
                 'host': url.hostname,
                 'port': url.port or 3306,
@@ -69,17 +73,9 @@ def get_db_connection():
                 'password': db_password,
                 'database': url.path.lstrip('/'),
                 'auth_plugin': 'mysql_native_password',
-                'connect_timeout': 20
+                'connect_timeout': 20,
+                'ssl_disabled': ssl_disabled
             }
-            
-            if ssl_mode_val:
-                connect_kwargs['ssl_mode'] = ssl_mode_val.upper()
-            else:
-                host_lower = (url.hostname or '').lower()
-                if host_lower in ('localhost', '127.0.0.1', '::1'):
-                    connect_kwargs['ssl_mode'] = 'PREFERRED'
-                else:
-                    connect_kwargs['ssl_mode'] = 'REQUIRED'
             
             conn = mysql.connector.connect(**connect_kwargs)
             return conn
