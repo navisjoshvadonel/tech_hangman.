@@ -439,7 +439,6 @@ export default function Home() {
           <div className="hint-system">
             <div className="hint-buttons">
               <button id="hint-reveal-cat" className="hint-btn">SHOW CATEGORY (FREE)</button>
-              <button id="hint-reveal-desc" className="hint-btn">REVEAL DESCRIPTION (-20 XP)</button>
               <button id="hint-reveal-letter" className="hint-btn">REVEAL LETTER (-50 XP)</button>
             </div>
           </div>

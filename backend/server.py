@@ -8,7 +8,7 @@ import os
 import words
 try:
     import mysql.connector
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, unquote, parse_qs
 except ImportError:
     mysql = None
 
@@ -49,20 +49,39 @@ def require_admin():
 
 def get_db_connection():
     """Returns a connection based on the available configuration."""
-    global DB_TYPE
-    if DB_TYPE == 'mysql':
+    if MYSQL_URL and MYSQL_URL.startswith('mysql'):
         try:
             url = urlparse(MYSQL_URL)
-            conn = mysql.connector.connect(
-                host=url.hostname,
-                port=url.port or 3306,
-                user=url.username,
-                password=url.password,
-                database=url.path.lstrip('/'),
-                auth_plugin='mysql_native_password',
-                ssl_disabled=False,
-                connect_timeout=20 # Extra time for slow cold-start cloud DBs
-            )
+            db_user = unquote(url.username) if url.username else None
+            db_password = unquote(url.password) if url.password else None
+            
+            query_params = parse_qs(url.query) if url.query else {}
+            ssl_mode_val = None
+            for k, v in query_params.items():
+                if k.lower() in ('ssl_mode', 'ssl-mode') and v:
+                    ssl_mode_val = v[0]
+                    break
+            
+            connect_kwargs = {
+                'host': url.hostname,
+                'port': url.port or 3306,
+                'user': db_user,
+                'password': db_password,
+                'database': url.path.lstrip('/'),
+                'auth_plugin': 'mysql_native_password',
+                'connect_timeout': 20
+            }
+            
+            if ssl_mode_val:
+                connect_kwargs['ssl_mode'] = ssl_mode_val.upper()
+            else:
+                host_lower = (url.hostname or '').lower()
+                if host_lower in ('localhost', '127.0.0.1', '::1'):
+                    connect_kwargs['ssl_mode'] = 'PREFERRED'
+                else:
+                    connect_kwargs['ssl_mode'] = 'REQUIRED'
+            
+            conn = mysql.connector.connect(**connect_kwargs)
             return conn
         except Exception as e:
             try:
@@ -70,11 +89,11 @@ def get_db_connection():
             except Exception:
                 err_msg = "Unknown MySQL connection error (string representation failed)"
             print(f"!!! CRITICAL MYSQL ERROR !!!: {err_msg}")
-            # Fallback to local SQLite so the site doesn't stay "Dead"
+            # Fallback to local SQLite using the persistent DB_PATH so the site doesn't stay "Dead"
             import sqlite3
-            conn = sqlite3.connect(DEFAULT_DB_PATH, timeout=20)
+            conn = sqlite3.connect(DB_PATH, timeout=20)
+            conn.execute('PRAGMA journal_mode=WAL')
             conn.row_factory = sqlite3.Row
-            DB_TYPE = 'sqlite'
             return conn
     else:
         import sqlite3
@@ -85,13 +104,17 @@ def get_db_connection():
 
 def get_cursor(conn):
     """Returns a cursor that behaves similarly across DBs."""
-    if DB_TYPE == 'mysql':
+    conn_class_name = conn.__class__.__name__
+    if 'mysql' in conn_class_name.lower() or 'CMySQL' in conn_class_name:
         return conn.cursor(buffered=True)
     return conn.cursor()
 
 def execute_query(cursor, query, params=None):
     """Abstraction layer to handle SQLite vs MySQL differences."""
-    if DB_TYPE == 'mysql':
+    cursor_class_name = cursor.__class__.__name__
+    is_mysql = 'mysql' in cursor_class_name.lower() or 'CMySQL' in cursor_class_name
+
+    if is_mysql:
         query = query.replace('?', '%s')
         # MySQL doesn't like AUTOINCREMENT (needs AUTO_INCREMENT)
         query = query.replace('AUTOINCREMENT', 'AUTO_INCREMENT')
@@ -120,8 +143,38 @@ def ping():
 
 # === Database Helpers ===
 def init_db():
-    conn = get_db_connection()
+    conn = None
+    if MYSQL_URL and MYSQL_URL.startswith('mysql'):
+        import time
+        max_retries = 6
+        for attempt in range(1, max_retries + 1):
+            try:
+                print(f"DATABASE INIT: Attempting to connect to MySQL (Attempt {attempt}/{max_retries})...")
+                temp_conn = get_db_connection()
+                # Check if it's actually MySQL and not SQLite fallback
+                if 'mysql' in temp_conn.__class__.__name__.lower() or 'CMySQL' in temp_conn.__class__.__name__:
+                    conn = temp_conn
+                    print("DATABASE INIT: Successfully connected to MySQL.")
+                    break
+                else:
+                    # It fell back to SQLite. Close it and try again.
+                    temp_conn.close()
+                    if attempt < max_retries:
+                        time.sleep(3)
+            except Exception as e:
+                print(f"DATABASE INIT: Connection attempt {attempt} failed: {e}")
+                if attempt < max_retries:
+                    time.sleep(3)
+        
+        if conn is None:
+            print("DATABASE INIT: Failed to connect to MySQL after retries. Raising error.")
+            raise RuntimeError("Could not connect to MySQL database at startup.")
+    else:
+        conn = get_db_connection()
+
     c = get_cursor(conn)
+    conn_class_name = conn.__class__.__name__
+    is_mysql = 'mysql' in conn_class_name.lower() or 'CMySQL' in conn_class_name
     
     # User Table
     execute_query(c, '''
@@ -154,7 +207,7 @@ def init_db():
             execute_query(c, f'ALTER TABLE Users ADD COLUMN {col_name} {col_type}')
         except Exception:
             # For MySQL, if column exists, we might need to MODIFY it to fix the VARCHAR type
-            if DB_TYPE == 'mysql':
+            if is_mysql:
                 try:
                     execute_query(c, f'ALTER TABLE Users MODIFY COLUMN {col_name} {col_type}')
                 except:
@@ -259,7 +312,9 @@ def init_db():
     
     execute_query(c, 'SELECT COUNT(*) FROM Words')
     res = c.fetchone()
-    count = res[0] if not isinstance(res, dict) else list(res.values())[0]
+    count = 0
+    if res:
+        count = res[0] if not isinstance(res, dict) else list(res.values())[0]
     
     if count < total_in_script:
         print(f"WORDS SYNC: DB has {count}, Script has {total_in_script}. Syncing...")
