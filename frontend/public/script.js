@@ -636,17 +636,14 @@ function playSfx(type) {
   osc.stop(ctx.currentTime + 0.2);
 }
 
-// === Mode Selector ===
 const modeBtns = {
   classic: document.getElementById("mode-classic"),
-  story: document.getElementById("mode-story"),
-  multiplayer: document.getElementById("mode-multiplayer")
+  story: document.getElementById("mode-story")
 };
 
 const grids = {
   classic: document.getElementById("classic-categories"),
-  story: document.getElementById("story-levels"),
-  multiplayer: document.getElementById("multiplayer-options")
+  story: document.getElementById("story-levels")
 };
 
 Object.keys(modeBtns).forEach(mode => {

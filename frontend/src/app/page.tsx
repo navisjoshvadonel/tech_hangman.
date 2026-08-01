@@ -161,13 +161,6 @@ export default function Home() {
                 <div className="mode-selector">
                   <button className="mode-btn active" id="mode-classic">CLASSIC</button>
                   <button className="mode-btn" id="mode-story">STORY</button>
-                  <button className="mode-btn" id="mode-multiplayer">DUEL</button>
-                  <button className="mode-btn" id="mode-codebreaker">CODEBREAKER</button>
-                </div>
-                <div className="selection-tools">
-                  <button className="text-btn" id="open-cyberdeck-btn">CYBERDECK</button>
-                  <button className="text-btn" id="open-mission-btn">MISSION CODE</button>
-                  <button className="text-btn" id="open-districts-btn">DISTRICTS</button>
                 </div>
               </div>
               <div className="selection-grid" id="classic-categories">
@@ -200,21 +193,7 @@ export default function Home() {
                 <button className="lvl-btn locked" data-lvl="4">LEVEL 4: ANCIENT RUINS 🔒</button>
               </div>
 
-              {/* Multiplayer Grid */}
-              <div className="selection-grid hidden" id="multiplayer-options">
-                <button className="multi-btn" id="btn-word-duel">WORD DUEL (1V1)</button>
-                <button className="multi-btn" id="btn-speed-battle">SPEED BATTLE</button>
-              </div>
 
-              {/* Codebreaker Mode Grid */}
-              <div className="selection-grid hidden" id="codebreaker-categories">
-                <button className="cat-btn" data-cat="DATABASE">DATABASE</button>
-                <button className="cat-btn" data-cat="LINUX">LINUX</button>
-                <button className="cat-btn" data-cat="NETWORKING">NETWORKING</button>
-                <button className="cat-btn" data-cat="WEBDEVELOPMENT">WEB DEVELOPMENT</button>
-                <button className="cat-btn" data-cat="CLOUD">CLOUD</button>
-                <button className="cat-btn" data-cat="RANDOM">RANDOM</button>
-              </div>
             </div>
 
             <div id="difficulty-selection" className="hidden">
@@ -258,8 +237,6 @@ export default function Home() {
           <div className="action-buttons">
             <button id="leaderboard-btn" className="text-btn">LEADERBOARD</button>
             <button id="daily-btn" className="text-btn daily-btn-pulse">📅 DAILY MISSION</button>
-            <button id="districts-btn" className="text-btn">DISTRICTS</button>
-            <button id="mission-code-btn" className="text-btn">MISSION CODE</button>
             <button id="trophies-btn" className="text-btn">🏆 TROPHIES</button>
             <button id="share-stats-btn" className="text-btn highlight-btn">📢 SHARE STATS</button>
           </div>
@@ -622,6 +599,8 @@ export default function Home() {
         </div>
         <div className="home-indicator"></div>
       </div>
+
+
 
       {/* Achievements Modal */}
       <div id="achievements-popup" className="hidden">
