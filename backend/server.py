@@ -2146,7 +2146,7 @@ def friend_duel_join():
         guest_id = room_d.get('guest_user_id')
 
         # If joining user is not host, update guest_user_id and status to active
-        if int(user_id) != int(host_id):
+        if str(user_id) != str(host_id):
             execute_query(c, '''
                 UPDATE FriendRooms SET guest_user_id = ?, status = 'active', updated_at = ? WHERE code = ?
             ''', (user_id, now_str, code))
@@ -2211,11 +2211,11 @@ def friend_duel_status():
             execute_query(c, 'UPDATE FriendRoomPlayers SET last_seen = ? WHERE room_code = ? AND user_id = ?', (now_str, code, user_id))
             conn.commit()
 
-        # Fetch room players leaderboard
+        # Fetch room players leaderboard (LEFT JOIN so offline/non-db users display cleanly)
         execute_query(c, '''
             SELECT FriendRoomPlayers.*, Users.username
             FROM FriendRoomPlayers
-            JOIN Users ON FriendRoomPlayers.user_id = Users.id
+            LEFT JOIN Users ON FriendRoomPlayers.user_id = Users.id
             WHERE FriendRoomPlayers.room_code = ?
             ORDER BY FriendRoomPlayers.score DESC, FriendRoomPlayers.wins DESC
         ''', (code,))
@@ -2227,10 +2227,11 @@ def friend_duel_status():
         for p in players_raw:
             p_d = row_to_dict(p, c)
             u_id = p_d.get('user_id')
+            uname = p_d.get('username') or f"Agent_{str(u_id)[:8]}"
             players.append({
                 "user_id": u_id,
-                "username": p_d.get('username'),
-                "is_host": int(u_id) == int(host_id) if host_id else False,
+                "username": uname,
+                "is_host": str(u_id) == str(host_id) if host_id else False,
                 "score": p_d.get('score', 0),
                 "mistakes": p_d.get('mistakes', 0),
                 "wins": p_d.get('wins', 0),

@@ -834,6 +834,14 @@ async function initGame() {
     part.classList.remove("drawn", "detach-head", "detach-body");
   });
 
+  if (isFriendModeActive) {
+    if (clueDisplayV2) clueDisplayV2.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    clueText.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    renderWord();
+    renderKeyboard();
+    return;
+  }
+
   // Fetch Word from Python Backend (Smart Anti-Repetition)
   try {
     let url = `${API_URL}/word?user_id=${currentUserId}`;

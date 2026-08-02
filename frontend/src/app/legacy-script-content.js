@@ -384,6 +384,14 @@ async function initGame() {
     part.classList.remove("drawn", "detach-head", "detach-body");
   });
 
+  if (isFriendModeActive) {
+    if (clueDisplayV2) clueDisplayV2.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    clueText.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    renderWord();
+    renderKeyboard();
+    return;
+  }
+
   // Fetch Word from Python Backend (Smart Anti-Repetition)
   try {
     const res = await fetch(`${API_URL}/word?category=${selectedCategory}&difficulty=${selectedDifficulty}&user_id=${currentUserId}`);
