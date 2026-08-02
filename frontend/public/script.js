@@ -189,24 +189,24 @@ setTimeout(playIntroSequence, 100);
 
 function playIntroSequence() {
   // Line 1: 0.3s
-  setTimeout(() => { introLine1.classList.add("animate-text-in"); }, 300);
+  setTimeout(() => { introLine1?.classList.add("animate-text-in"); }, 300);
 
   // Line 2: 1.8s
-  setTimeout(() => { introLine2.classList.add("animate-text-in"); }, 1800);
+  setTimeout(() => { introLine2?.classList.add("animate-text-in"); }, 1800);
 
   // Line 3: 3.2s
-  setTimeout(() => { introLine3.classList.add("animate-text-in"); }, 3200);
+  setTimeout(() => { introLine3?.classList.add("animate-text-in"); }, 3200);
 
   // Line 4: 4.6s
-  setTimeout(() => { introLine4.classList.add("animate-text-in"); }, 4600);
+  setTimeout(() => { introLine4?.classList.add("animate-text-in"); }, 4600);
 
   // Logo Reveal: 6.0s (Animation takes 4s, finishes at 10.0s)
-  setTimeout(() => { introLogo.classList.add("animate-logo-in"); }, 6000);
+  setTimeout(() => { introLogo?.classList.add("animate-logo-in"); }, 6000);
 
   // Fade out Intro & Show Login: wait for logo animation to finish (10.0s)
   setTimeout(() => {
-    introOverlay.classList.add("fade-out-overlay");
-    loginOverlay.classList.remove("hidden");
+    introOverlay?.classList.add("fade-out-overlay");
+    loginOverlay?.classList.remove("hidden");
 
     // Remove intro entirely after transition to clean DOM
     setTimeout(() => { introOverlay.remove(); }, 1000);
@@ -237,14 +237,14 @@ function playIntroSequence() {
   // Animate stickman parts loop
   setInterval(() => {
     const loginOverlay = document.getElementById("login-overlay");
-    if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
+    if (!loginOverlay || loginOverlay?.classList.contains("hidden")) return;
 
     if (glitchMode) {
       // Clear glitch mode, hide all parts, reset index
       parts.forEach(p => {
         if (p) {
-          p.classList.remove("visible", "glitch-fail");
-          p.classList.add("hidden");
+          p?.classList.remove("visible", "glitch-fail");
+          p?.classList.add("hidden");
         }
       });
       glitchMode = false;
@@ -254,14 +254,14 @@ function playIntroSequence() {
         // Show next part
         const part = parts[currentPartIndex];
         if (part) {
-          part.classList.remove("hidden");
-          part.classList.add("visible");
+          part?.classList.remove("hidden");
+          part?.classList.add("visible");
         }
         currentPartIndex++;
       } else {
         // All parts shown, trigger glitch fail state
         parts.forEach(p => {
-          if (p) p.classList.add("glitch-fail");
+          if (p) p?.classList.add("glitch-fail");
         });
         glitchMode = true;
       }
@@ -278,7 +278,7 @@ function playIntroSequence() {
   // Spawn popping words or letters
   setInterval(() => {
     const loginOverlay = document.getElementById("login-overlay");
-    if (!loginOverlay || loginOverlay.classList.contains("hidden")) return;
+    if (!loginOverlay || loginOverlay?.classList.contains("hidden")) return;
 
     // Spawn either a full decrypting word (45% chance) or single letters (55% chance)
     if (Math.random() < 0.45) {
@@ -316,7 +316,7 @@ function playIntroSequence() {
     // After 1 second, resolve/solve the word to fully decrypted state
     setTimeout(() => {
       wordEl.innerText = word;
-      wordEl.classList.add("solved");
+      wordEl?.classList.add("solved");
     }, 1000);
 
     // Remove element after animation finishes
@@ -353,32 +353,32 @@ const panelOffline = document.getElementById('panel-offline');
 
 if (tabReturning) {
   tabReturning.addEventListener('click', () => {
-    tabReturning.classList.add('active');
-    if (tabNew) tabNew.classList.remove('active');
-    if (tabOffline) tabOffline.classList.remove('active');
-    if (panelReturning) panelReturning.classList.remove('hidden');
-    if (panelNew) panelNew.classList.add('hidden');
-    if (panelOffline) panelOffline.classList.add('hidden');
+    tabReturning?.classList.add('active');
+    if (tabNew) tabNew?.classList.remove('active');
+    if (tabOffline) tabOffline?.classList.remove('active');
+    if (panelReturning) panelReturning?.classList.remove('hidden');
+    if (panelNew) panelNew?.classList.add('hidden');
+    if (panelOffline) panelOffline?.classList.add('hidden');
   });
 }
 if (tabNew) {
   tabNew.addEventListener('click', () => {
-    tabNew.classList.add('active');
-    if (tabReturning) tabReturning.classList.remove('active');
-    if (tabOffline) tabOffline.classList.remove('active');
-    if (panelNew) panelNew.classList.remove('hidden');
-    if (panelReturning) panelReturning.classList.add('hidden');
-    if (panelOffline) panelOffline.classList.add('hidden');
+    tabNew?.classList.add('active');
+    if (tabReturning) tabReturning?.classList.remove('active');
+    if (tabOffline) tabOffline?.classList.remove('active');
+    if (panelNew) panelNew?.classList.remove('hidden');
+    if (panelReturning) panelReturning?.classList.add('hidden');
+    if (panelOffline) panelOffline?.classList.add('hidden');
   });
 }
 if (tabOffline) {
   tabOffline.addEventListener('click', () => {
-    tabOffline.classList.add('active');
-    if (tabReturning) tabReturning.classList.remove('active');
-    if (tabNew) tabNew.classList.remove('active');
-    if (panelOffline) panelOffline.classList.remove('hidden');
-    if (panelReturning) panelReturning.classList.add('hidden');
-    if (panelNew) panelNew.classList.add('hidden');
+    tabOffline?.classList.add('active');
+    if (tabReturning) tabReturning?.classList.remove('active');
+    if (tabNew) tabNew?.classList.remove('active');
+    if (panelOffline) panelOffline?.classList.remove('hidden');
+    if (panelReturning) panelReturning?.classList.add('hidden');
+    if (panelNew) panelNew?.classList.add('hidden');
   });
 }
 
@@ -402,10 +402,10 @@ function applyUserSession(data) {
 
   document.getElementById("selection-title").innerHTML = `Welcome back, <span style="color: #fff">${currentUser.toUpperCase()}</span><br><br>Select Category`;
 
-  loginOverlay.classList.add("hidden");
-  selectionScreen.classList.remove("hidden");
-  categorySelection.classList.remove("hidden");
-  difficultySelection.classList.add("hidden");
+  loginOverlay?.classList.add("hidden");
+  selectionScreen?.classList.remove("hidden");
+  categorySelection?.classList.remove("hidden");
+  difficultySelection?.classList.add("hidden");
 
   updateAgentHUD();
   refreshProgressHUD();
@@ -413,7 +413,7 @@ function applyUserSession(data) {
   // Restore HUD state
   const hud = document.getElementById("agent-hud");
   if (hud && localStorage.getItem("hud_minimized") === "true") {
-    hud.classList.add("minimized");
+    hud?.classList.add("minimized");
   }
 }
 
@@ -421,7 +421,7 @@ function updateAgentHUD() {
   const hud = document.getElementById("agent-hud");
   if (!hud) return;
 
-  hud.classList.remove("hidden");
+  hud?.classList.remove("hidden");
 
   const userEl = document.getElementById("hud-user");
   const rankEl = document.getElementById("hud-rank");
@@ -495,7 +495,7 @@ async function handleLogin() {
   if (_loginInFlight) return; // Prevent double submit
   const username = usernameInput.value.trim();
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.classList.remove("success");
+  errorMsg?.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
     return;
@@ -518,7 +518,7 @@ async function handleLogin() {
     if (res.status === 429) {
       errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
     } else if (res.ok) {
-      errorMsg.classList.add("success");
+      errorMsg?.classList.add("success");
       errorMsg.innerText = "ACCESS GRANTED. Loading...";
       applyUserSession(data);
     } else {
@@ -551,7 +551,7 @@ async function handleRegister() {
   if (_registerInFlight) return; // Prevent double submit
   const username = registerInput.value.trim();
   const errorMsg = document.getElementById("register-error-msg");
-  errorMsg.classList.remove("success");
+  errorMsg?.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
     return;
@@ -574,7 +574,7 @@ async function handleRegister() {
     if (res.status === 429) {
       errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
     } else if (res.ok) {
-      errorMsg.classList.add("success");
+      errorMsg?.classList.add("success");
       errorMsg.innerText = "ENLISTED! Logging in...";
       setTimeout(() => applyUserSession(data), 1200);
     } else {
@@ -613,15 +613,15 @@ logoutBtn.addEventListener("click", () => {
     offlineError.style.color = "";
   }
   // Reset tabs back to Returning Player
-  if (tabReturning) tabReturning.classList.add("active");
-  if (tabNew) tabNew.classList.remove('active');
-  if (tabOffline) tabOffline.classList.remove('active');
-  if (panelReturning) panelReturning.classList.remove("hidden");
-  if (panelNew) panelNew.classList.add("hidden");
-  if (panelOffline) panelOffline.classList.add("hidden");
-  gameContainer.classList.add("hidden");
-  selectionScreen.classList.add("hidden");
-  loginOverlay.classList.remove("hidden");
+  if (tabReturning) tabReturning?.classList.add("active");
+  if (tabNew) tabNew?.classList.remove('active');
+  if (tabOffline) tabOffline?.classList.remove('active');
+  if (panelReturning) panelReturning?.classList.remove("hidden");
+  if (panelNew) panelNew?.classList.add("hidden");
+  if (panelOffline) panelOffline?.classList.add("hidden");
+  gameContainer?.classList.add("hidden");
+  selectionScreen?.classList.add("hidden");
+  loginOverlay?.classList.remove("hidden");
 });
 
 // === Sound Toggle ===
@@ -680,11 +680,11 @@ Object.keys(modeBtns).forEach(mode => {
   if (modeBtns[mode]) {
     modeBtns[mode].addEventListener("click", () => {
       currentMode = mode;
-      Object.keys(modeBtns).forEach(m => modeBtns[m].classList.remove("active"));
-      modeBtns[mode].classList.add("active");
+      Object.keys(modeBtns).forEach(m => modeBtns[m]?.classList.remove("active"));
+      modeBtns[mode]?.classList.add("active");
 
-      Object.keys(grids).forEach(g => grids[g].classList.add("hidden"));
-      grids[mode].classList.remove("hidden");
+      Object.keys(grids).forEach(g => grids[g]?.classList.add("hidden"));
+      grids[mode]?.classList.remove("hidden");
       playSfx("click");
     });
   }
@@ -701,8 +701,8 @@ if (hintRevealCat) {
   hintRevealCat.addEventListener("click", () => {
     if (isGameOver) return;
     clueDisplayV2.innerText = `CATEGORY: ${currentWordData.category.replace(/_/g, " ")}`;
-    hintDisplayArea.classList.remove("hidden");
-    hintRevealCat.classList.add("disabled");
+    hintDisplayArea?.classList.remove("hidden");
+    hintRevealCat?.classList.add("disabled");
     hintRevealCat.disabled = true;
     playSfx("click");
   });
@@ -712,8 +712,8 @@ if (hintRevealDesc) {
   hintRevealDesc.addEventListener("click", async () => {
     if (isGameOver || currentXp < 20) return;
     clueDisplayV2.innerText = `INTEL: ${currentWordData.description || currentWordData.clue}`;
-    hintDisplayArea.classList.remove("hidden");
-    hintRevealDesc.classList.add("disabled");
+    hintDisplayArea?.classList.remove("hidden");
+    hintRevealDesc?.classList.add("disabled");
     hintRevealDesc.disabled = true;
 
     if (currentUserId === "offline") {
@@ -774,28 +774,28 @@ async function initGame() {
 
   // Reset Hint UI
   if (hintRevealCat) {
-    hintRevealCat.classList.remove("disabled");
+    hintRevealCat?.classList.remove("disabled");
     hintRevealCat.disabled = false;
   }
   if (hintRevealDesc) {
-    hintRevealDesc.classList.add("locked");
+    hintRevealDesc?.classList.add("locked");
     hintRevealDesc.disabled = true; // Initially locked until some progress or specific mode
     if (currentXp >= 200) { // Example: Unlocks after 200 total XP
-      hintRevealDesc.classList.remove("locked");
+      hintRevealDesc?.classList.remove("locked");
       hintRevealDesc.disabled = false;
     }
   }
   if (hintRevealLetter) {
-    hintRevealLetter.classList.remove("disabled");
+    hintRevealLetter?.classList.remove("disabled");
     hintRevealLetter.disabled = false;
   }
   if (hintDisplayArea) {
-    hintDisplayArea.classList.add("hidden");
+    hintDisplayArea?.classList.add("hidden");
     clueDisplayV2.innerText = "";
   }
   // Clue display should be visible immediately in new layout
   if (clueDisplay) {
-    clueDisplay.classList.remove("hidden");
+    clueDisplay?.classList.remove("hidden");
     clueText.innerText = "GENERATING CLUE...";
   }
 
@@ -807,10 +807,10 @@ async function initGame() {
   }
 
   // Reset DOM Classes
-  gameContainer.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
+  gameContainer?.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
 
-  redOverlay.classList.remove("active");
-  popup.classList.remove("show", "popup-win", "popup-loss");
+  redOverlay?.classList.remove("active");
+  popup?.classList.remove("show", "popup-win", "popup-loss");
   clueText.innerText = "GENERATING CLUE...";
 
   const progressBar = document.getElementById("game-progress-bar");
@@ -819,19 +819,19 @@ async function initGame() {
   // Hide Escape Container
   const escapeContainer = document.getElementById("escape-container");
   if (escapeContainer) {
-    escapeContainer.classList.add("hidden");
+    escapeContainer?.classList.add("hidden");
     const portal = escapeContainer.querySelector('.escape-portal');
     const runner = escapeContainer.querySelector('.escape-runner-container');
     const particles = escapeContainer.querySelector('.particles');
 
-    if (portal) portal.classList.remove("open");
-    if (runner) runner.classList.remove("escaping");
+    if (portal) portal?.classList.remove("open");
+    if (runner) runner?.classList.remove("escaping");
     if (particles) particles.innerHTML = "";
   }
 
   // Clear hangman SVG & remove detachment classes
   hangmanParts.forEach(part => {
-    part.classList.remove("drawn", "detach-head", "detach-body");
+    part?.classList.remove("drawn", "detach-head", "detach-body");
   });
 
   if (isFriendModeActive) {
@@ -864,9 +864,9 @@ async function initGame() {
       isGameOver = true;
 
       setTimeout(() => {
-        gameContainer.classList.add("win-state");
-        popup.classList.add("show", "popup-win");
-        popup.classList.remove("popup-loss");
+        gameContainer?.classList.add("win-state");
+        popup?.classList.add("show", "popup-win");
+        popup?.classList.remove("popup-loss");
         popupMessage.innerText = "You have saved all the men in this difficulty context!";
         nextBtn.innerText = "Return to Protocol Context";
       }, 500);
@@ -1033,7 +1033,7 @@ function renderWord() {
     box.className = "letter-box";
     if (guessedLetters.includes(letter)) {
       box.innerText = letter;
-      box.classList.add("revealed-anim");
+      box?.classList.add("revealed-anim");
     } else {
       box.innerText = "";
     }
@@ -1053,9 +1053,9 @@ function renderKeyboard() {
 
     if (guessedLetters.includes(letter)) {
       if (currentWord.includes(letter)) {
-        btn.classList.add("correct", "disabled");
+        btn?.classList.add("correct", "disabled");
       } else {
-        btn.classList.add("wrong", "disabled");
+        btn?.classList.add("wrong", "disabled");
       }
     }
 
@@ -1072,14 +1072,14 @@ function handleGuess(letter) {
   if (currentWord.includes(letter)) {
     // Correct
     renderWord();
-    document.getElementById(`key-${letter}`).classList.add("correct", "disabled");
+    document.getElementById()?.classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
     playSfx("correct");
     checkWin();
   } else {
     // Incorrect
-    document.getElementById(`key-${letter}`).classList.add("wrong", "disabled");
+    document.getElementById()?.classList.add("wrong", "disabled");
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
     playSfx("wrong");
@@ -1091,7 +1091,7 @@ function handleGuess(letter) {
       if (partsToDraw) {
         partsToDraw.forEach(partIdx => {
           const partEl = document.querySelector(`.part-${partIdx}`);
-          if (partEl) partEl.classList.add("drawn");
+          if (partEl) partEl?.classList.add("drawn");
         });
       }
       wrongGuesses++;
@@ -1135,18 +1135,18 @@ function checkWin() {
       // Hide standard hangman and shake screen
       const hangmanDisplay = document.querySelector('.hangman-display');
       if (hangmanDisplay) hangmanDisplay.style.opacity = '0';
-      gameContainer.classList.add("game-container-shake");
+      gameContainer?.classList.add("game-container-shake");
 
       setTimeout(() => {
         // Screen stabilizes, tear open the portal
-        gameContainer.classList.remove("game-container-shake");
-        escapeContainer.classList.remove("hidden");
-        portal.classList.add("open");
+        gameContainer?.classList.remove("game-container-shake");
+        escapeContainer?.classList.remove("hidden");
+        portal?.classList.add("open");
 
         // Spawn Particles
         for (let i = 0; i < 30; i++) {
           const p = document.createElement('div');
-          p.classList.add('particle');
+          p?.classList.add('particle');
           p.style.left = `50%`;
           p.style.top = `50%`;
 
@@ -1169,23 +1169,23 @@ function checkWin() {
 
         // Runner dashes in
         setTimeout(() => {
-          runner.classList.add("escaping");
+          runner?.classList.add("escaping");
 
           // Glitch flash right as he enters portal
           setTimeout(() => {
-            escapeContainer.classList.add('glitch-flash');
+            escapeContainer?.classList.add('glitch-flash');
 
             // Show final victory popup
             setTimeout(() => {
-              escapeContainer.classList.add("hidden");
-              escapeContainer.classList.remove('glitch-flash');
+              escapeContainer?.classList.add("hidden");
+              escapeContainer?.classList.remove('glitch-flash');
               const hangmanDisplay = document.querySelector('.hangman-display');
               if (hangmanDisplay) hangmanDisplay.style.opacity = '1';
 
-              gameContainer.classList.add("win-state");
+              gameContainer?.classList.add("win-state");
               console.log("Adding classes");
-              popup.classList.add("show", "popup-win");
-              popup.classList.remove("popup-loss");
+              popup?.classList.add("show", "popup-win");
+              popup?.classList.remove("popup-loss");
               popupMessage.innerText = "Protocol breached. Agent evacuated successfully.";
             }, 500);
 
@@ -1217,8 +1217,8 @@ function checkLoss() {
 
     // Death Animation Sequence Let user see the final leg get drawn
     setTimeout(() => {
-      redOverlay.classList.add("active");
-      gameContainer.classList.add("loss-state", "game-loss");
+      redOverlay?.classList.add("active");
+      gameContainer?.classList.add("loss-state", "game-loss");
 
       // Apply detachment to SVG elements
       const head = document.querySelector('.part-4');
@@ -1230,13 +1230,13 @@ function checkLoss() {
         document.querySelector('.part-9')  // R Leg
       ];
 
-      if (head) head.classList.add('detach-head');
-      body.forEach(p => { if (p) p.classList.add('detach-body'); });
+      if (head) head?.classList.add('detach-head');
+      body.forEach(p => { if (p) p?.classList.add('detach-body'); });
 
       // Wait for the disintegration before showing the popup
       setTimeout(() => {
-        popup.classList.add("show", "popup-loss");
-        popup.classList.remove("popup-win");
+        popup?.classList.add("show", "popup-loss");
+        popup?.classList.remove("popup-win");
         popupMessage.innerText = "your man is dead but dont give up he is immortal";
       }, 1500); // 1.5s delay fits the CSS animations
 
@@ -1269,8 +1269,8 @@ function renderLeaderboard(type) {
 
 lbTabs.forEach(tab => {
   tab.addEventListener("click", (e) => {
-    lbTabs.forEach(t => t.classList.remove("active"));
-    e.target.classList.add("active");
+    lbTabs.forEach(t => t?.classList.remove("active"));
+    e?.target?.classList.add("active");
     const type = e.target.getAttribute("data-leaderboard");
     renderLeaderboard(type);
   });
@@ -1282,18 +1282,18 @@ leaderboardBtn.addEventListener("click", async () => {
     currentLeaderboardData = await res.json();
 
     // Reset to default tab
-    lbTabs.forEach(t => t.classList.remove("active"));
-    document.querySelector('.lb-tab[data-leaderboard="score"]').classList.add("active");
+    lbTabs.forEach(t => t?.classList.remove("active"));
+    document.querySelector()?.classList.add("active");
     renderLeaderboard("score");
 
-    leaderboardPopup.classList.remove("hidden");
+    leaderboardPopup?.classList.remove("hidden");
   } catch (err) {
     console.error("Leaderboard Error", err);
   }
 });
 
 closeLeaderboardBtn.addEventListener("click", () => {
-  leaderboardPopup.classList.add("hidden");
+  leaderboardPopup?.classList.add("hidden");
 });
 
 // === Keyboard Mapping ===
@@ -1301,7 +1301,7 @@ document.addEventListener("keydown", (e) => {
   if (!currentUser) return; // Ignore if playing login
 
   if (isGameOver) {
-    if (e.key === "Enter" && popup.classList.contains("show")) {
+    if (e.key === "Enter" && popup?.classList.contains("show")) {
       initGame();
     }
     return;
@@ -1473,19 +1473,19 @@ catBtns.forEach(btn => {
     domainQuoteText.innerText = domainQuotes[selectedCategory] || '"Knowledge is power."';
 
     // Reset animation
-    domainQuoteText.classList.remove("animate-quote-in");
+    domainQuoteText?.classList.remove("animate-quote-in");
     void domainQuoteText.offsetWidth; // trigger reflow
 
     // Show overlay and Animate
-    quoteTransitionOverlay.classList.remove("hidden");
-    domainQuoteText.classList.add("animate-quote-in");
+    quoteTransitionOverlay?.classList.remove("hidden");
+    domainQuoteText?.classList.add("animate-quote-in");
 
     // Hide overlay after animation finishes (3.5s)
     setTimeout(() => {
-      quoteTransitionOverlay.classList.add("hidden");
+      quoteTransitionOverlay?.classList.add("hidden");
       chosenCategoryTitle.innerText = "TARGET SYSTEM: " + displayCategory;
-      categorySelection.classList.add("hidden");
-      difficultySelection.classList.remove("hidden");
+      categorySelection?.classList.add("hidden");
+      difficultySelection?.classList.remove("hidden");
 
       // Update Left Panel: Show domain logo & domain quote when inside a domain
       document.getElementById("left-logo-container").innerHTML = domainLogos[selectedCategory] || defaultLogo;
@@ -1496,8 +1496,8 @@ catBtns.forEach(btn => {
 });
 
 backToCatBtn.addEventListener("click", () => {
-  difficultySelection.classList.add("hidden");
-  categorySelection.classList.remove("hidden");
+  difficultySelection?.classList.add("hidden");
+  categorySelection?.classList.remove("hidden");
   selectedCategory = null;
   document.body.classList.remove("tamil-theme");
   // Restore Cross Logo and Bible quote in main lobby
@@ -1510,20 +1510,20 @@ diffBtns.forEach(btn => {
   btn.addEventListener("click", () => {
     selectedDifficulty = btn.getAttribute("data-diff");
     MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
-    selectionScreen.classList.add("hidden");
-    gameContainer.classList.remove("hidden");
+    selectionScreen?.classList.add("hidden");
+    gameContainer?.classList.remove("hidden");
     initGame();
   });
 });
 
 changeProtocolBtn.addEventListener("click", () => {
   isGameOver = true;
-  gameContainer.classList.add("hidden");
-  popup.classList.remove("show");
-  redOverlay.classList.remove("active");
-  selectionScreen.classList.remove("hidden");
-  categorySelection.classList.remove("hidden");
-  difficultySelection.classList.add("hidden");
+  gameContainer?.classList.add("hidden");
+  popup?.classList.remove("show");
+  redOverlay?.classList.remove("active");
+  selectionScreen?.classList.remove("hidden");
+  categorySelection?.classList.remove("hidden");
+  difficultySelection?.classList.add("hidden");
   selectedCategory = null;
   selectedDifficulty = null;
   document.getElementById("left-logo-container").innerHTML = defaultLogo;
@@ -1540,12 +1540,12 @@ nextBtn.addEventListener("click", () => {
     nextBtn.innerText = "are u ready to save another man";
     // Manually trigger "change protocol" to reset state
     isGameOver = true;
-    gameContainer.classList.add("hidden");
-    popup.classList.remove("show");
-    redOverlay.classList.remove("active");
-    selectionScreen.classList.remove("hidden");
-    categorySelection.classList.remove("hidden");
-    difficultySelection.classList.add("hidden");
+    gameContainer?.classList.add("hidden");
+    popup?.classList.remove("show");
+    redOverlay?.classList.remove("active");
+    selectionScreen?.classList.remove("hidden");
+    categorySelection?.classList.remove("hidden");
+    difficultySelection?.classList.add("hidden");
     selectedCategory = null;
     selectedDifficulty = null;
     document.getElementById("left-logo-container").innerHTML = defaultLogo;
@@ -1594,8 +1594,8 @@ dailyBtn.addEventListener('click', async () => {
     selectedDifficulty = data.difficulty;
     MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty]?.length || 9;
 
-    selectionScreen.classList.add('hidden');
-    gameContainer.classList.remove('hidden');
+    selectionScreen?.classList.add('hidden');
+    gameContainer?.classList.remove('hidden');
 
     // Init the game using the daily word directly
     guessedLetters = [];
@@ -1606,17 +1606,17 @@ dailyBtn.addEventListener('click', async () => {
     currentWord = data.word.toUpperCase();
 
     // Reset Hint UI
-    if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn.classList.remove('disabled'); hintBtn.disabled = false; }
-    if (clueDisplay) clueDisplay.classList.remove('hidden');
+    if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn?.classList.remove('disabled'); hintBtn.disabled = false; }
+    if (clueDisplay) clueDisplay?.classList.remove('hidden');
     clueText.innerText = `[DAILY] ${data.hint || data.clue}`;
 
     // Reset DOM state
-    gameContainer.classList.remove('win-state', 'loss-state', 'game-loss', 'game-container-shake');
-    redOverlay.classList.remove('active');
-    popup.classList.remove('show', 'popup-win', 'popup-loss');
-    hangmanParts.forEach(p => p.classList.remove('drawn', 'detach-head', 'detach-body'));
+    gameContainer?.classList.remove('win-state', 'loss-state', 'game-loss', 'game-container-shake');
+    redOverlay?.classList.remove('active');
+    popup?.classList.remove('show', 'popup-win', 'popup-loss');
+    hangmanParts.forEach(p => p?.classList.remove('drawn', 'detach-head', 'detach-body'));
     const escEl = document.getElementById('escape-container');
-    if (escEl) { escEl.classList.add('hidden'); }
+    if (escEl) { escEl?.classList.add('hidden'); }
 
     renderWord();
     renderKeyboard();
@@ -1686,10 +1686,10 @@ function rollRandomEvent() {
   const anomalyPopup = document.getElementById('anomaly-popup');
   document.getElementById('anomaly-event-name').innerText = event.name;
   document.getElementById('anomaly-event-desc').innerText = event.desc;
-  anomalyPopup.classList.remove('hidden');
+  anomalyPopup?.classList.remove('hidden');
 
   document.getElementById('anomaly-confirm-btn').onclick = () => {
-    anomalyPopup.classList.add('hidden');
+    anomalyPopup?.classList.add('hidden');
   };
 }
 
@@ -1759,7 +1759,7 @@ trophiesBtn.addEventListener('click', async () => {
       achievementsList.appendChild(div);
     });
 
-    achievementsPopup.classList.remove('hidden');
+    achievementsPopup?.classList.remove('hidden');
   } catch (err) {
     console.error('Achievements Error', err);
     // Fallback to local storage if API call fails
@@ -1781,13 +1781,13 @@ trophiesBtn.addEventListener('click', async () => {
         `;
         achievementsList.appendChild(div);
       });
-      achievementsPopup.classList.remove('hidden');
+      achievementsPopup?.classList.remove('hidden');
     }
   }
 });
 
 closeAchievementsBtn.addEventListener('click', () => {
-  achievementsPopup.classList.add('hidden');
+  achievementsPopup?.classList.add('hidden');
 });
 
 // =========================================================
@@ -1801,9 +1801,9 @@ function showToast(title, message, color = '#00ffcc') {
   toast.style.color = color;
   toast.innerHTML = `<strong>${title}</strong><br>${message}`;
   document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('toast-visible'), 50);
+  setTimeout(() => toast?.classList.add('toast-visible'), 50);
   setTimeout(() => {
-    toast.classList.remove('toast-visible');
+    toast?.classList.remove('toast-visible');
     setTimeout(() => toast.remove(), 500);
   }, 4000);
 }
@@ -1870,13 +1870,13 @@ window.addEventListener("mouseup", () => {
 
 // Add hover effects for all buttons and interactive elements
 document.addEventListener("mouseover", (e) => {
-  if (e.target.tagName === "BUTTON" || e.target.classList.contains("key") || e.target.closest("a") || e.target.classList.contains("lb-tab")) {
+  if (e.target.tagName === "BUTTON" || e?.target?.classList.contains("key") || e.target.closest("a") || e?.target?.classList.contains("lb-tab")) {
     document.body.classList.add("cursor-hover");
   }
 });
 
 document.addEventListener("mouseout", (e) => {
-  if (e.target.tagName === "BUTTON" || e.target.classList.contains("key") || e.target.closest("a") || e.target.classList.contains("lb-tab")) {
+  if (e.target.tagName === "BUTTON" || e?.target?.classList.contains("key") || e.target.closest("a") || e?.target?.classList.contains("lb-tab")) {
     document.body.classList.remove("cursor-hover");
   }
 });
@@ -1894,10 +1894,10 @@ function updateStoryUI() {
   lvlBtns.forEach(btn => {
     const lvl = parseInt(btn.getAttribute("data-lvl"));
     if (lvl <= storyProgress) {
-      btn.classList.remove("locked");
+      btn?.classList.remove("locked");
       btn.innerText = `LEVEL ${lvl}: ${STORY_LEVELS[lvl].name}`;
     } else {
-      btn.classList.add("locked");
+      btn?.classList.add("locked");
       btn.innerText = `LEVEL ${lvl}: LOCKED 🔒`;
     }
   });
@@ -1916,8 +1916,8 @@ document.querySelectorAll(".lvl-btn").forEach(btn => {
     currentStoryLevel = lvl;
 
     MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
-    selectionScreen.classList.add("hidden");
-    gameContainer.classList.remove("hidden");
+    selectionScreen?.classList.add("hidden");
+    gameContainer?.classList.remove("hidden");
     initGame();
 
     showToast("📜 MISSION BRIEF", `Objective: Escape ${STORY_LEVELS[lvl].name}. Difficulty: ${selectedDifficulty}`, "#00ffcc");
@@ -1933,14 +1933,14 @@ const btnWordDuel = document.getElementById("btn-word-duel");
 
 if (btnWordDuel) {
   btnWordDuel.addEventListener("click", () => {
-    duelSetupOverlay.classList.remove("hidden");
+    duelSetupOverlay?.classList.remove("hidden");
     playSfx("click");
   });
 }
 
 if (duelCancelBtn) {
   duelCancelBtn.addEventListener("click", () => {
-    duelSetupOverlay.classList.add("hidden");
+    duelSetupOverlay?.classList.add("hidden");
     playSfx("click");
   });
 }
@@ -1964,9 +1964,9 @@ if (duelStartBtn) {
     selectedDifficulty = "MEDIUM"; // Default to medium mapping for duels
     MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty].length;
 
-    duelSetupOverlay.classList.add("hidden");
-    selectionScreen.classList.add("hidden");
-    gameContainer.classList.remove("hidden");
+    duelSetupOverlay?.classList.add("hidden");
+    selectionScreen?.classList.add("hidden");
+    gameContainer?.classList.remove("hidden");
 
     // Reset state for new game
     guessedLetters = [];
@@ -2058,8 +2058,8 @@ document.addEventListener('click', (e) => {
   const hud = document.getElementById('agent-hud');
 
   if (toggleBtn && hud) {
-    toggleBtn.classList.remove('hud-pulse-hint'); // Remove hint once discovered
-    const isMinimized = hud.classList.toggle('minimized');
+    toggleBtn?.classList.remove('hud-pulse-hint'); // Remove hint once discovered
+    const isMinimized = hud?.classList.toggle('minimized');
     localStorage.setItem('hud_minimized', isMinimized);
 
     // Add effect
@@ -2071,8 +2071,8 @@ document.addEventListener('click', (e) => {
   }
 
   // Also allow clicking the minimized phone to expand
-  if (hud && hud.classList.contains('minimized') && e.target.closest('#agent-hud')) {
-    hud.classList.remove('minimized');
+  if (hud && hud?.classList.contains('minimized') && e.target.closest('#agent-hud')) {
+    hud?.classList.remove('minimized');
     localStorage.setItem('hud_minimized', 'false');
   }
 });
@@ -2104,16 +2104,16 @@ const leaderboardContainer = document.getElementById("friend-room-leaderboard-co
 
 if (modeFriendsBtn) {
   modeFriendsBtn.addEventListener("click", () => {
-    if (friendsOverlay) friendsOverlay.classList.remove("hidden");
-    if (friendsSetupView) friendsSetupView.classList.remove("hidden");
-    if (friendsActiveView) friendsActiveView.classList.add("hidden");
+    if (friendsOverlay) friendsOverlay?.classList.remove("hidden");
+    if (friendsSetupView) friendsSetupView?.classList.remove("hidden");
+    if (friendsActiveView) friendsActiveView?.classList.add("hidden");
     if (friendRoomError) friendRoomError.innerText = "";
   });
 }
 
 if (closeFriendsBtn) {
   closeFriendsBtn.addEventListener("click", () => {
-    if (friendsOverlay) friendsOverlay.classList.add("hidden");
+    if (friendsOverlay) friendsOverlay?.classList.add("hidden");
   });
 }
 
@@ -2203,8 +2203,8 @@ async function handleJoinRoom() {
 }
 
 function setupActiveRoomUI(data) {
-  if (friendsSetupView) friendsSetupView.classList.add("hidden");
-  if (friendsActiveView) friendsActiveView.classList.remove("hidden");
+  if (friendsSetupView) friendsSetupView?.classList.add("hidden");
+  if (friendsActiveView) friendsActiveView?.classList.remove("hidden");
 
   if (displayCode) displayCode.innerText = `${data.code} 📋`;
   if (displayRound) displayRound.innerText = data.round_number || 1;
@@ -2291,21 +2291,21 @@ function renderFriendLeaderboard(players) {
 
 if (startGameBtn) {
   startGameBtn.addEventListener("click", () => {
-    if (friendsOverlay) friendsOverlay.classList.add("hidden");
-    if (selectionScreen) selectionScreen.classList.add("hidden");
-    if (gameContainer) gameContainer.classList.remove("hidden");
+    if (friendsOverlay) friendsOverlay?.classList.add("hidden");
+    if (selectionScreen) selectionScreen?.classList.add("hidden");
+    if (gameContainer) gameContainer?.classList.remove("hidden");
 
     // Apply Cyber Glitch Reveal animation to Word Display
     if (wordDisplay) {
-      wordDisplay.classList.remove("cyber-glitch-reveal-anim");
+      wordDisplay?.classList.remove("cyber-glitch-reveal-anim");
       void wordDisplay.offsetWidth; // Trigger reflow
-      wordDisplay.classList.add("cyber-glitch-reveal-anim");
+      wordDisplay?.classList.add("cyber-glitch-reveal-anim");
     }
 
     // Apply Dual Hologram Gallows style
     const hangmanSvg = document.querySelector(".hangman-svg");
     if (hangmanSvg) {
-      hangmanSvg.classList.add("holo-duo-execution");
+      hangmanSvg?.classList.add("holo-duo-execution");
     }
 
     resetGameVariables();
@@ -2362,10 +2362,10 @@ function exitFriendDuel() {
   isFriendModeActive = false;
 
   const hangmanSvg = document.querySelector(".hangman-svg");
-  if (hangmanSvg) hangmanSvg.classList.remove("holo-duo-execution");
+  if (hangmanSvg) hangmanSvg?.classList.remove("holo-duo-execution");
 
-  if (friendsOverlay) friendsOverlay.classList.add("hidden");
-  if (gameContainer) gameContainer.classList.add("hidden");
-  if (selectionScreen) selectionScreen.classList.remove("hidden");
+  if (friendsOverlay) friendsOverlay?.classList.add("hidden");
+  if (gameContainer) gameContainer?.classList.add("hidden");
+  if (selectionScreen) selectionScreen?.classList.remove("hidden");
 }
 
