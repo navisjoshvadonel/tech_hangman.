@@ -4,13 +4,30 @@ services:
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python populate_db.py
-    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2
+    # 4 workers x 2 threads = handles 8 concurrent requests
+    # --max-requests prevents memory leaks in long-running workers
+    # --keep-alive 5 prevents dropped connections under load
+    # --timeout 120 covers Render cold-start + MySQL handshake time
+    startCommand: >
+      gunicorn server:app
+      --bind 0.0.0.0:$PORT
+      --workers 4
+      --threads 2
+      --timeout 120
+      --keep-alive 5
+      --max-requests 1000
+      --max-requests-jitter 100
+      --worker-class gthread
+      --log-level info
     plan: starter
+    healthCheckPath: /api/health
     envVars:
       - key: DB_PATH
         value: /data/hangman.db
       - key: ADMIN_KEY
         generateValue: true
+      - key: PYTHON_UNBUFFERED
+        value: "1"
     disk:
       name: hangman-storage
       mountPath: /data

@@ -487,15 +487,25 @@ function handleOfflineLogin() {
   showToast("💻 LOCAL OFFLINE MODE", `Agent ${username.toUpperCase()} initialized locally.`, "#00ffcc");
 }
 
+// === Debounce guard: prevents double-submit on rapid clicks ===
+let _loginInFlight = false;
+let _registerInFlight = false;
+
 async function handleLogin() {
+  if (_loginInFlight) return; // Prevent double submit
   const username = usernameInput.value.trim();
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg.innerText = "AUTHENTICATING...";
   errorMsg.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
     return;
   }
+
+  _loginInFlight = true;
+  const origBtnText = loginBtn.innerText;
+  loginBtn.disabled = true;
+  loginBtn.innerText = "AUTHENTICATING...";
+  errorMsg.innerText = "";
 
   try {
     const res = await fetch(`${API_URL}/login`, {
@@ -505,7 +515,11 @@ async function handleLogin() {
     });
     const data = await res.json();
 
-    if (res.ok) {
+    if (res.status === 429) {
+      errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
+    } else if (res.ok) {
+      errorMsg.classList.add("success");
+      errorMsg.innerText = "ACCESS GRANTED. Loading...";
       applyUserSession(data);
     } else {
       errorMsg.innerText = data.error || "LOGIN FAILED.";
@@ -520,6 +534,10 @@ async function handleLogin() {
         handleOfflineLogin();
       });
     }
+  } finally {
+    _loginInFlight = false;
+    loginBtn.disabled = false;
+    loginBtn.innerText = origBtnText;
   }
 }
 
@@ -530,14 +548,20 @@ registerBtn.addEventListener("click", handleRegister);
 registerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleRegister(); });
 
 async function handleRegister() {
+  if (_registerInFlight) return; // Prevent double submit
   const username = registerInput.value.trim();
   const errorMsg = document.getElementById("register-error-msg");
-  errorMsg.innerText = "ENLISTING...";
   errorMsg.classList.remove("success");
   if (!username) {
     errorMsg.innerText = "";
     return;
   }
+
+  _registerInFlight = true;
+  const origBtnText = registerBtn.innerText;
+  registerBtn.disabled = true;
+  registerBtn.innerText = "ENLISTING...";
+  errorMsg.innerText = "";
 
   try {
     const res = await fetch(`${API_URL}/register`, {
@@ -547,7 +571,9 @@ async function handleRegister() {
     });
     const data = await res.json();
 
-    if (res.ok) {
+    if (res.status === 429) {
+      errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
+    } else if (res.ok) {
       errorMsg.classList.add("success");
       errorMsg.innerText = "ENLISTED! Logging in...";
       setTimeout(() => applyUserSession(data), 1200);
@@ -564,6 +590,10 @@ async function handleRegister() {
         handleOfflineLogin();
       });
     }
+  } finally {
+    _registerInFlight = false;
+    registerBtn.disabled = false;
+    registerBtn.innerText = origBtnText;
   }
 }
 

@@ -1,11 +1,59 @@
 import random
 import json
 import sqlite3
+import time
+import threading
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import words
+
+# =============================================
+# In-Memory Rate Limiter (no extra deps)
+# =============================================
+_rate_lock = threading.Lock()
+_rate_store: dict = {}  # ip -> [timestamps]
+
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 30     # max requests per window per IP
+
+def _get_client_ip():
+    """Best-effort client IP extraction."""
+    # Render / nginx forwards the real IP in X-Forwarded-For
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or 'unknown'
+
+def rate_limited(max_per_window: int = RATE_LIMIT_MAX, window: int = RATE_LIMIT_WINDOW):
+    """Returns True if the current request should be blocked (rate limited)."""
+    ip = _get_client_ip()
+    now = time.time()
+    with _rate_lock:
+        hits = _rate_store.get(ip, [])
+        # Purge old entries outside window
+        hits = [t for t in hits if now - t < window]
+        if len(hits) >= max_per_window:
+            _rate_store[ip] = hits
+            return True
+        hits.append(now)
+        _rate_store[ip] = hits
+    return False
+
+def _cleanup_rate_store():
+    """Background thread: purge stale IPs from rate store every 5 minutes."""
+    while True:
+        time.sleep(300)
+        now = time.time()
+        with _rate_lock:
+            stale = [ip for ip, hits in _rate_store.items()
+                     if all(now - t >= RATE_LIMIT_WINDOW for t in hits)]
+            for ip in stale:
+                del _rate_store[ip]
+
+_cleanup_thread = threading.Thread(target=_cleanup_rate_store, daemon=True)
+_cleanup_thread.start()
 DB_INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
 try:
     import mysql.connector
@@ -93,14 +141,23 @@ def get_db_connection():
             print(f"!!! CRITICAL MYSQL ERROR !!!: {err_msg}")
             # Fallback to local SQLite using the persistent DB_PATH so the site doesn't stay "Dead"
             import sqlite3
-            conn = sqlite3.connect(DB_PATH, timeout=20)
+            conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
             conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')
+            conn.execute('PRAGMA cache_size=-32000')
+            conn.execute('PRAGMA temp_store=MEMORY')
+            conn.execute('PRAGMA busy_timeout=10000')
             conn.row_factory = sqlite3.Row
             return conn
     else:
         import sqlite3
-        conn = sqlite3.connect(DB_PATH, timeout=20)
+        conn = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
         conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')      # Safe + fast (WAL makes this safe)
+        conn.execute('PRAGMA cache_size=-32000')       # 32 MB page cache
+        conn.execute('PRAGMA temp_store=MEMORY')       # Keep temp tables in RAM
+        conn.execute('PRAGMA mmap_size=134217728')     # 128 MB memory-mapped I/O
+        conn.execute('PRAGMA busy_timeout=10000')      # Wait 10s before giving up on a lock
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -163,11 +220,55 @@ def index():
 def ping():
     return jsonify({"status": "active", "timestamp": datetime.now().isoformat()}), 200
 
+@app.route('/api/health')
+def health():
+    """Health check endpoint — tests DB connectivity and returns system status."""
+    db_ok = False
+    db_type = DB_TYPE
+    word_count = 0
+    user_count = 0
+    try:
+        conn = get_db_connection()
+        c = get_cursor(conn)
+        execute_query(c, 'SELECT COUNT(*) FROM Words')
+        r = c.fetchone()
+        if r:
+            word_count = row_to_tuple(r)[0]
+        execute_query(c, 'SELECT COUNT(*) FROM Users')
+        r2 = c.fetchone()
+        if r2:
+            user_count = row_to_tuple(r2)[0]
+        conn.close()
+        db_ok = True
+    except Exception as e:
+        db_ok = False
+    return jsonify({
+        "status": "healthy" if db_ok else "degraded",
+        "db": db_type,
+        "db_ok": db_ok,
+        "word_count": word_count,
+        "user_count": user_count,
+        "timestamp": datetime.now().isoformat()
+    }), 200 if db_ok else 503
+
 # === Database Helpers ===
 def init_db():
+    # For SQLite: apply WAL at the file level immediately on startup
+    # This ensures the WAL setting persists across all future connections
+    if not (MYSQL_URL and MYSQL_URL.startswith('mysql')):
+        import sqlite3 as _sq
+        _bootstrap = _sq.connect(DB_PATH, timeout=30, check_same_thread=False)
+        _bootstrap.execute('PRAGMA journal_mode=WAL')
+        _bootstrap.execute('PRAGMA synchronous=NORMAL')
+        _bootstrap.execute('PRAGMA cache_size=-32000')
+        _bootstrap.execute('PRAGMA temp_store=MEMORY')
+        _bootstrap.execute('PRAGMA mmap_size=134217728')
+        _bootstrap.commit()
+        _bootstrap.close()
+        print("SQLITE WAL: Applied WAL mode and performance pragmas to DB file.")
+
     conn = None
     if MYSQL_URL and MYSQL_URL.startswith('mysql'):
-        import time
         max_retries = 6
         for attempt in range(1, max_retries + 1):
             try:
@@ -384,14 +485,40 @@ def init_db():
         
     conn.close()
 
+    # === CREATE PERFORMANCE INDEXES (idempotent — IF NOT EXISTS) ===
+    # These dramatically speed up the most common queries under concurrent load
+    _idx_conn = get_db_connection()
+    _idx_c = get_cursor(_idx_conn)
+    try:
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_cat_diff ON Words(category, difficulty)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_diff ON Words(difficulty)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user ON UserWordProgress(user_id)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user_word ON UserWordProgress(user_id, word_id)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_username ON Users(username)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_xp ON Users(xp DESC)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_score ON Users(highest_score DESC)')
+        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_missionruns_key ON MissionRuns(mission_key, score DESC)')
+        _idx_conn.commit()
+        print("INDEXES: Performance indexes applied.")
+    except Exception as e:
+        print(f"INDEXES: Warning during index creation: {e}")
+    finally:
+        _idx_conn.close()
+
 init_db()
 
 # === API Endpoints ===
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username', '').strip()
+    if rate_limited(max_per_window=20, window=60):
+        return jsonify({"error": "Too many requests. Wait a moment and try again."}), 429
+
+    data = request.json or {}
+    username = data.get('username', '')
+    if not isinstance(username, str):
+        return jsonify({"error": "Invalid input"}), 400
+    username = username.strip()[:50]  # Hard cap at 50 chars
     
     if not username:
         return jsonify({"error": "Username required"}), 400
@@ -439,15 +566,27 @@ def login():
 @app.route('/api/register', methods=['POST'])
 def register():
     """Creates a brand new user. Fails if username already exists."""
-    data = request.json
-    username = data.get('username', '').strip()
+    if rate_limited(max_per_window=10, window=60):
+        return jsonify({"error": "Too many registration attempts. Wait a moment."}), 429
+
+    data = request.json or {}
+    username = data.get('username', '')
+    if not isinstance(username, str):
+        return jsonify({"error": "Invalid input"}), 400
+    username = username.strip()[:50]  # Hard cap at 50 chars
     
     if not username:
         return jsonify({"error": "Username required"}), 400
     if len(username) < 3:
         return jsonify({"error": "Callsign too short (3+ chars)"}), 400
+    if len(username) > 15:
+        return jsonify({"error": "Callsign too long (max 15 chars)"}), 400
     if username.isdigit():
         return jsonify({"error": "Username cannot be numbers only"}), 400
+    # Block special characters that can cause SQL issues even through parameterised queries
+    import re as _re
+    if not _re.match(r'^[A-Za-z0-9_\-\.]+$', username):
+        return jsonify({"error": "Callsign: letters, numbers, _, -, . only"}), 400
         
     conn = get_db_connection()
     c = get_cursor(conn)
@@ -534,6 +673,9 @@ def get_user_progress():
 
 @app.route('/api/word', methods=['GET'])
 def get_word():
+    if rate_limited(max_per_window=60, window=60):
+        return jsonify({"error": "Too many requests. Slow down."}), 429
+
     # Expect category and difficulty from the query
     category = request.args.get('category', '').upper()
     difficulty = request.args.get('difficulty', '').upper()
@@ -631,7 +773,10 @@ def get_word():
 
 @app.route('/api/score', methods=['POST'])
 def submit_score():
-    data = request.json
+    if rate_limited(max_per_window=30, window=60):
+        return jsonify({"error": "Too many score submissions. Slow down."}), 429
+
+    data = request.json or {}
     user_id = data.get('user_id')
     score = data.get('score', 0)
     xp_added = data.get('xp_added', 0)

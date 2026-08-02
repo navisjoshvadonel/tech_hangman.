@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const PYTHON_API = process.env.PYTHON_API_URL || 'http://127.0.0.1:5000/api';
+const PYTHON_API = process.env.PYTHON_API_URL || 'http://127.0.0.1:5005/api';
 
 async function proxyRequest(request: Request, method: string, subPath: string) {
   try {
