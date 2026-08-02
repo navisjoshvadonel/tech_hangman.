@@ -1025,6 +1025,7 @@ function renderWord() {
     box.className = "letter-box";
     if (guessedLetters.includes(letter)) {
       box.innerText = letter;
+      box.classList.add("revealed-anim");
     } else {
       box.innerText = "";
     }
