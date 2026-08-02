@@ -158,9 +158,10 @@ export default function Home() {
             <div id="category-selection">
               <div className="selection-header">
                 <h2 id="selection-title">Select Category</h2>
-                <div className="mode-selector">
+                <div className="mode-selector" style={{ flexWrap: 'wrap', gap: '8px' }}>
                   <button className="mode-btn active" id="mode-classic">CLASSIC</button>
                   <button className="mode-btn" id="mode-story">STORY</button>
+                  <button className="mode-btn" id="mode-friends" style={{ borderColor: '#00ffcc', color: '#00ffcc' }}>⚔️ PLAY WITH FRIENDS</button>
                 </div>
               </div>
               <div className="selection-grid" id="classic-categories">
@@ -205,6 +206,79 @@ export default function Home() {
                 <button className="diff-btn" data-diff="HARD">HARD</button>
               </div>
               <button id="back-to-cat-btn" className="text-btn" style={{ marginTop: "20px", width: "100%" }}>&lt; BACK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Play with Friends Room Overlay */}
+      <div id="friends-room-overlay" className="overlay hidden">
+        <div className="friend-room-card quantum-handshake-anim">
+          <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(0,255,204,0.3)', paddingBottom: '10px' }}>
+            <h2 style={{ color: '#00ffcc', margin: 0, fontSize: '1.6rem', letterSpacing: '2px' }}>⚔️ PLAY WITH FRIENDS</h2>
+            <button id="close-friends-modal-btn" className="icon-btn" style={{ fontSize: '1.2rem' }}>✕</button>
+          </div>
+
+          {/* Setup / Join View */}
+          <div id="friends-setup-view">
+            <p style={{ color: '#e0e0e0', textAlign: 'center', marginBottom: '25px', fontSize: '0.95rem' }}>
+              Create a room to generate a code, or join your friend&apos;s active room challenge!
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+              <button id="create-friend-room-btn" className="highlight-btn" style={{ width: '100%', padding: '14px', fontSize: '1.1rem', letterSpacing: '2px' }}>
+                🚀 CREATE ROOM (HOST)
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '10px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,204,0.3)' }}></div>
+                <span style={{ color: '#888', fontSize: '0.85rem' }}>OR ENTER CODE</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,204,0.3)' }}></div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <input type="text" id="join-room-code-input" placeholder="ENTER 6-CHAR CODE" maxLength={6} style={{ flex: 1, textTransform: 'uppercase', textAlign: 'center', fontSize: '1.1rem', letterSpacing: '4px' }} />
+                <button id="join-friend-room-btn" className="text-btn" style={{ padding: '0 20px', fontWeight: 'bold' }}>JOIN</button>
+              </div>
+              <p id="friend-room-error" style={{ color: '#ff3366', fontSize: '0.9rem', minHeight: '20px', margin: 0, textAlign: 'center' }}></p>
+            </div>
+          </div>
+
+          {/* Active Room View */}
+          <div id="friends-active-view" className="hidden">
+            <div className="friend-room-header">
+              <div>
+                <span style={{ color: '#888', fontSize: '0.8rem', display: 'block' }}>ROOM CODE</span>
+                <span id="display-room-code" style={{ color: '#00ffcc', fontWeight: 'bold', fontSize: '1.4rem', letterSpacing: '3px', cursor: 'pointer' }} title="Click to copy">
+                  ------ 📋
+                </span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem', display: 'block' }}>ROUND</span>
+                <span id="display-room-round" style={{ color: '#ff0080', fontWeight: 'bold', fontSize: '1.4rem' }}>
+                  1
+                </span>
+              </div>
+              <button id="exit-friend-duel-btn" className="exit-duel-btn">EXIT DUEL</button>
+            </div>
+
+            <div id="friend-lobby-status" style={{ textAlign: 'center', padding: '12px', background: 'rgba(0,255,204,0.1)', border: '1px solid rgba(0,255,204,0.3)', borderRadius: '8px', marginBottom: '20px' }}>
+              <span style={{ color: '#00ffcc', fontWeight: 'bold' }}>⏳ WAITING FOR FRIEND TO JOIN...</span>
+              <p style={{ color: '#aaa', fontSize: '0.85rem', margin: '4px 0 0 0' }}>Share code above with your friend to connect.</p>
+            </div>
+
+            {/* Side-by-Side Live Leaderboard */}
+            <div style={{ marginTop: '15px' }}>
+              <h4 style={{ color: '#00ffcc', margin: '0 0 10px 0', fontSize: '1rem', letterSpacing: '1px', textTransform: 'uppercase' }}>🏆 EVENT LEADERBOARD</h4>
+              <div id="friend-room-leaderboard-container">
+                {/* Dynamically populated rows */}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button id="start-friend-game-btn" className="highlight-btn" style={{ flex: 1, padding: '12px', fontSize: '1rem' }}>
+                ▶ PLAY ROUND NOW
+              </button>
+              <button id="next-friend-round-btn" className="text-btn" style={{ flex: 1, padding: '12px', fontSize: '1rem', borderColor: '#ff0080', color: '#ff0080' }}>
+                NEXT ROUND ➔
+              </button>
             </div>
           </div>
         </div>

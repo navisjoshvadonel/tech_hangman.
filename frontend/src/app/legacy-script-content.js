@@ -1250,4 +1250,299 @@ document.addEventListener("mouseout", (e) => {
   }
 });
 
+// ==========================================================
+// PLAY WITH FRIENDS (Client Duel Engine)
+// ==========================================================
+
+let activeFriendRoomCode = null;
+let friendPollInterval = null;
+let isFriendModeActive = false;
+let isHostPlayer = false;
+
+const modeFriendsBtn = document.getElementById("mode-friends");
+const friendsOverlay = document.getElementById("friends-room-overlay");
+const closeFriendsBtn = document.getElementById("close-friends-modal-btn");
+const createRoomBtn = document.getElementById("create-friend-room-btn");
+const joinRoomBtn = document.getElementById("join-friend-room-btn");
+const joinInput = document.getElementById("join-room-code-input");
+const friendRoomError = document.getElementById("friend-room-error");
+const friendsSetupView = document.getElementById("friends-setup-view");
+const friendsActiveView = document.getElementById("friends-active-view");
+const displayCode = document.getElementById("display-room-code");
+const displayRound = document.getElementById("display-room-round");
+const exitDuelBtn = document.getElementById("exit-friend-duel-btn");
+const startGameBtn = document.getElementById("start-friend-game-btn");
+const nextRoundBtn = document.getElementById("next-friend-round-btn");
+const leaderboardContainer = document.getElementById("friend-room-leaderboard-container");
+
+if (modeFriendsBtn) {
+  modeFriendsBtn.addEventListener("click", () => {
+    if (friendsOverlay) friendsOverlay.classList.remove("hidden");
+    if (friendsSetupView) friendsSetupView.classList.remove("hidden");
+    if (friendsActiveView) friendsActiveView.classList.add("hidden");
+    if (friendRoomError) friendRoomError.innerText = "";
+  });
+}
+
+if (closeFriendsBtn) {
+  closeFriendsBtn.addEventListener("click", () => {
+    if (friendsOverlay) friendsOverlay.classList.add("hidden");
+  });
+}
+
+if (createRoomBtn) {
+  createRoomBtn.addEventListener("click", async () => {
+    try {
+      createRoomBtn.disabled = true;
+      createRoomBtn.innerText = "GENERATING CODE...";
+      if (friendRoomError) friendRoomError.innerText = "";
+
+      const res = await fetch('/api/friend_duel/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: window.currentUserId || 1,
+          category: window.selectedCategory || 'DATABASE',
+          difficulty: window.selectedDifficulty || 'MEDIUM'
+        })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        activeFriendRoomCode = data.code;
+        isHostPlayer = true;
+        isFriendModeActive = true;
+        window.currentWord = data.word;
+        window.currentClue = data.clue;
+
+        setupActiveRoomUI(data);
+        startFriendPolling();
+      } else {
+        if (friendRoomError) friendRoomError.innerText = data.error || "Failed to create room.";
+      }
+    } catch (err) {
+      if (friendRoomError) friendRoomError.innerText = "Network connection error.";
+    } finally {
+      createRoomBtn.disabled = false;
+      createRoomBtn.innerText = "🚀 CREATE ROOM (HOST)";
+    }
+  });
+}
+
+if (joinRoomBtn) {
+  joinRoomBtn.addEventListener("click", handleJoinRoom);
+}
+if (joinInput) {
+  joinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleJoinRoom(); });
+}
+
+async function handleJoinRoom() {
+  const code = (joinInput ? joinInput.value : "").trim().toUpperCase();
+  if (!code) {
+    if (friendRoomError) friendRoomError.innerText = "Please enter a 6-character room code.";
+    return;
+  }
+
+  try {
+    joinRoomBtn.disabled = true;
+    joinRoomBtn.innerText = "JOINING...";
+    if (friendRoomError) friendRoomError.innerText = "";
+
+    const res = await fetch('/api/friend_duel/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, user_id: window.currentUserId || 2 })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      activeFriendRoomCode = data.code;
+      isHostPlayer = false;
+      isFriendModeActive = true;
+      window.currentWord = data.word;
+      window.currentClue = data.clue;
+
+      setupActiveRoomUI(data);
+      startFriendPolling();
+    } else {
+      if (friendRoomError) friendRoomError.innerText = data.error || "Invalid or expired room code.";
+    }
+  } catch (err) {
+    if (friendRoomError) friendRoomError.innerText = "Network connection error.";
+  } finally {
+    joinRoomBtn.disabled = false;
+    joinRoomBtn.innerText = "JOIN";
+  }
+}
+
+function setupActiveRoomUI(data) {
+  if (friendsSetupView) friendsSetupView.classList.add("hidden");
+  if (friendsActiveView) friendsActiveView.classList.remove("hidden");
+
+  if (displayCode) displayCode.innerText = `${data.code} 📋`;
+  if (displayRound) displayRound.innerText = data.round_number || 1;
+}
+
+if (displayCode) {
+  displayCode.addEventListener("click", () => {
+    if (activeFriendRoomCode) {
+      navigator.clipboard.writeText(activeFriendRoomCode);
+      displayCode.innerText = `${activeFriendRoomCode} COPIED!`;
+      setTimeout(() => {
+        if (displayCode) displayCode.innerText = `${activeFriendRoomCode} 📋`;
+      }, 2000);
+    }
+  });
+}
+
+function startFriendPolling() {
+  if (friendPollInterval) clearInterval(friendPollInterval);
+  pollFriendRoomStatus();
+  friendPollInterval = setInterval(pollFriendRoomStatus, 1500);
+}
+
+async function pollFriendRoomStatus() {
+  if (!activeFriendRoomCode) return;
+
+  try {
+    const res = await fetch(`/api/friend_duel/status?code=${activeFriendRoomCode}&user_id=${window.currentUserId || 1}`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    if (data.status === 'ended') {
+      clearInterval(friendPollInterval);
+      alert("The duel session has been ended by a player.");
+      exitFriendDuel();
+      return;
+    }
+
+    if (displayRound) displayRound.innerText = data.round_number;
+    if (data.current_word && data.current_word !== window.currentWord) {
+      window.currentWord = data.current_word;
+      window.currentClue = data.current_clue;
+    }
+
+    const lobbyStatus = document.getElementById("friend-lobby-status");
+    if (lobbyStatus) {
+      if (data.players && data.players.length > 1) {
+        lobbyStatus.style.background = "rgba(0, 255, 204, 0.15)";
+        lobbyStatus.innerHTML = `<span style="color:#00ffcc; font-weight:bold;">🟢 DUEL READY: ${data.players.length} PLAYERS CONNECTED!</span>`;
+      } else {
+        lobbyStatus.style.background = "rgba(255, 0, 128, 0.1)";
+        lobbyStatus.innerHTML = `<span style="color:#ff0080; font-weight:bold;">⏳ WAITING FOR FRIEND TO JOIN...</span><p style="color:#aaa; font-size:0.85rem; margin:4px 0 0 0">Share code ${data.code} to connect.</p>`;
+      }
+    }
+
+    renderFriendLeaderboard(data.players || []);
+  } catch (err) {
+    console.error("Poll friend room error:", err);
+  }
+}
+
+function renderFriendLeaderboard(players) {
+  if (!leaderboardContainer) return;
+  leaderboardContainer.innerHTML = "";
+
+  players.forEach((p, idx) => {
+    const row = document.createElement("div");
+    row.className = `friend-leaderboard-row ${p.is_host ? 'host-row' : 'guest-row'}`;
+    row.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-weight:bold; color: ${p.is_host ? '#00ffcc' : '#ff0080'}">
+          ${idx === 0 ? '👑' : '⚔️'} ${p.username.toUpperCase()} ${p.is_host ? '(HOST)' : ''}
+        </span>
+      </div>
+      <div style="display:flex; gap:12px; font-size:0.85rem;">
+        <span>PTS: <strong style="color:#00ffcc">${p.score}</strong></span>
+        <span>ERR: <strong style="color:#ff3366">${p.mistakes}</strong></span>
+        <span>W/L: <strong style="color:#ffaa00">${p.wins}/${p.losses}</strong></span>
+      </div>
+    `;
+    leaderboardContainer.appendChild(row);
+  });
+}
+
+if (startGameBtn) {
+  startGameBtn.addEventListener("click", () => {
+    if (friendsOverlay) friendsOverlay.classList.add("hidden");
+    const selScreen = document.getElementById("selection-screen");
+    const gameCont = document.getElementById("game-container");
+    if (selScreen) selScreen.classList.add("hidden");
+    if (gameCont) gameCont.classList.remove("hidden");
+
+    const wordDisp = document.getElementById("word-display");
+    if (wordDisp) {
+      wordDisp.classList.remove("cyber-glitch-reveal-anim");
+      void wordDisp.offsetWidth;
+      wordDisp.classList.add("cyber-glitch-reveal-anim");
+    }
+
+    const hangmanSvg = document.querySelector(".hangman-svg");
+    if (hangmanSvg) {
+      hangmanSvg.classList.add("holo-duo-execution");
+    }
+
+    if (typeof window.resetGameVariables === 'function') window.resetGameVariables();
+    if (typeof window.renderWord === 'function') window.renderWord();
+    if (typeof window.renderKeyboard === 'function') window.renderKeyboard();
+  });
+}
+
+if (nextRoundBtn) {
+  nextRoundBtn.addEventListener("click", async () => {
+    if (!activeFriendRoomCode) return;
+    try {
+      nextRoundBtn.disabled = true;
+      nextRoundBtn.innerText = "LOADING NEXT ROUND...";
+
+      const res = await fetch('/api/friend_duel/next_round', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: activeFriendRoomCode, user_id: window.currentUserId || 1 })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.currentWord = data.word;
+        window.currentClue = data.clue;
+        if (displayRound) displayRound.innerText = data.round_number;
+
+        if (startGameBtn) startGameBtn.click();
+      }
+    } catch (err) {
+      console.error("Next round error:", err);
+    } finally {
+      nextRoundBtn.disabled = false;
+      nextRoundBtn.innerText = "NEXT ROUND ➔";
+    }
+  });
+}
+
+if (exitDuelBtn) {
+  exitDuelBtn.addEventListener("click", exitFriendDuel);
+}
+
+function exitFriendDuel() {
+  if (activeFriendRoomCode) {
+    fetch('/api/friend_duel/exit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: activeFriendRoomCode })
+    }).catch(() => {});
+  }
+
+  if (friendPollInterval) clearInterval(friendPollInterval);
+  activeFriendRoomCode = null;
+  isFriendModeActive = false;
+
+  const hangmanSvg = document.querySelector(".hangman-svg");
+  if (hangmanSvg) hangmanSvg.classList.remove("holo-duo-execution");
+
+  if (friendsOverlay) friendsOverlay.classList.add("hidden");
+  const gameCont = document.getElementById("game-container");
+  const selScreen = document.getElementById("selection-screen");
+  if (gameCont) gameCont.classList.add("hidden");
+  if (selScreen) selScreen.classList.remove("hidden");
+}
+
+
 

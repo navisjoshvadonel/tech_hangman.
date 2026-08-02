@@ -4548,6 +4548,155 @@ body {
   box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
 }
 
+/* ==========================================================
+   UNIQUE PLAY WITH FRIENDS CYBERPUNK ANIMATIONS & ROOM STYLES
+   ========================================================== */
+
+/* 1. Quantum Handshake Intro Animation */
+.quantum-handshake-anim {
+  animation: quantum-pulse 2s infinite ease-in-out, quantum-scan 1.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes quantum-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4), inset 0 0 15px rgba(0, 255, 204, 0.2);
+    border-color: #00ffcc;
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(255, 0, 128, 0.6), inset 0 0 30px rgba(255, 0, 128, 0.3);
+    border-color: #ff0080;
+  }
+}
+
+@keyframes quantum-scan {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  50% {
+    transform: scale(1.03);
+    filter: blur(0px);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 2. Cyber Glitch Question Reveal Animation */
+.cyber-glitch-reveal-anim {
+  animation: glitch-reveal 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes glitch-reveal {
+  0% {
+    transform: translateY(-15px) skewX(-10deg);
+    opacity: 0;
+    filter: drop-shadow(4px 0 0 #ff0080) drop-shadow(-4px 0 0 #00ffcc);
+  }
+  30% {
+    transform: translateY(5px) skewX(8deg);
+    filter: drop-shadow(-3px 0 0 #ff0080) drop-shadow(3px 0 0 #00ffcc);
+  }
+  60% {
+    transform: translateY(-2px) skewX(-4deg);
+  }
+  100% {
+    transform: translateY(0) skewX(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 204, 0.5));
+  }
+}
+
+/* 3. Dual Hologram Execution Gallows Animation */
+.holo-duo-execution {
+  filter: drop-shadow(0 0 15px #00ffcc) drop-shadow(0 0 30px #ff0080);
+  animation: duo-gallows-arc 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes duo-gallows-arc {
+  0% {
+    stroke: #00ffcc;
+    filter: drop-shadow(0 0 15px #00ffcc);
+  }
+  50% {
+    stroke: #e0e0e0;
+    filter: drop-shadow(0 0 25px #ffffff);
+  }
+  100% {
+    stroke: #ff0080;
+    filter: drop-shadow(0 0 20px #ff0080);
+  }
+}
+
+/* 4. Friend Room UI Layout & Leaderboard Cards */
+.friend-room-card {
+  background: rgba(8, 14, 28, 0.92);
+  border: 2px solid rgba(0, 255, 204, 0.4);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 255, 204, 0.1);
+  padding: clamp(1rem, 3vw, 2.5rem);
+  width: min(92vw, 650px);
+  margin: 0 auto;
+}
+
+.friend-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  border-radius: 12px;
+  padding: 10px 18px;
+  margin-bottom: 15px;
+}
+
+.friend-leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 25, 45, 0.7);
+  border: 1px solid rgba(0, 255, 204, 0.2);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.friend-leaderboard-row.host-row {
+  border-color: #00ffcc;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+}
+
+.friend-leaderboard-row.guest-row {
+  border-color: #ff0080;
+  box-shadow: 0 0 15px rgba(255, 0, 128, 0.2);
+}
+
+.exit-duel-btn {
+  background: linear-gradient(135deg, #ff0055, #880033);
+  color: white;
+  border: 1px solid #ff3366;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+
+.exit-duel-btn:hover {
+  background: linear-gradient(135deg, #ff2277, #aa0044);
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+}
+
+
 
 
 

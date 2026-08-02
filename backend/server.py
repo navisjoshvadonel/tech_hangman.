@@ -456,6 +456,38 @@ def init_db():
         )
     ''')
 
+    # NEW: Friend Rooms (Play with Friends multi-round engine)
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS FriendRooms (
+            code VARCHAR(32) PRIMARY KEY,
+            host_user_id INT,
+            guest_user_id INT,
+            round_number INT DEFAULT 1,
+            current_word VARCHAR(255),
+            current_clue TEXT,
+            category VARCHAR(64) DEFAULT 'RANDOM',
+            difficulty VARCHAR(32) DEFAULT 'MEDIUM',
+            status VARCHAR(32) DEFAULT 'waiting',
+            created_at TEXT,
+            updated_at TEXT
+        )
+    ''')
+
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS FriendRoomPlayers (
+            room_code VARCHAR(32),
+            user_id INT,
+            score INT DEFAULT 0,
+            mistakes INT DEFAULT 0,
+            wins INT DEFAULT 0,
+            losses INT DEFAULT 0,
+            round_progress INT DEFAULT 0,
+            round_status VARCHAR(32) DEFAULT 'playing',
+            last_seen TEXT,
+            PRIMARY KEY (room_code, user_id)
+        )
+    ''')
+
     conn.commit()
     
     # NEW: Self-healing check for words (Always sync to guarantee all words are reflected)
@@ -1998,6 +2030,388 @@ def cleanup_duplicates():
     conn.commit()
     conn.close()
     return jsonify({"message": f"Removed {deleted} duplicate/ghost accounts."})
+
+# ==========================================================
+# PLAY WITH FRIENDS (Multi-Round Synchronized Duel Engine)
+# ==========================================================
+
+import string
+
+def _generate_room_code(length=6):
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
+@app.route('/api/friend_duel/create', methods=['POST'])
+def friend_duel_create():
+    data = request.json or {}
+    user_id = data.get('user_id')
+    category = data.get('category', 'RANDOM')
+    difficulty = data.get('difficulty', 'MEDIUM')
+
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        # Generate unique 6-character room code
+        code = _generate_room_code()
+        for _ in range(5):
+            execute_query(c, 'SELECT code FROM FriendRooms WHERE code = ?', (code,))
+            if not c.fetchone():
+                break
+            code = _generate_room_code()
+
+        # Pick random word
+        query = 'SELECT word, hint, category, difficulty FROM Words'
+        params = []
+        if category and category != 'RANDOM':
+            query += ' WHERE category = ?'
+            params.append(category)
+            if difficulty and difficulty != 'RANDOM':
+                query += ' AND difficulty = ?'
+                params.append(difficulty)
+        execute_query(c, query, params)
+        all_words = c.fetchall()
+
+        if not all_words:
+            execute_query(c, 'SELECT word, hint, category, difficulty FROM Words')
+            all_words = c.fetchall()
+
+        chosen = random.choice(all_words) if all_words else None
+        word = row_to_dict(chosen, c).get('word') if chosen else "FRIENDSHIP"
+        clue = row_to_dict(chosen, c).get('hint') if chosen else "A bond between players"
+
+        # Create room
+        execute_query(c, '''
+            INSERT INTO FriendRooms (code, host_user_id, guest_user_id, round_number, current_word, current_clue, category, difficulty, status, created_at, updated_at)
+            VALUES (?, ?, NULL, 1, ?, ?, ?, ?, 'waiting', ?, ?)
+        ''', (code, user_id, word, clue, category, difficulty, now_str, now_str))
+
+        # Add Host player
+        execute_query(c, '''
+            INSERT INTO FriendRoomPlayers (room_code, user_id, score, mistakes, wins, losses, round_progress, round_status, last_seen)
+            VALUES (?, ?, 0, 0, 0, 0, 0, 'playing', ?)
+        ''', (code, user_id, now_str))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "code": code,
+            "word": word,
+            "clue": clue,
+            "round_number": 1,
+            "status": "waiting",
+            "category": category,
+            "difficulty": difficulty
+        })
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/friend_duel/join', methods=['POST'])
+def friend_duel_join():
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+    user_id = data.get('user_id')
+
+    if not code or not user_id:
+        return jsonify({"error": "code and user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'SELECT * FROM FriendRooms WHERE code = ?', (code,))
+        room = c.fetchone()
+        if not room:
+            conn.close()
+            return jsonify({"error": "Room code not found"}), 404
+
+        room_d = row_to_dict(room, c)
+        if room_d.get('status') == 'ended':
+            conn.close()
+            return jsonify({"error": "Room session has ended"}), 400
+
+        host_id = room_d.get('host_user_id')
+        guest_id = room_d.get('guest_user_id')
+
+        # If joining user is not host, update guest_user_id and status to active
+        if int(user_id) != int(host_id):
+            execute_query(c, '''
+                UPDATE FriendRooms SET guest_user_id = ?, status = 'active', updated_at = ? WHERE code = ?
+            ''', (user_id, now_str, code))
+        else:
+            execute_query(c, 'UPDATE FriendRooms SET updated_at = ? WHERE code = ?', (now_str, code))
+
+        # Add or update Guest player in FriendRoomPlayers
+        execute_query(c, 'SELECT * FROM FriendRoomPlayers WHERE room_code = ? AND user_id = ?', (code, user_id))
+        existing_p = c.fetchone()
+        if not existing_p:
+            execute_query(c, '''
+                INSERT INTO FriendRoomPlayers (room_code, user_id, score, mistakes, wins, losses, round_progress, round_status, last_seen)
+                VALUES (?, ?, 0, 0, 0, 0, 0, 'playing', ?)
+            ''', (code, user_id, now_str))
+        else:
+            execute_query(c, 'UPDATE FriendRoomPlayers SET last_seen = ? WHERE room_code = ? AND user_id = ?', (now_str, code, user_id))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "code": code,
+            "word": room_d.get('current_word'),
+            "clue": room_d.get('current_clue'),
+            "round_number": room_d.get('round_number'),
+            "status": "active",
+            "category": room_d.get('category'),
+            "difficulty": room_d.get('difficulty')
+        })
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/friend_duel/status', methods=['GET'])
+def friend_duel_status():
+    code = (request.args.get('code') or '').strip().upper()
+    user_id = request.args.get('user_id')
+
+    if not code:
+        return jsonify({"error": "code required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'SELECT * FROM FriendRooms WHERE code = ?', (code,))
+        room = c.fetchone()
+        if not room:
+            conn.close()
+            return jsonify({"error": "Room code not found"}), 404
+
+        room_d = row_to_dict(room, c)
+
+        # Update last seen for player
+        if user_id:
+            execute_query(c, 'UPDATE FriendRoomPlayers SET last_seen = ? WHERE room_code = ? AND user_id = ?', (now_str, code, user_id))
+            conn.commit()
+
+        # Fetch room players leaderboard
+        execute_query(c, '''
+            SELECT FriendRoomPlayers.*, Users.username
+            FROM FriendRoomPlayers
+            JOIN Users ON FriendRoomPlayers.user_id = Users.id
+            WHERE FriendRoomPlayers.room_code = ?
+            ORDER BY FriendRoomPlayers.score DESC, FriendRoomPlayers.wins DESC
+        ''', (code,))
+        players_raw = c.fetchall()
+        conn.close()
+
+        players = []
+        host_id = room_d.get('host_user_id')
+        for p in players_raw:
+            p_d = row_to_dict(p, c)
+            u_id = p_d.get('user_id')
+            players.append({
+                "user_id": u_id,
+                "username": p_d.get('username'),
+                "is_host": int(u_id) == int(host_id) if host_id else False,
+                "score": p_d.get('score', 0),
+                "mistakes": p_d.get('mistakes', 0),
+                "wins": p_d.get('wins', 0),
+                "losses": p_d.get('losses', 0),
+                "round_progress": p_d.get('round_progress', 0),
+                "round_status": p_d.get('round_status', 'playing')
+            })
+
+        return jsonify({
+            "code": code,
+            "round_number": room_d.get('round_number', 1),
+            "current_word": room_d.get('current_word'),
+            "current_clue": room_d.get('current_clue'),
+            "category": room_d.get('category'),
+            "difficulty": room_d.get('difficulty'),
+            "status": room_d.get('status'),
+            "players": players
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/friend_duel/action', methods=['POST'])
+def friend_duel_action():
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+    user_id = data.get('user_id')
+    mistakes = data.get('mistakes', 0)
+    score_delta = data.get('score_delta', 0)
+    round_status = data.get('round_status', 'playing')
+    round_progress = data.get('round_progress', 0)
+
+    if not code or not user_id:
+        return jsonify({"error": "code and user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'SELECT * FROM FriendRoomPlayers WHERE room_code = ? AND user_id = ?', (code, user_id))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "Player not in room"}), 404
+
+        row_d = row_to_dict(row, c)
+        old_score = row_d.get('score', 0)
+        old_wins = row_d.get('wins', 0)
+        old_losses = row_d.get('losses', 0)
+        prev_round_status = row_d.get('round_status', 'playing')
+
+        new_wins = old_wins + 1 if (round_status == 'won' and prev_round_status != 'won') else old_wins
+        new_losses = old_losses + 1 if (round_status == 'lost' and prev_round_status != 'lost') else old_losses
+        new_score = max(0, old_score + score_delta)
+
+        execute_query(c, '''
+            UPDATE FriendRoomPlayers
+            SET score = ?, mistakes = ?, wins = ?, losses = ?, round_progress = ?, round_status = ?, last_seen = ?
+            WHERE room_code = ? AND user_id = ?
+        ''', (new_score, mistakes, new_wins, new_losses, round_progress, round_status, now_str, code, user_id))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "updated", "score": new_score, "wins": new_wins, "losses": new_losses})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/friend_duel/next_round', methods=['POST'])
+def friend_duel_next_round():
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+    user_id = data.get('user_id')
+
+    if not code or not user_id:
+        return jsonify({"error": "code and user_id required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'SELECT * FROM FriendRooms WHERE code = ?', (code,))
+        room = c.fetchone()
+        if not room:
+            conn.close()
+            return jsonify({"error": "Room code not found"}), 404
+
+        room_d = row_to_dict(room, c)
+        current_round = room_d.get('round_number', 1)
+        next_round = current_round + 1
+        category = room_d.get('category', 'RANDOM')
+        difficulty = room_d.get('difficulty', 'MEDIUM')
+
+        # Select new random word
+        query = 'SELECT word, hint FROM Words'
+        params = []
+        if category and category != 'RANDOM':
+            query += ' WHERE category = ?'
+            params.append(category)
+            if difficulty and difficulty != 'RANDOM':
+                query += ' AND difficulty = ?'
+                params.append(difficulty)
+
+        execute_query(c, query, params)
+        all_words = c.fetchall()
+
+        if not all_words:
+            execute_query(c, 'SELECT word, hint FROM Words')
+            all_words = c.fetchall()
+
+        chosen = random.choice(all_words) if all_words else None
+        word = row_to_dict(chosen, c).get('word') if chosen else "NEXTROUND"
+        clue = row_to_dict(chosen, c).get('hint') if chosen else "Advancing to next level"
+
+        # Update room
+        execute_query(c, '''
+            UPDATE FriendRooms
+            SET round_number = ?, current_word = ?, current_clue = ?, updated_at = ?
+            WHERE code = ?
+        ''', (next_round, word, clue, now_str, code))
+
+        # Reset round status & mistakes for all players in room
+        execute_query(c, '''
+            UPDATE FriendRoomPlayers
+            SET mistakes = 0, round_progress = 0, round_status = 'playing', last_seen = ?
+            WHERE room_code = ?
+        ''', (now_str, code))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "code": code,
+            "word": word,
+            "clue": clue,
+            "round_number": next_round,
+            "status": "active"
+        })
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/friend_duel/exit', methods=['POST'])
+def friend_duel_exit():
+    data = request.json or {}
+    code = (data.get('code') or '').strip().upper()
+
+    if not code:
+        return jsonify({"error": "code required"}), 400
+
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        execute_query(c, 'UPDATE FriendRooms SET status = \'ended\', updated_at = ? WHERE code = ?', (now_str, code))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "ended", "message": "Room session terminated."})
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     print("Agent Protocol Initialization Complete. Servicing APIs.")
