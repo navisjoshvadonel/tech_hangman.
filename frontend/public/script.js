@@ -1072,14 +1072,14 @@ function handleGuess(letter) {
   if (currentWord.includes(letter)) {
     // Correct
     renderWord();
-    document.getElementById()?.classList.add("correct", "disabled");
+    document.getElementById(`key-${letter}`)?.classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
     playSfx("correct");
     checkWin();
   } else {
     // Incorrect
-    document.getElementById()?.classList.add("wrong", "disabled");
+    document.getElementById(`key-${letter}`)?.classList.add("wrong", "disabled");
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
     playSfx("wrong");

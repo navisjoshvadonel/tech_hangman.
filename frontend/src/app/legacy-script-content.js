@@ -137,17 +137,17 @@ function playIntroSequence() {
 }
 
 // === Tab Switching ===
-document.getElementById('tab-returning').addEventListener('click', () => {
-  document.getElementById()?.classList.add('active');
-  document.getElementById()?.classList.remove('active');
-  document.getElementById()?.classList.remove('hidden');
-  document.getElementById()?.classList.add('hidden');
+document.getElementById('tab-returning')?.addEventListener('click', () => {
+  document.getElementById('tab-returning')?.classList.add('active');
+  document.getElementById('tab-new')?.classList.remove('active');
+  document.getElementById('panel-returning')?.classList.remove('hidden');
+  document.getElementById('panel-new')?.classList.add('hidden');
 });
-document.getElementById('tab-new').addEventListener('click', () => {
-  document.getElementById()?.classList.add('active');
-  document.getElementById()?.classList.remove('active');
-  document.getElementById()?.classList.remove('hidden');
-  document.getElementById()?.classList.add('hidden');
+document.getElementById('tab-new')?.addEventListener('click', () => {
+  document.getElementById('tab-new')?.classList.add('active');
+  document.getElementById('tab-returning')?.classList.remove('active');
+  document.getElementById('panel-new')?.classList.remove('hidden');
+  document.getElementById('panel-returning')?.classList.add('hidden');
 });
 
 // Shared function to apply login data to the game state
@@ -297,10 +297,10 @@ logoutBtn.addEventListener("click", () => {
   document.getElementById("login-error-msg").innerText = "";
   document.getElementById("register-error-msg").innerText = "";
   // Reset tabs back to Returning Player
-  document.getElementById()?.classList.add("active");
-  document.getElementById()?.classList.remove("active");
-  document.getElementById()?.classList.remove("hidden");
-  document.getElementById()?.classList.add("hidden");
+  document.getElementById("tab-returning")?.classList.add("active");
+  document.getElementById("tab-new")?.classList.remove("active");
+  document.getElementById("panel-returning")?.classList.remove("hidden");
+  document.getElementById("panel-new")?.classList.add("hidden");
   gameContainer?.classList.add("hidden");
   selectionScreen?.classList.add("hidden");
   loginOverlay?.classList.remove("hidden");
@@ -528,13 +528,13 @@ function handleGuess(letter) {
   if (currentWord.includes(letter)) {
     // Correct
     renderWord();
-    document.getElementById()?.classList.add("correct", "disabled");
+    document.getElementById(`key-${letter}`)?.classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
     checkWin();
   } else {
     // Incorrect
-    document.getElementById()?.classList.add("wrong", "disabled");
+    document.getElementById(`key-${letter}`)?.classList.add("wrong", "disabled");
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
 
