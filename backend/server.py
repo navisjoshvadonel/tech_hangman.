@@ -77,6 +77,14 @@ else:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DB_PATH = os.path.join(BASE_DIR, 'hangman.db')
 DB_PATH = os.environ.get('DB_PATH', DEFAULT_DB_PATH)
+try:
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+except Exception as _dir_err:
+    print(f"WARNING: Unable to create DB directory '{DB_PATH}': {_dir_err}. Falling back to default.")
+    DB_PATH = DEFAULT_DB_PATH
+
 MYSQL_URL = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL')
 
 # Global toggle for placeholder style
@@ -537,7 +545,10 @@ def init_db():
     finally:
         _idx_conn.close()
 
-init_db()
+try:
+    init_db()
+except Exception as _init_err:
+    print(f"DATABASE INIT EXCEPTION: {_init_err}")
 
 # === API Endpoints ===
 
