@@ -992,19 +992,24 @@ body {
 
 /* Leaderboard */
 #leaderboard-popup {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(5, 8, 16, 0.95);
-  border: 1px solid var(--neon-cyan);
+  background: rgba(5, 12, 24, 0.98);
+  border: 2px solid var(--neon-cyan);
   padding: 30px;
-  border-radius: 10px;
-  z-index: 60;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
-  min-width: 300px;
+  border-radius: 12px;
+  z-index: 9999;
+  box-shadow: 0 0 60px rgba(0, 255, 204, 0.4), 0 0 100px rgba(0, 0, 0, 0.9);
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
   text-align: center;
+  backdrop-filter: blur(12px);
 }
+
 
 #leaderboard-popup h3 {
   color: var(--neon-cyan);

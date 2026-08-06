@@ -761,14 +761,21 @@ document.getElementById("lb-category-select")?.addEventListener("change", fetchA
 document.getElementById("lb-difficulty-select")?.addEventListener("change", fetchAndRenderLeaderboard);
 
 leaderboardBtn.addEventListener("click", async () => {
+  // Show popup immediately so user gets visual feedback
+  leaderboardPopup?.classList.remove("hidden");
+
+  if (leaderboardBody) {
+    leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #00ffcc; padding: 25px; font-family: monospace;">⚡ RETRIEVING LEADERBOARD DATA...</td></tr>`;
+  }
+
   const catSelect = document.getElementById("lb-category-select");
   const diffSelect = document.getElementById("lb-difficulty-select");
 
-  if (catSelect && selectedCategory) {
+  if (catSelect && typeof selectedCategory === 'string' && selectedCategory) {
     const matchedOption = [...catSelect.options].find(o => o.value.toUpperCase() === selectedCategory.replace(/\s+/g, '_').toUpperCase());
     if (matchedOption) catSelect.value = matchedOption.value;
   }
-  if (diffSelect && selectedDifficulty) {
+  if (diffSelect && typeof selectedDifficulty === 'string' && selectedDifficulty) {
     const matchedOption = [...diffSelect.options].find(o => o.value.toUpperCase() === selectedDifficulty.toUpperCase());
     if (matchedOption) diffSelect.value = matchedOption.value;
   }
@@ -779,12 +786,12 @@ leaderboardBtn.addEventListener("click", async () => {
   currentLeaderboardType = "score";
 
   await fetchAndRenderLeaderboard();
-  leaderboardPopup?.classList.remove("hidden");
 });
 
 closeLeaderboardBtn.addEventListener("click", () => {
   leaderboardPopup?.classList.add("hidden");
 });
+
 
 
 // === Keyboard Mapping ===
