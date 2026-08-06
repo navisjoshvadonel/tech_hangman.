@@ -29,22 +29,38 @@ export function backendError(error: any, fallback?: Record<string, any>) {
 /**
  * Proxy a fetch call to the Python backend.
  * Returns { data, status } — never throws.
+ * Includes automatic single retry on timeout to handle server cold starts smoothly.
  */
 export async function proxyFetch(
     path: string,
-    init?: RequestInit & { timeoutMs?: number },
+    init?: RequestInit & { timeoutMs?: number; retries?: number },
     fallback?: Record<string, any>
 ): Promise<{ data: any; status: number }> {
-    const { timeoutMs = 45000, ...fetchInit } = init || {};
-    try {
-        const res = await fetch(`${PYTHON_API}${path}`, {
-            ...fetchInit,
-            signal: AbortSignal.timeout(timeoutMs),
-        });
-        const data = await res.json();
-        return { data, status: res.status };
-    } catch (error: any) {
-        const { payload, status } = backendError(error, fallback);
-        return { data: payload, status };
+    const { timeoutMs = 60000, retries = 1, ...fetchInit } = init || {};
+    let lastError: any;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(`${PYTHON_API}${path}`, {
+                ...fetchInit,
+                signal: AbortSignal.timeout(timeoutMs),
+            });
+            const data = await res.json();
+            return { data, status: res.status };
+        } catch (error: any) {
+            lastError = error;
+            // If timeout or network error occurs on initial attempt, wait 2s and retry once
+            // (The initial attempt triggered Render cold start wakeup)
+            const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.message?.includes('timeout') || error?.message?.includes('fetch failed');
+            if (attempt < retries && isTimeout) {
+                console.log(`[ProxyFetch] Attempt ${attempt + 1} timed out while waking backend. Retrying in 2s...`);
+                await new Promise((r) => setTimeout(r, 2000));
+                continue;
+            }
+        }
     }
+
+    const { payload, status } = backendError(lastError, fallback);
+    return { data: payload, status };
 }
+

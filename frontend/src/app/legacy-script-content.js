@@ -454,7 +454,8 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         is_win: isWin,
         time_taken: timeTaken,
         wrong_guesses: wrongGuesses,  // For Flawless achievement
-        difficulty: selectedDifficulty
+        category: selectedCategory,   // Send category domain
+        difficulty: selectedDifficulty // Send threat level
       })
     });
     const data = await res.json();
@@ -478,6 +479,10 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
       });
     }
   } catch (err) {
+    console.error("Score Submit Error:", err);
+  }
+}
+
     console.error("Score Submit Error:", err);
   }
 }
@@ -691,8 +696,26 @@ function checkLoss() {
 }
 
 // === Leaderboard Logic ===
+let currentLeaderboardType = "score";
+
+async function fetchAndRenderLeaderboard() {
+  const catSelect = document.getElementById("lb-category-select");
+  const diffSelect = document.getElementById("lb-difficulty-select");
+  const category = catSelect ? catSelect.value : "ALL";
+  const difficulty = diffSelect ? diffSelect.value : "ALL";
+
+  try {
+    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`);
+    currentLeaderboardData = await res.json();
+    renderLeaderboard(currentLeaderboardType);
+  } catch (err) {
+    console.error("Leaderboard Error", err);
+  }
+}
 
 function renderLeaderboard(type) {
+  currentLeaderboardType = type;
+  if (!leaderboardBody) return;
   leaderboardBody.innerHTML = "";
   if (!currentLeaderboardData) return;
 
@@ -700,14 +723,26 @@ function renderLeaderboard(type) {
 
   if (type === "score") lbValHeader.innerText = "SCORE";
   else if (type === "speed") lbValHeader.innerText = "SECONDS";
-  else if (type === "streak") lbValHeader.innerText = "STREAK";
+  else if (type === "streak") lbValHeader.innerText = "WINS / STREAK";
+
+  if (dataArr.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3" style="text-align: center; color: #888; padding: 20px;">No scores logged for this protocol filter yet! Be the first!</td>`;
+    leaderboardBody.appendChild(tr);
+    return;
+  }
 
   dataArr.forEach((entry, index) => {
     const tr = document.createElement("tr");
+    let medal = `#${index + 1}`;
+    if (index === 0) medal = "🥇 #1";
+    else if (index === 1) medal = "🥈 #2";
+    else if (index === 2) medal = "🥉 #3";
+
     tr.innerHTML = `
-      <td>#${index + 1}</td>
-      <td>${entry.username.toUpperCase()}</td>
-      <td>${entry.val}</td>
+      <td style="font-weight: bold; padding: 8px;">${medal}</td>
+      <td style="color: #00ffcc; font-weight: bold; padding: 8px;">${entry.username.toUpperCase()}</td>
+      <td style="padding: 8px;">${entry.val}</td>
     `;
     leaderboardBody.appendChild(tr);
   });
@@ -722,25 +757,35 @@ lbTabs.forEach(tab => {
   });
 });
 
+document.getElementById("lb-category-select")?.addEventListener("change", fetchAndRenderLeaderboard);
+document.getElementById("lb-difficulty-select")?.addEventListener("change", fetchAndRenderLeaderboard);
+
 leaderboardBtn.addEventListener("click", async () => {
-  try {
-    const res = await fetch(`${API_URL}/highscores`);
-    currentLeaderboardData = await res.json();
+  const catSelect = document.getElementById("lb-category-select");
+  const diffSelect = document.getElementById("lb-difficulty-select");
 
-    // Reset to default tab
-    lbTabs.forEach(t => t?.classList.remove("active"));
-    document.querySelector()?.classList.add("active");
-    renderLeaderboard("score");
-
-    leaderboardPopup?.classList.remove("hidden");
-  } catch (err) {
-    console.error("Leaderboard Error", err);
+  if (catSelect && selectedCategory) {
+    const matchedOption = [...catSelect.options].find(o => o.value.toUpperCase() === selectedCategory.replace(/\s+/g, '_').toUpperCase());
+    if (matchedOption) catSelect.value = matchedOption.value;
   }
+  if (diffSelect && selectedDifficulty) {
+    const matchedOption = [...diffSelect.options].find(o => o.value.toUpperCase() === selectedDifficulty.toUpperCase());
+    if (matchedOption) diffSelect.value = matchedOption.value;
+  }
+
+  // Reset to score tab
+  lbTabs.forEach(t => t?.classList.remove("active"));
+  document.querySelector('.lb-tab[data-leaderboard="score"]')?.classList.add("active");
+  currentLeaderboardType = "score";
+
+  await fetchAndRenderLeaderboard();
+  leaderboardPopup?.classList.remove("hidden");
 });
 
 closeLeaderboardBtn.addEventListener("click", () => {
   leaderboardPopup?.classList.add("hidden");
 });
+
 
 // === Keyboard Mapping ===
 document.addEventListener("keydown", (e) => {

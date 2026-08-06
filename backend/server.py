@@ -421,6 +421,23 @@ def init_db():
         )
     ''')
 
+    # NEW: Per domain & difficulty highscores table
+    execute_query(c, '''
+        CREATE TABLE IF NOT EXISTS DomainScores (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            user_id INT,
+            category VARCHAR(255),
+            difficulty VARCHAR(255),
+            highest_score INT DEFAULT 0,
+            fastest_win_seconds INT DEFAULT 999999,
+            total_wins INT DEFAULT 0,
+            updated_at TEXT,
+            UNIQUE(user_id, category, difficulty),
+            FOREIGN KEY(user_id) REFERENCES Users(id)
+        )
+    ''')
+
+
     execute_query(c, '''
         CREATE TABLE IF NOT EXISTS DuelRuns (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -952,6 +969,37 @@ def submit_score():
             SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?
             WHERE id = ?
         ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, user_id))
+
+    # --- Domain & Difficulty Score Record ---
+    category = data.get('category')
+    if category and category.upper() != 'ALL' and user_id:
+        cat_clean = category.upper()
+        diff_clean = difficulty.upper()
+        try:
+            execute_query(c, 'SELECT highest_score, fastest_win_seconds, total_wins FROM DomainScores WHERE user_id = ? AND category = ? AND difficulty = ?', (user_id, cat_clean, diff_clean))
+            ds_row = c.fetchone()
+            if ds_row:
+                ds_tup = row_to_tuple(ds_row)
+                ds_high = max(ds_tup[0] or 0, score)
+                ds_fast = ds_tup[1] or 999999
+                if is_win and time_taken and time_taken < ds_fast:
+                    ds_fast = time_taken
+                ds_wins = (ds_tup[2] or 0) + (1 if is_win else 0)
+                execute_query(c, '''
+                    UPDATE DomainScores
+                    SET highest_score = ?, fastest_win_seconds = ?, total_wins = ?, updated_at = ?
+                    WHERE user_id = ? AND category = ? AND difficulty = ?
+                ''', (ds_high, ds_fast, ds_wins, datetime.now().isoformat(), user_id, cat_clean, diff_clean))
+            else:
+                ds_high = score
+                ds_fast = time_taken if (is_win and time_taken) else 999999
+                ds_wins = 1 if is_win else 0
+                execute_query(c, '''
+                    INSERT INTO DomainScores (user_id, category, difficulty, highest_score, fastest_win_seconds, total_wins, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (user_id, cat_clean, diff_clean, ds_high, ds_fast, ds_wins, datetime.now().isoformat()))
+        except Exception as ds_err:
+            print(f"DATABASE WARNING: DomainScores update failed: {ds_err}")
         
     # === Achievement Engine ===
     new_achievements = []
@@ -1015,28 +1063,84 @@ def get_highscores():
     conn = get_db_connection()
     c = get_cursor(conn)
     
-    # 1. Highest Score Leaderboard
-    execute_query(c, 
-'SELECT username, highest_score FROM Users ORDER BY highest_score DESC LIMIT 10')
-    score_rows = c.fetchall()
-    
-    # 2. Fastest Win Leaderboard
-    try:
-        execute_query(c, 
-'SELECT username, fastest_win_seconds FROM Users WHERE fastest_win_seconds < 999999 ORDER BY fastest_win_seconds ASC LIMIT 10')
-        speed_rows = c.fetchall()
-    except Exception as e:
-        print(f"DATABASE WARNING: fastest_win highscores failed: {e}")
-        speed_rows = []
+    category = request.args.get('category', 'ALL').upper()
+    difficulty = request.args.get('difficulty', 'ALL').upper()
+
+    score_rows = []
+    speed_rows = []
+    streak_rows = []
+
+    if category != 'ALL' or difficulty != 'ALL':
+        where_clauses = []
+        params = []
+        if category != 'ALL':
+            where_clauses.append("DomainScores.category = ?")
+            params.append(category)
+        if difficulty != 'ALL':
+            where_clauses.append("DomainScores.difficulty = ?")
+            params.append(difficulty)
         
-    # 3. Longest Streak Leaderboard
-    try:
-        execute_query(c, 
-'SELECT username, longest_streak FROM Users ORDER BY longest_streak DESC LIMIT 10')
-        streak_rows = c.fetchall()
-    except Exception as e:
-        print(f"DATABASE WARNING: longest_streak highscores failed: {e}")
-        streak_rows = []
+        where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # 1. Highest Score in Domain/Diff
+        try:
+            execute_query(c, f'''
+                SELECT Users.username, DomainScores.highest_score 
+                FROM DomainScores 
+                JOIN Users ON DomainScores.user_id = Users.id 
+                {where_str} 
+                ORDER BY DomainScores.highest_score DESC LIMIT 10
+            ''', tuple(params))
+            score_rows = c.fetchall()
+        except Exception as e:
+            print(f"DATABASE WARNING: domain highest_score query failed: {e}")
+
+        # 2. Fastest Win in Domain/Diff
+        try:
+            speed_where = (where_str + " AND " if where_str else " WHERE ") + "DomainScores.fastest_win_seconds < 999999"
+            execute_query(c, f'''
+                SELECT Users.username, DomainScores.fastest_win_seconds 
+                FROM DomainScores 
+                JOIN Users ON DomainScores.user_id = Users.id 
+                {speed_where} 
+                ORDER BY DomainScores.fastest_win_seconds ASC LIMIT 10
+            ''', tuple(params))
+            speed_rows = c.fetchall()
+        except Exception as e:
+            print(f"DATABASE WARNING: domain speed query failed: {e}")
+
+        # 3. Total Wins in Domain/Diff
+        try:
+            execute_query(c, f'''
+                SELECT Users.username, DomainScores.total_wins 
+                FROM DomainScores 
+                JOIN Users ON DomainScores.user_id = Users.id 
+                {where_str} 
+                ORDER BY DomainScores.total_wins DESC LIMIT 10
+            ''', tuple(params))
+            streak_rows = c.fetchall()
+        except Exception as e:
+            print(f"DATABASE WARNING: domain wins query failed: {e}")
+    else:
+        # 1. Highest Score Leaderboard (Global)
+        execute_query(c, 'SELECT username, highest_score FROM Users ORDER BY highest_score DESC LIMIT 10')
+        score_rows = c.fetchall()
+        
+        # 2. Fastest Win Leaderboard (Global)
+        try:
+            execute_query(c, 'SELECT username, fastest_win_seconds FROM Users WHERE fastest_win_seconds < 999999 ORDER BY fastest_win_seconds ASC LIMIT 10')
+            speed_rows = c.fetchall()
+        except Exception as e:
+            print(f"DATABASE WARNING: fastest_win highscores failed: {e}")
+            speed_rows = []
+            
+        # 3. Longest Streak Leaderboard (Global)
+        try:
+            execute_query(c, 'SELECT username, longest_streak FROM Users ORDER BY longest_streak DESC LIMIT 10')
+            streak_rows = c.fetchall()
+        except Exception as e:
+            print(f"DATABASE WARNING: longest_streak highscores failed: {e}")
+            streak_rows = []
         
     def fmt_rows(rows):
         res = []
@@ -1052,6 +1156,7 @@ def get_highscores():
         "speed": fmt_rows(speed_rows),
         "streak": fmt_rows(streak_rows)
     })
+
 
 
 @app.route('/api/daily_challenge', methods=['GET'])

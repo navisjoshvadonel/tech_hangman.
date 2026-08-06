@@ -546,10 +546,43 @@ export default function Home() {
       {/* Leaderboard Popup */}
       <div id="leaderboard-popup" className="hidden">
         <h3>TOP PLAYERS</h3>
+
+        {/* Dynamic Domain & Threat Level Filters */}
+        <div className="lb-filters" style={{ display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <select id="lb-category-select" style={{ background: '#051024', color: '#00ffcc', border: '1px solid #00ffcc', padding: '6px 12px', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: 'monospace' }}>
+            <option value="ALL">🌐 ALL DOMAINS</option>
+            <option value="DATABASE">DATABASE</option>
+            <option value="DATA_STRUCTURE">DATA STRUCTURE</option>
+            <option value="JAVA">JAVA</option>
+            <option value="PYTHON">PYTHON</option>
+            <option value="C">C</option>
+            <option value="CPP">C++</option>
+            <option value="ARTIFICIAL_INTELLIGENCE">ARTIFICIAL INTELLIGENCE</option>
+            <option value="OPERATING_SYSTEM">OPERATING SYSTEM</option>
+            <option value="CODE_OUTPUT">CODE OUTPUT</option>
+            <option value="GENERAL_KNOWLEDGE">GENERAL KNOWLEDGE</option>
+            <option value="NETWORKING">NETWORKING</option>
+            <option value="CYBERSECURITY">CYBERSECURITY</option>
+            <option value="WEBDEVELOPMENT">WEB DEVELOPMENT</option>
+            <option value="SOFTWAREENGINEERING">SOFTWARE ENG.</option>
+            <option value="LINUX">LINUX</option>
+            <option value="CLOUD">CLOUD</option>
+            <option value="DATASCIENCE">DATA SCIENCE</option>
+            <option value="TAMIL_MOVIES">TAMIL MOVIES</option>
+          </select>
+
+          <select id="lb-difficulty-select" style={{ background: '#051024', color: '#00ffcc', border: '1px solid #00ffcc', padding: '6px 12px', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: 'monospace' }}>
+            <option value="ALL">⚡ ALL THREAT LEVELS</option>
+            <option value="EASY">EASY</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HARD">HARD</option>
+          </select>
+        </div>
+
         <div className="lb-tabs">
           <button className="lb-tab active" data-leaderboard="score">HIGH SCORE</button>
           <button className="lb-tab" data-leaderboard="speed">FASTEST WIN</button>
-          <button className="lb-tab" data-leaderboard="streak">LONG STREAK</button>
+          <button className="lb-tab" data-leaderboard="streak">TOTAL WINS / STREAK</button>
         </div>
         <table id="leaderboard-table">
           <thead>
@@ -564,6 +597,7 @@ export default function Home() {
         </table>
         <button id="close-leaderboard-btn">CLOSE</button>
       </div>
+
 
       {/* Anomaly Event Popup */}
       <div id="anomaly-popup" className="hidden">

@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
+import { proxyFetch } from '../_proxy';
 
-const PYTHON_API = process.env.PYTHON_API_URL || 'http://127.0.0.1:5005/api';
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get('category') || 'ALL';
+    const difficulty = searchParams.get('difficulty') || 'ALL';
 
-export async function GET() {
-    try {
-        const res = await fetch(`${PYTHON_API}/highscores`, { signal: AbortSignal.timeout(45000) });
-        const data = await res.json();
-        return NextResponse.json(data);
-    } catch {
-        return NextResponse.json({ score: [], speed: [], streak: [] });
-    }
+    const { data, status } = await proxyFetch(
+        `/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`,
+        {},
+        { score: [], speed: [], streak: [] }
+    );
+
+    return NextResponse.json(data, { status });
 }
+
