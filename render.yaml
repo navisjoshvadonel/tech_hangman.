@@ -16,7 +16,7 @@ services:
       --worker-class gthread
       --log-level info
     plan: free
-    healthCheckPath: /api/ping
+    healthCheckPath: /health
     envVars:
       - key: DB_PATH
         value: hangman.db

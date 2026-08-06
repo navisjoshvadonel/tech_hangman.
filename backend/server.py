@@ -66,7 +66,7 @@ except ImportError:
     mysql = None
 
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__)
 FRONTEND_URL = os.environ.get('FRONTEND_URL')
 if FRONTEND_URL:
     CORS(app, origins=[FRONTEND_URL])
@@ -220,44 +220,14 @@ def row_to_dict(row, cursor=None):
     return {}
 
 
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
+@app.route('/', methods=['GET'])
+@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
+@app.route('/api/ping', methods=['GET'])
+@app.route('/ping', methods=['GET'])
+def root_health_check():
+    return jsonify({"status": "ok", "message": "Hangman API is running"}), 200
 
-@app.route('/api/ping')
-def ping():
-    return jsonify({"status": "active", "timestamp": datetime.now().isoformat()}), 200
-
-@app.route('/api/health')
-def health():
-    """Health check endpoint — tests DB connectivity and returns system status."""
-    db_ok = False
-    db_type = DB_TYPE
-    word_count = 0
-    user_count = 0
-    try:
-        conn = get_db_connection()
-        c = get_cursor(conn)
-        execute_query(c, 'SELECT COUNT(*) FROM Words')
-        r = c.fetchone()
-        if r:
-            word_count = row_to_tuple(r)[0]
-        execute_query(c, 'SELECT COUNT(*) FROM Users')
-        r2 = c.fetchone()
-        if r2:
-            user_count = row_to_tuple(r2)[0]
-        conn.close()
-        db_ok = True
-    except Exception as e:
-        db_ok = False
-    return jsonify({
-        "status": "healthy" if db_ok else "degraded",
-        "db": db_type,
-        "db_ok": db_ok,
-        "word_count": word_count,
-        "user_count": user_count,
-        "timestamp": datetime.now().isoformat()
-    }), 200 if db_ok else 503
 
 # === Database Helpers ===
 def init_db():
@@ -570,6 +540,8 @@ except Exception as _init_err:
 # === API Endpoints ===
 
 @app.route('/api/login', methods=['POST'])
+
+
 def login():
     if rate_limited(max_per_window=20, window=60):
         return jsonify({"error": "Too many requests. Wait a moment and try again."}), 429
