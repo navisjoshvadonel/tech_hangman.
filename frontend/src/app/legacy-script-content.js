@@ -483,9 +483,6 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
   }
 }
 
-    console.error("Score Submit Error:", err);
-  }
-}
 
 function renderWord() {
   wordDisplay.innerHTML = "";
