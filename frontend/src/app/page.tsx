@@ -162,7 +162,9 @@ export default function Home() {
                   <button className="mode-btn active" id="mode-classic">CLASSIC</button>
                   <button className="mode-btn" id="mode-story">STORY</button>
                   <button className="mode-btn" id="mode-friends" style={{ borderColor: '#00ffcc', color: '#00ffcc' }}>⚔️ PLAY WITH FRIENDS</button>
+                  <button className="mode-btn open-leaderboard-btn" style={{ borderColor: '#ffd700', color: '#ffd700' }}>🏆 LEADERBOARD</button>
                 </div>
+
               </div>
               <div className="selection-grid" id="classic-categories">
                 <button className="cat-btn" data-cat="DATABASE">DATABASE</button>

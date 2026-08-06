@@ -749,7 +749,7 @@ function renderLeaderboard(type) {
 }
 
 lbTabs.forEach(tab => {
-  tab.addEventListener("click", (e) => {
+  tab?.addEventListener("click", (e) => {
     lbTabs.forEach(t => t?.classList.remove("active"));
     e?.target?.classList.add("active");
     const type = e.target.getAttribute("data-leaderboard");
@@ -760,12 +760,15 @@ lbTabs.forEach(tab => {
 document.getElementById("lb-category-select")?.addEventListener("change", fetchAndRenderLeaderboard);
 document.getElementById("lb-difficulty-select")?.addEventListener("change", fetchAndRenderLeaderboard);
 
-leaderboardBtn.addEventListener("click", async () => {
-  // Show popup immediately so user gets visual feedback
-  leaderboardPopup?.classList.remove("hidden");
+async function openLeaderboardModal() {
+  const popupEl = document.getElementById("leaderboard-popup");
+  const bodyEl = document.getElementById("leaderboard-body");
+  if (popupEl) {
+    popupEl.classList.remove("hidden");
+  }
 
-  if (leaderboardBody) {
-    leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #00ffcc; padding: 25px; font-family: monospace;">⚡ RETRIEVING LEADERBOARD DATA...</td></tr>`;
+  if (bodyEl) {
+    bodyEl.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #00ffcc; padding: 25px; font-family: monospace;">⚡ RETRIEVING LEADERBOARD DATA...</td></tr>`;
   }
 
   const catSelect = document.getElementById("lb-category-select");
@@ -781,16 +784,35 @@ leaderboardBtn.addEventListener("click", async () => {
   }
 
   // Reset to score tab
-  lbTabs.forEach(t => t?.classList.remove("active"));
+  const tabs = document.querySelectorAll(".lb-tab");
+  tabs.forEach(t => t?.classList.remove("active"));
   document.querySelector('.lb-tab[data-leaderboard="score"]')?.classList.add("active");
   currentLeaderboardType = "score";
 
   await fetchAndRenderLeaderboard();
+}
+
+function closeLeaderboardModal() {
+  const popupEl = document.getElementById("leaderboard-popup");
+  if (popupEl) {
+    popupEl.classList.add("hidden");
+  }
+}
+
+// Global click listener delegation for leaderboard buttons
+document.addEventListener("click", (e) => {
+  const openBtn = e.target?.closest?.("#leaderboard-btn, .open-leaderboard-btn");
+  if (openBtn) {
+    openLeaderboardModal();
+    return;
+  }
+  const closeBtn = e.target?.closest?.("#close-leaderboard-btn");
+  if (closeBtn) {
+    closeLeaderboardModal();
+    return;
+  }
 });
 
-closeLeaderboardBtn.addEventListener("click", () => {
-  leaderboardPopup?.classList.add("hidden");
-});
 
 
 
