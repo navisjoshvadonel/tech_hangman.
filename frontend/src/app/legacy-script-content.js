@@ -798,15 +798,37 @@ function closeLeaderboardModal() {
 
 // Global click listener delegation for leaderboard buttons
 document.addEventListener("click", (e) => {
-  const openBtn = e.target?.closest?.("#leaderboard-btn, .open-leaderboard-btn");
+  const target = e.target && e.target.nodeType === 1 ? e.target : e.target?.parentElement;
+  if (!target) return;
+
+  const openBtn = target.closest("#leaderboard-btn, .open-leaderboard-btn");
   if (openBtn) {
+    e.preventDefault();
     openLeaderboardModal();
     return;
   }
-  const closeBtn = e.target?.closest?.("#close-leaderboard-btn");
+  const closeBtn = target.closest("#close-leaderboard-btn, #close-leaderboard-btn-x, .close-x-btn");
   if (closeBtn) {
+    e.preventDefault();
     closeLeaderboardModal();
     return;
+  }
+
+  const tabTarget = target.closest(".lb-tab");
+  if (tabTarget) {
+    e.preventDefault();
+    document.querySelectorAll(".lb-tab").forEach(t => t.classList.remove("active"));
+    tabTarget.classList.add("active");
+    const type = tabTarget.getAttribute("data-leaderboard");
+    if (typeof renderLeaderboard === "function") {
+      renderLeaderboard(type);
+    }
+    return;
+  }
+
+  const popupEl = document.getElementById("leaderboard-popup");
+  if (popupEl && !popupEl.classList.contains("hidden") && e.target === popupEl) {
+    closeLeaderboardModal();
   }
 });
 

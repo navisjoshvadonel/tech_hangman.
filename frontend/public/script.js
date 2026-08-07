@@ -163,7 +163,10 @@ const leaderboardBody = document.getElementById("leaderboard-body");
 const closeLeaderboardBtn = document.getElementById("close-leaderboard-btn");
 const lbTabs = document.querySelectorAll(".lb-tab");
 const lbValHeader = document.getElementById("lb-val-header");
+const lbCategorySelect = document.getElementById("lb-category-select");
+const lbDifficultySelect = document.getElementById("lb-difficulty-select");
 let currentLeaderboardData = null;
+let currentLeaderboardTab = "score";
 
 // Selection Screen Elements
 const selectionScreen = document.getElementById("selection-screen");
@@ -899,6 +902,10 @@ async function initGame() {
 
 function updateScoreUI() {
   currentScoreSpan.innerText = `${currentScore}`;
+  if (currentScore > highestScore) {
+    highestScore = currentScore;
+    highScoreSpan.innerText = `${highestScore}`;
+  }
 }
 
 async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
@@ -1246,54 +1253,200 @@ function checkLoss() {
 
 // === Leaderboard Logic ===
 
+async function fetchAndRenderLeaderboard() {
+  const popupEl = document.getElementById("leaderboard-popup");
+  const bodyEl = document.getElementById("leaderboard-body") || leaderboardBody;
+  if (!bodyEl) return;
+
+  // Render loading state
+  bodyEl.innerHTML = `
+    <tr>
+      <td colspan="3" style="padding: 24px; text-align: center; color: var(--neon-cyan); font-family: monospace;">
+        <span style="display: inline-block; animation: pulse-glow 1s infinite alternate;">⚡</span> RETRIEVING HIGH SCORES...
+      </td>
+    </tr>
+  `;
+
+  const catSelect = document.getElementById("lb-category-select");
+  const diffSelect = document.getElementById("lb-difficulty-select");
+  const category = catSelect ? catSelect.value : "ALL";
+  const difficulty = diffSelect ? diffSelect.value : "ALL";
+
+  try {
+    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    currentLeaderboardData = await res.json();
+  } catch (err) {
+    console.warn("Leaderboard API fetch fallback triggered:", err);
+
+    // Build offline fallback leaderboard from local storage
+    const localUsers = JSON.parse(localStorage.getItem("hangman_offline_users") || "{}");
+    const localScores = [];
+
+    Object.keys(localUsers).forEach(username => {
+      const uData = localUsers[username];
+      if (uData) {
+        localScores.push({
+          username: username,
+          score: uData.highest_score || 0,
+          speed: uData.fastest_win || 999999,
+          streak: uData.longest_streak || uData.streak || 0
+        });
+      }
+    });
+
+    if (window.offlineAgentName) {
+      const currOffline = window.loadOfflineUser(window.offlineAgentName);
+      if (currOffline && !localScores.some(s => s.username.toLowerCase() === window.offlineAgentName.toLowerCase())) {
+        localScores.push({
+          username: window.offlineAgentName,
+          score: currOffline.highest_score || 0,
+          speed: currOffline.fastest_win || 999999,
+          streak: currOffline.longest_streak || currOffline.streak || 0
+        });
+      }
+    }
+
+    const scoreArr = [...localScores].sort((a, b) => b.score - a.score).map(s => ({ username: s.username, val: s.score }));
+    const speedArr = [...localScores].filter(s => s.speed < 999999).sort((a, b) => a.speed - b.speed).map(s => ({ username: s.username, val: s.speed }));
+    const streakArr = [...localScores].sort((a, b) => b.streak - a.streak).map(s => ({ username: s.username, val: s.streak }));
+
+    currentLeaderboardData = {
+      score: scoreArr,
+      speed: speedArr,
+      streak: streakArr
+    };
+  }
+
+  renderLeaderboard(currentLeaderboardTab || "score");
+}
+
 function renderLeaderboard(type) {
-  leaderboardBody.innerHTML = "";
-  if (!currentLeaderboardData) return;
+  currentLeaderboardTab = type;
+  const bodyEl = document.getElementById("leaderboard-body") || leaderboardBody;
+  const valHeader = document.getElementById("lb-val-header") || lbValHeader;
+  if (!bodyEl) return;
 
-  const dataArr = currentLeaderboardData[type] || [];
+  bodyEl.innerHTML = "";
 
-  if (type === "score") lbValHeader.innerText = "SCORE";
-  else if (type === "speed") lbValHeader.innerText = "SECONDS";
-  else if (type === "streak") lbValHeader.innerText = "STREAK";
+  if (valHeader) {
+    if (type === "score") valHeader.innerText = "SCORE";
+    else if (type === "speed") valHeader.innerText = "SECONDS";
+    else if (type === "streak") valHeader.innerText = "STREAK / WINS";
+  }
+
+  if (!currentLeaderboardData || !currentLeaderboardData[type] || currentLeaderboardData[type].length === 0) {
+    bodyEl.innerHTML = `
+      <tr>
+        <td colspan="3" style="padding: 24px; text-align: center; color: #888; font-style: italic; font-family: monospace;">
+          NO HIGH SCORES RECORDED FOR THIS FILTER YET. BE THE FIRST!
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const dataArr = currentLeaderboardData[type];
+  const activeUsername = (currentUser || window.offlineAgentName || "").toUpperCase();
 
   dataArr.forEach((entry, index) => {
     const tr = document.createElement("tr");
+    const isMe = entry.username && entry.username.toUpperCase() === activeUsername;
+    
+    if (isMe) {
+      tr.style.background = "rgba(0, 255, 204, 0.18)";
+      tr.style.outline = "1px solid var(--neon-cyan)";
+    }
+
+    let rankDisplay = `#${index + 1}`;
+    if (index === 0) rankDisplay = "🥇 #1";
+    else if (index === 1) rankDisplay = "🥈 #2";
+    else if (index === 2) rankDisplay = "🥉 #3";
+
+    let valDisplay = entry.val;
+    if (type === "speed" && typeof entry.val === "number") {
+      valDisplay = `${entry.val}s`;
+    }
+
     tr.innerHTML = `
-      <td>#${index + 1}</td>
-      <td>${entry.username.toUpperCase()}</td>
-      <td>${entry.val}</td>
+      <td style="color: ${index < 3 ? '#ffd700' : '#888'}; font-weight: bold;">${rankDisplay}</td>
+      <td style="color: ${isMe ? '#00ffcc' : '#fff'}; font-weight: ${isMe ? 'bold' : 'normal'};">
+        ${entry.username ? entry.username.toUpperCase() : 'AGENT'} 
+        ${isMe ? '<span style="font-size: 0.68rem; color: #ffd700; margin-left: 4px;">(YOU)</span>' : ''}
+      </td>
+      <td style="color: var(--neon-cyan); font-family: monospace; font-weight: bold;">${valDisplay}</td>
     `;
-    leaderboardBody.appendChild(tr);
+    bodyEl.appendChild(tr);
   });
 }
 
-lbTabs.forEach(tab => {
-  tab.addEventListener("click", (e) => {
-    lbTabs.forEach(t => t?.classList.remove("active"));
-    e?.target?.classList.add("active");
-    const type = e.target.getAttribute("data-leaderboard");
-    renderLeaderboard(type);
+function openLeaderboardModal() {
+  const popupEl = document.getElementById("leaderboard-popup");
+  if (!popupEl) return;
+
+  popupEl.classList.remove("hidden");
+
+  // Highlight active tab
+  document.querySelectorAll(".lb-tab").forEach(tab => {
+    if (tab.getAttribute("data-leaderboard") === (currentLeaderboardTab || "score")) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
   });
-});
 
-leaderboardBtn.addEventListener("click", async () => {
-  try {
-    const res = await fetch(`${API_URL}/highscores`);
-    currentLeaderboardData = await res.json();
+  fetchAndRenderLeaderboard();
+}
 
-    // Reset to default tab
-    lbTabs.forEach(t => t?.classList.remove("active"));
-    document.querySelector()?.classList.add("active");
-    renderLeaderboard("score");
+function closeLeaderboardModal() {
+  const popupEl = document.getElementById("leaderboard-popup");
+  if (popupEl) popupEl.classList.add("hidden");
+}
 
-    leaderboardPopup?.classList.remove("hidden");
-  } catch (err) {
-    console.error("Leaderboard Error", err);
+// Global Event Delegation for Leaderboard Interactions
+document.addEventListener("click", (e) => {
+  const target = e.target && e.target.nodeType === 1 ? e.target : e.target?.parentElement;
+  if (!target) return;
+
+  const openTarget = target.closest("#leaderboard-btn, .open-leaderboard-btn");
+  if (openTarget) {
+    e.preventDefault();
+    openLeaderboardModal();
+    return;
+  }
+
+  const closeTarget = target.closest("#close-leaderboard-btn, #close-leaderboard-btn-x, .close-x-btn");
+  if (closeTarget) {
+    e.preventDefault();
+    closeLeaderboardModal();
+    return;
+  }
+
+  const tabTarget = target.closest(".lb-tab");
+  if (tabTarget) {
+    e.preventDefault();
+    document.querySelectorAll(".lb-tab").forEach(t => t.classList.remove("active"));
+    tabTarget.classList.add("active");
+    const type = tabTarget.getAttribute("data-leaderboard");
+    if (typeof renderLeaderboard === "function") {
+      renderLeaderboard(type);
+    }
+    return;
+  }
+
+  // Close popup if clicking on overlay backdrop outside popup contents
+  const popupEl = document.getElementById("leaderboard-popup");
+  if (popupEl && !popupEl.classList.contains("hidden") && e.target === popupEl) {
+    closeLeaderboardModal();
   }
 });
 
-closeLeaderboardBtn.addEventListener("click", () => {
-  leaderboardPopup?.classList.add("hidden");
+document.addEventListener("change", (e) => {
+  if (e.target && (e.target.id === "lb-category-select" || e.target.id === "lb-difficulty-select")) {
+    if (typeof fetchAndRenderLeaderboard === "function") {
+      fetchAndRenderLeaderboard();
+    }
+  }
 });
 
 // === Keyboard Mapping ===
