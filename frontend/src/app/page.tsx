@@ -130,12 +130,6 @@ export default function Home() {
                 </div>
                 <p className="login-hint" id="offline-error-msg">Saves all progress locally in this browser.</p>
               </div>
-
-              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                <button className="mode-btn open-leaderboard-btn" style={{ borderColor: '#ffd700', color: '#ffd700', padding: '10px 20px', fontSize: '0.9rem', width: '100%', maxWidth: '300px' }}>
-                  🏆 VIEW GLOBAL LEADERBOARD
-                </button>
-              </div>
             </div>
           </div>
         </div>
