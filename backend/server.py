@@ -2502,7 +2502,40 @@ def friend_duel_exit():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/admin/reset_users', methods=['POST', 'GET'])
+def admin_reset_users():
+    """Admin endpoint to wipe all user data and start from scratch."""
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    user_tables = [
+        'Users',
+        'Achievements',
+        'UserWordProgress',
+        'MissionRuns',
+        'DuelInvites',
+        'DomainScores',
+        'DuelRuns',
+        'LiveDuelQueue',
+        'LiveDuels',
+        'FriendRooms',
+        'FriendRoomPlayers'
+    ]
+    for table in user_tables:
+        try:
+            execute_query(c, f"DELETE FROM {table}")
+        except Exception:
+            pass
+    try:
+        execute_query(c, "DELETE FROM sqlite_sequence WHERE name IN ('Users', 'Achievements', 'UserWordProgress', 'MissionRuns', 'DuelInvites', 'DomainScores', 'DuelRuns')")
+    except Exception:
+        pass
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "All user data wiped successfully. Database is clean from scratch."}), 200
+
+
 if __name__ == '__main__':
     print("Agent Protocol Initialization Complete. Servicing APIs.")
     port = int(os.environ.get('PORT', 5005))
     app.run(host='0.0.0.0', port=port)
+
