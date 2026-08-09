@@ -84,18 +84,18 @@ export const CustomCursor: React.FC = () => {
         <>
             <div
                 ref={dotRef}
-                className="pointer-events-none fixed z-[10000] w-2 h-2 rounded-full bg-cyan-400 drop-shadow-[0_0_10px_var(--neon-cyan)] transition-transform duration-100 ease-in-out hidden md:block mix-blend-screen"
+                className="pointer-events-none fixed z-[100000000] w-2 h-2 rounded-full bg-cyan-400 drop-shadow-[0_0_10px_var(--neon-cyan)] transition-transform duration-100 ease-in-out hidden md:block mix-blend-screen"
                 style={{ left: '-10px', top: '-10px', boxShadow: '0 0 10px #00ffcc, 0 0 20px #00ffcc' }}
             />
             <div
                 ref={outlineRef}
-                className="pointer-events-none fixed z-[9999] w-10 h-10 border border-cyan-400 rounded-full transition-[width,height,background-color,border-width,transform] duration-200 ease-out hidden md:block mix-blend-screen"
+                className="pointer-events-none fixed z-[99999999] w-10 h-10 border border-cyan-400 rounded-full transition-[width,height,background-color,border-width,transform] duration-200 ease-out hidden md:block mix-blend-screen"
                 style={{ left: '-20px', top: '-20px', boxShadow: '0 0 15px rgba(0, 255, 204, 0.4)' }}
             />
             {/* HUD Brackets */}
             <div
                 ref={bracketsRef}
-                className="pointer-events-none fixed z-[9998] w-14 h-14 hidden md:block"
+                className="pointer-events-none fixed z-[99999998] w-14 h-14 hidden md:block"
                 style={{ left: '-50px', top: '-50px' }}
             >
                 <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400 opacity-50"></div>

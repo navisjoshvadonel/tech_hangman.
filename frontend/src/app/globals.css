@@ -3766,8 +3766,8 @@ h2,
     top: 0;
     width: 0;
     height: 0;
-    pointer-events: none;
-    z-index: 9999;
+    pointer-events: none !important;
+    z-index: 99999999;
     opacity: 0.95;
     transition: opacity 160ms ease;
     mix-blend-mode: screen;
