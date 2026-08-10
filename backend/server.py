@@ -2525,34 +2525,85 @@ def friend_duel_exit():
 
 @app.route('/api/admin/reset_users', methods=['POST', 'GET'])
 def admin_reset_users():
-    """Admin endpoint to wipe all user data and start from scratch."""
+    """Admin endpoint to wipe user data, optionally preserving one user."""
+    keep_username = request.args.get('keep_username', 'NAVIS').strip()
+    
     conn = get_db_connection()
     c = get_cursor(conn)
-    user_tables = [
-        'Users',
-        'Achievements',
-        'UserWordProgress',
-        'MissionRuns',
-        'DuelInvites',
-        'DomainScores',
-        'DuelRuns',
-        'LiveDuelQueue',
-        'LiveDuels',
-        'FriendRooms',
-        'FriendRoomPlayers'
-    ]
-    for table in user_tables:
+    
+    keep_user_id = None
+    if keep_username and keep_username.lower() not in ('none', 'all', 'null', 'false'):
         try:
-            execute_query(c, f"DELETE FROM {table}")
+            execute_query(c, "SELECT id FROM Users WHERE LOWER(username) = LOWER(?)", (keep_username,))
+            row = c.fetchone()
+            if row:
+                keep_user_id = row_to_dict(row, c).get('id') if isinstance(row, dict) else row[0]
+        except Exception as e:
+            print(f"DATABASE WARNING: could not retrieve user to keep: {e}")
+
+    if keep_user_id is not None:
+        # Preserve only this user and delete everyone else
+        tables_with_user_id = [
+            ('Achievements', 'user_id'),
+            ('UserWordProgress', 'user_id'),
+            ('MissionRuns', 'user_id'),
+            ('DuelInvites', 'creator_user_id'),
+            ('DomainScores', 'user_id'),
+            ('DuelRuns', 'user_id'),
+            ('LiveDuelQueue', 'user_id'),
+            ('FriendRoomPlayers', 'user_id')
+        ]
+        
+        for table, col in tables_with_user_id:
+            try:
+                execute_query(c, f"DELETE FROM {table} WHERE {col} != ?", (keep_user_id,))
+            except Exception as e:
+                print(f"DATABASE WARNING: failed to clean table {table}: {e}")
+                
+        # Wipe other tables entirely as they contain ephemeral match/duel data
+        other_tables = ['LiveDuels', 'FriendRooms']
+        for table in other_tables:
+            try:
+                execute_query(c, f"DELETE FROM {table}")
+            except Exception:
+                pass
+                
+        # Finally delete other users from Users table
+        try:
+            execute_query(c, "DELETE FROM Users WHERE id != ?", (keep_user_id,))
+        except Exception as e:
+            print(f"DATABASE WARNING: failed to delete other users: {e}")
+            
+        message = f"Cleared all users and their progress/scores, except for user '{keep_username}' (ID: {keep_user_id})."
+    else:
+        # If no user is being preserved, wipe everything completely
+        user_tables = [
+            'Users',
+            'Achievements',
+            'UserWordProgress',
+            'MissionRuns',
+            'DuelInvites',
+            'DomainScores',
+            'DuelRuns',
+            'LiveDuelQueue',
+            'LiveDuels',
+            'FriendRooms',
+            'FriendRoomPlayers'
+        ]
+        for table in user_tables:
+            try:
+                execute_query(c, f"DELETE FROM {table}")
+            except Exception:
+                pass
+        try:
+            execute_query(c, "DELETE FROM sqlite_sequence WHERE name IN ('Users', 'Achievements', 'UserWordProgress', 'MissionRuns', 'DuelInvites', 'DomainScores', 'DuelRuns')")
         except Exception:
             pass
-    try:
-        execute_query(c, "DELETE FROM sqlite_sequence WHERE name IN ('Users', 'Achievements', 'UserWordProgress', 'MissionRuns', 'DuelInvites', 'DomainScores', 'DuelRuns')")
-    except Exception:
-        pass
+        message = "All user data wiped successfully. Database is clean from scratch."
+
     conn.commit()
     conn.close()
-    return jsonify({"status": "success", "message": "All user data wiped successfully. Database is clean from scratch."}), 200
+    return jsonify({"status": "success", "message": message}), 200
 
 
 if __name__ == '__main__':
