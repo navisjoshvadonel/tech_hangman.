@@ -345,6 +345,42 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Boss Battle Panel */}
+        <div id="boss-panel" className="boss-panel hidden" style={{
+          background: 'rgba(25, 0, 50, 0.4)',
+          border: '1px solid #d300ff',
+          padding: '10px 15px',
+          borderRadius: '8px',
+          marginBottom: '15px',
+          boxShadow: '0 0 15px rgba(211, 0, 255, 0.2)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+            <span style={{ color: '#d300ff', fontWeight: 'bold', letterSpacing: '2px', fontFamily: 'monospace', textShadow: '0 0 8px rgba(211,0,255,0.6)' }}>
+              ⚡ FIREWALL BOSS HP
+            </span>
+            <span id="boss-hp-text" style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 'bold' }}>
+              1000 / 1000
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(211,0,255,0.3)' }}>
+            <div id="boss-hp-fill" style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #d300ff, #ff0055)', transition: 'width 0.3s ease' }}></div>
+          </div>
+          <div id="boss-timer-container" style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden', marginTop: '8px', display: 'none' }}>
+            <div id="boss-timer-fill" style={{ width: '100%', height: '100%', background: '#ff0055', transition: 'width 0.1s linear' }}></div>
+          </div>
+          <div id="boss-curses-row" style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <span id="curse-fog" className="curse-chip" style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.5)', border: '1px solid #888', color: '#aaa', padding: '2px 8px', borderRadius: '4px', display: 'none', fontFamily: 'monospace' }}>
+              🌫️ FOG OF WAR
+            </span>
+            <span id="curse-timer" className="curse-chip" style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.5)', border: '1px solid #ff0055', color: '#ff0055', padding: '2px 8px', borderRadius: '4px', display: 'none', fontFamily: 'monospace', textShadow: '0 0 4px rgba(255,0,85,0.4)' }}>
+              ⏳ 15s TIME BOMB
+            </span>
+            <span id="curse-vowel" className="curse-chip" style={{ fontSize: '0.75rem', background: 'rgba(0,0,0,0.5)', border: '1px solid #ffd700', color: '#ffd700', padding: '2px 8px', borderRadius: '4px', display: 'none', fontFamily: 'monospace' }}>
+              🩸 VOWEL STEALER
+            </span>
+          </div>
+        </div>
+
         <div className="hangman-display">
           <svg className="hangman-svg" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
             <defs>

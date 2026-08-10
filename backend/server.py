@@ -300,7 +300,8 @@ def init_db():
         ("last_daily_date", "VARCHAR(255) DEFAULT ''"),
         ("hints_used", "INT DEFAULT 0"),
         ("total_games", "INT DEFAULT 0"),
-        ("story_progress", "INT DEFAULT 1")
+        ("story_progress", "INT DEFAULT 1"),
+        ("bosses_defeated", "INT DEFAULT 0")
     ]
     
     for col_name, col_type in new_columns:
@@ -557,9 +558,8 @@ def login():
         
     conn = get_db_connection()
     c = get_cursor(conn)
-    # Case-insensitive checking
     execute_query(c, 
-'SELECT id, username, highest_score, xp, level, rank, total_wins, total_losses, story_progress FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
+'SELECT id, username, highest_score, xp, level, rank, total_wins, total_losses, story_progress, bosses_defeated FROM Users WHERE LOWER(username) = LOWER(?)', (username,))
     user = c.fetchone()
     
     if not user:
@@ -576,9 +576,10 @@ def login():
         total_wins = user['total_wins']
         total_losses = user['total_losses']
         story_progress = user['story_progress']
+        bosses_defeated = user.get('bosses_defeated') or 0
     else:
         # Tuple-based unpacking
-        user_id, _, high_score, xp, level, rank, total_wins, total_losses, story_progress = user
+        user_id, _, high_score, xp, level, rank, total_wins, total_losses, story_progress, bosses_defeated = user
         
     conn.close()
     
@@ -592,7 +593,8 @@ def login():
         "rank": rank,
         "total_wins": total_wins,
         "total_losses": total_losses,
-        "story_progress": story_progress
+        "story_progress": story_progress,
+        "bosses_defeated": bosses_defeated or 0
     })
 
 @app.route('/api/register', methods=['POST'])
@@ -823,7 +825,7 @@ def submit_score():
     
     try:
         execute_query(c, 
-'SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress FROM Users WHERE id = ?', (user_id,))
+'SELECT highest_score, xp, level, rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, story_progress, bosses_defeated FROM Users WHERE id = ?', (user_id,))
         row = c.fetchone()
     except Exception as e:
         print(f"DATABASE WARNING: submit_score read fallback triggered: {e}")
@@ -846,6 +848,7 @@ def submit_score():
     current_streak = row_d.get('current_streak') or 0
     longest_streak = row_d.get('longest_streak') or 0
     story_progress = row_d.get('story_progress') or 1
+    bosses_defeated = row_d.get('bosses_defeated') or 0
     
     # --- MEANINGFUL SCORING SYSTEM ---
     # Multipliers based on difficulty
@@ -854,8 +857,8 @@ def submit_score():
     mult = multipliers.get(difficulty, 1.0)
 
     # Base XP calculation
-    base_xp = xp_added # Use the value sent from frontend as base (usu 150 for win, 10 for loss)
-    
+    is_boss = data.get('is_boss', False)
+
     if is_win is True:
         total_wins += 1
         current_streak += 1
@@ -878,10 +881,16 @@ def submit_score():
         # Formula: (Base * Difficulty + Bonuses) * Streak
         final_xp_added = int(((base_xp * mult) + time_bonus + flawless_bonus) * streak_mult)
         
+        if is_boss:
+            bosses_defeated += 1
+            final_xp_added = int(final_xp_added * 2.0)
+        
     elif is_win is False:
         total_losses += 1
         current_streak = 0
         final_xp_added = int(base_xp * mult) # Still get some XP for trying, based on difficulty
+        if is_boss:
+            final_xp_added = int(final_xp_added * 1.5)
     else:
         final_xp_added = 0
 
@@ -929,12 +938,12 @@ def submit_score():
         execute_query(c, 
 '''
             UPDATE Users 
-            SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, total_games = total_games + 1
+            SET highest_score = ?, xp = ?, level = ?, rank = ?, total_wins = ?, total_losses = ?, fastest_win_seconds = ?, current_streak = ?, longest_streak = ?, story_progress = ?, bosses_defeated = ?, total_games = total_games + 1
             WHERE id = ?
-        ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, user_id))
+        ''', (new_high_score, new_xp, new_level, new_rank, total_wins, total_losses, fastest_win_seconds, current_streak, longest_streak, new_story_progress, bosses_defeated, user_id))
     except Exception as e:
         print(f"DATABASE WARNING: submit_score write fallback triggered: {e}")
-        # Fallback if fastest_win_seconds, current_streak, longest_streak, story_progress, total_games columns are missing
+        # Fallback if fastest_win_seconds, current_streak, longest_streak, story_progress, total_games, bosses_defeated columns are missing
         execute_query(c, 
 '''
             UPDATE Users 
@@ -1017,6 +1026,14 @@ def submit_score():
         if total_losses >= threshold:
             if award_achievement(c, user_id, name):
                 new_achievements.append(name)
+                
+    # Boss-based achievements
+    if bosses_defeated >= 1:
+        if award_achievement(c, user_id, "Executioner's Bane"):
+            new_achievements.append("Executioner's Bane")
+    if bosses_defeated >= 5:
+        if award_achievement(c, user_id, "Arch-Nemesis"):
+            new_achievements.append("Arch-Nemesis")
         
     conn.commit()
     conn.close()
@@ -1027,6 +1044,8 @@ def submit_score():
         "xp": new_xp,
         "level": new_level,
         "rank": new_rank,
+        "current_streak": current_streak,
+        "bosses_defeated": bosses_defeated,
         "new_achievements": new_achievements
     })
 
@@ -1208,9 +1227,9 @@ def get_profile():
         execute_query(c, 
 '''
             SELECT username, highest_score, xp, level, rank, total_wins, total_losses, 
-                   fastest_win_seconds, current_streak, longest_streak, hints_used, total_games, story_progress 
+                   fastest_win_seconds, current_streak, longest_streak, hints_used, total_games, story_progress, bosses_defeated 
             FROM Users WHERE id = ?
-        ''', (user_id,))
+''', (user_id,))
         row = c.fetchone()
     except Exception as e:
         print(f"DATABASE WARNING: get_profile read fallback triggered: {e}")
@@ -1225,7 +1244,8 @@ def get_profile():
                 'longest_streak': 0,
                 'hints_used': 0,
                 'total_games': (row_d.get('total_wins') or 0) + (row_d.get('total_losses') or 0),
-                'story_progress': 1
+                'story_progress': 1,
+                'bosses_defeated': 0
             })
             row = row_d
 
@@ -1248,7 +1268,8 @@ def get_profile():
         "longest_streak": row_d.get('longest_streak') or 0,
         "hints_used": row_d.get('hints_used') or 0,
         "total_games": row_d.get('total_games') or 0,
-        "story_progress": row_d.get('story_progress') or 1
+        "story_progress": row_d.get('story_progress') or 1,
+        "bosses_defeated": row_d.get('bosses_defeated') or 0
     }
     
     conn.close()

@@ -25,6 +25,15 @@ let currentXp = 0;
 let currentRank = "Beginner";
 let currentLevel = 1;
 let currentStoryProgress = 1;
+let currentStreak = 0;
+let isBossGame = false;
+let bossMaxHp = 1000;
+let bossCurrentHp = 1000;
+let bossTimerInterval = null;
+let bossTimeLeft = 15;
+let isFogOfWarActive = false;
+let isTimeBombActive = false;
+let isVowelStealerActive = false;
 
 // Timing State
 let gameStartTime = 0;
@@ -159,6 +168,7 @@ function applyUserSession(data) {
   currentRank = data.rank || "Beginner";
   currentLevel = data.level || 1;
   currentStoryProgress = data.story_progress || 1;
+  currentStreak = data.current_streak || 0;
   currentScore = 0;
 
   currentUserSpan.innerText = `USER: ${currentUser.toUpperCase().replace(/_/g, " ")}`;
@@ -343,6 +353,23 @@ if (hintBtn) {
 // === Game Logic ===
 
 async function initGame() {
+  // Clear any existing boss timer
+  if (bossTimerInterval) {
+    clearInterval(bossTimerInterval);
+    bossTimerInterval = null;
+  }
+  isBossGame = false;
+  isFogOfWarActive = false;
+  isTimeBombActive = false;
+  isVowelStealerActive = false;
+  gameContainer?.classList.remove("boss-active-shadow");
+  
+  const bPanel = document.getElementById("boss-panel");
+  if (bPanel) bPanel.classList.add("hidden");
+  
+  const bTimerCont = document.getElementById("boss-timer-container");
+  if (bTimerCont) bTimerCont.style.display = "none";
+
   // Reset Variables
   guessedLetters = [];
   wrongGuesses = 0;
@@ -425,10 +452,75 @@ async function initGame() {
     renderWord();
     renderKeyboard();
 
-    // Roll a random event after word loads (15% chance, skip on daily)
-    if (!isDailyChallenge) {
-      scoreMultiplier = 1;
-      rollRandomEvent();
+    // If streak is >= 3, trigger Firewall Boss Battle!
+    if (currentStreak >= 3 && !isDailyChallenge && !isFriendModeActive) {
+      isBossGame = true;
+      isFogOfWarActive = true;
+      isTimeBombActive = true;
+      isVowelStealerActive = true;
+
+      bossMaxHp = 1000;
+      bossCurrentHp = 1000;
+
+      const bossPanel = document.getElementById("boss-panel");
+      const tracePanel = document.getElementById("trace-panel");
+
+      if (bossPanel) bossPanel.classList.remove("hidden");
+      if (tracePanel) tracePanel.classList.add("hidden");
+
+      const hpText = document.getElementById("boss-hp-text");
+      const hpFill = document.getElementById("boss-hp-fill");
+      if (hpText) hpText.innerText = `${bossCurrentHp} / ${bossMaxHp}`;
+      if (hpFill) hpFill.style.width = "100%";
+
+      // Show Curse Chips
+      const curseFog = document.getElementById("curse-fog");
+      const curseTimer = document.getElementById("curse-timer");
+      const curseVowel = document.getElementById("curse-vowel");
+      if (curseFog) curseFog.style.display = "inline-block";
+      if (curseTimer) curseTimer.style.display = "inline-block";
+      if (curseVowel) curseVowel.style.display = "inline-block";
+
+      // Setup Time Bomb countdown bar
+      if (isTimeBombActive) {
+        bossTimeLeft = 15;
+        const timerContainer = document.getElementById("boss-timer-container");
+        const timerFill = document.getElementById("boss-timer-fill");
+        if (timerContainer) timerContainer.style.display = "block";
+        if (timerFill) timerFill.style.width = "100%";
+
+        bossTimerInterval = setInterval(() => {
+          if (isGameOver) {
+            clearInterval(bossTimerInterval);
+            bossTimerInterval = null;
+            return;
+          }
+          bossTimeLeft -= 0.1;
+          if (timerFill) {
+            timerFill.style.width = `${(bossTimeLeft / 15) * 100}%`;
+          }
+          if (bossTimeLeft <= 0) {
+            bossTimeLeft = 15; // reset
+            handleBossTimeOut();
+          }
+        }, 100);
+      }
+
+      gameContainer?.classList.add("boss-active-shadow");
+      showCritHitToast("⚠️ WARNING: BOSS INTERCEPT DETECTED! ⚠️");
+    } else {
+      const bossPanel = document.getElementById("boss-panel");
+      const tracePanel = document.getElementById("trace-panel");
+      if (bossPanel) bossPanel.classList.add("hidden");
+      if (tracePanel && !isDailyChallenge && !isFriendModeActive) {
+        tracePanel.classList.remove("hidden");
+      }
+
+      // Roll a random event after word loads (15% chance, skip on daily)
+      if (!isDailyChallenge) {
+        scoreMultiplier = 1;
+        rollRandomEvent();
+      }
     }
   } catch (err) {
     console.error("Word Fetch Error", err);
@@ -455,13 +547,17 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
         time_taken: timeTaken,
         wrong_guesses: wrongGuesses,  // For Flawless achievement
         category: selectedCategory,   // Send category domain
-        difficulty: selectedDifficulty // Send threat level
+        difficulty: selectedDifficulty, // Send threat level
+        is_boss: isBossGame
       })
     });
     const data = await res.json();
     if (data.highest_score > highestScore) {
       highestScore = data.highest_score;
       highScoreSpan.innerText = `${highestScore}`;
+    }
+    if (data.current_streak !== undefined) {
+      currentStreak = data.current_streak;
     }
     if (data.xp !== undefined) {
       currentXp = data.xp;
@@ -484,12 +580,12 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
 }
 
 
-function renderWord() {
+function renderWord(obscure = false) {
   wordDisplay.innerHTML = "";
   currentWord.split("").forEach(letter => {
     const box = document.createElement("div");
     box.className = "letter-box";
-    if (guessedLetters.includes(letter)) {
+    if (guessedLetters.includes(letter) && !obscure) {
       box.innerText = letter;
       box?.classList.add("revealed-anim");
     } else {
@@ -497,6 +593,15 @@ function renderWord() {
     }
     wordDisplay.appendChild(box);
   });
+
+  if (isBossGame && isFogOfWarActive && !obscure && !isGameOver) {
+    if (window.fogTimeout) clearTimeout(window.fogTimeout);
+    window.fogTimeout = setTimeout(() => {
+      if (!isGameOver) {
+        renderWord(true);
+      }
+    }, 2000);
+  }
 }
 
 function renderKeyboard() {
@@ -522,10 +627,87 @@ function renderKeyboard() {
   });
 }
 
+function showCritHitToast(msg) {
+  const toast = document.createElement("div");
+  toast.innerText = msg;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff0055, #d300ff);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-weight: bold;
+    border: 1px solid #ff0055;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.6);
+    z-index: 10000;
+    pointer-events: none;
+    animation: critToastAnim 2s forwards;
+  `;
+  document.body.appendChild(toast);
+  
+  // Inject keyframe animation dynamically if it doesn't exist
+  if (!document.getElementById("crit-toast-keyframes")) {
+    const style = document.createElement("style");
+    style.id = "crit-toast-keyframes";
+    style.innerHTML = `
+      @keyframes critToastAnim {
+        0% { transform: translateY(50px) scale(0.8); opacity: 0; }
+        15% { transform: translateY(0) scale(1.1); opacity: 1; }
+        30% { transform: translateY(-5px) scale(1.0); opacity: 1; }
+        80% { transform: translateY(-10px); opacity: 1; }
+        100% { transform: translateY(-30px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  setTimeout(() => toast.remove(), 2000);
+}
+
+function handleBossTimeOut() {
+  if (isGameOver) return;
+  
+  // Shake the container as visual feedback
+  gameContainer?.classList.remove("game-container-shake");
+  void gameContainer.offsetWidth; // trigger reflow
+  gameContainer?.classList.add("game-container-shake");
+  
+  // Red overlay flash
+  if (redOverlay) {
+    redOverlay?.classList.add("active");
+    setTimeout(() => {
+      if (!isGameOver) redOverlay?.classList.remove("active");
+    }, 400);
+  }
+
+  showCritHitToast("⏳ TIME EXPIRED! -1 LIFE");
+
+  if (wrongGuesses < MAX_MISTAKES) {
+    const mapping = MISTAKE_MAPPINGS[selectedDifficulty];
+    const partsToDraw = mapping ? mapping[wrongGuesses] : null;
+    if (partsToDraw) {
+      partsToDraw.forEach(partIdx => {
+        const partEl = document.querySelector(`.part-${partIdx}`);
+        if (partEl) partEl?.classList.add("drawn");
+      });
+    }
+    wrongGuesses++;
+  }
+  checkLoss();
+}
+
 function handleGuess(letter) {
   if (isGameOver || guessedLetters.includes(letter)) return;
 
   guessedLetters.push(letter);
+
+  // Reset Boss Timer on guess if active
+  if (isBossGame && isTimeBombActive) {
+    bossTimeLeft = 15;
+  }
 
   if (currentWord.includes(letter)) {
     // Correct
@@ -533,6 +715,24 @@ function handleGuess(letter) {
     document.getElementById(`key-${letter}`)?.classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
+
+    if (isBossGame) {
+      const isRare = "ZQXJK".includes(letter);
+      const damage = isRare ? 300 : 150;
+      bossCurrentHp = Math.max(0, bossCurrentHp - damage);
+
+      const hpText = document.getElementById("boss-hp-text");
+      const hpFill = document.getElementById("boss-hp-fill");
+      if (hpText) hpText.innerText = `${bossCurrentHp} / ${bossMaxHp}`;
+      if (hpFill) hpFill.style.width = `${(bossCurrentHp / bossMaxHp) * 100}%`;
+
+      if (isRare) {
+        showCritHitToast(`🔥 CRITICAL HIT! -${damage} HP`);
+      } else {
+        showCritHitToast(`💥 HIT! -${damage} HP`);
+      }
+    }
+
     checkWin();
   } else {
     // Incorrect
@@ -540,17 +740,25 @@ function handleGuess(letter) {
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
 
-    if (wrongGuesses < MAX_MISTAKES) {
-      // BUG FIX: Guard against null difficulty (edge case on protocol change mid-game)
-      const mapping = MISTAKE_MAPPINGS[selectedDifficulty];
-      const partsToDraw = mapping ? mapping[wrongGuesses] : null;
-      if (partsToDraw) {
-        partsToDraw.forEach(partIdx => {
-          const partEl = document.querySelector(`.part-${partIdx}`);
-          if (partEl) partEl?.classList.add("drawn");
-        });
+    const isVowel = "AEIOU".includes(letter);
+    const penaltyCount = (isVowel && isBossGame && isVowelStealerActive) ? 2 : 1;
+
+    if (isBossGame && isVowel && isVowelStealerActive) {
+      showCritHitToast("🩸 VOWEL STEALER! -2 LIVES");
+    }
+
+    for (let p = 0; p < penaltyCount; p++) {
+      if (wrongGuesses < MAX_MISTAKES) {
+        const mapping = MISTAKE_MAPPINGS[selectedDifficulty];
+        const partsToDraw = mapping ? mapping[wrongGuesses] : null;
+        if (partsToDraw) {
+          partsToDraw.forEach(partIdx => {
+            const partEl = document.querySelector(`.part-${partIdx}`);
+            if (partEl) partEl?.classList.add("drawn");
+          });
+        }
+        wrongGuesses++;
       }
-      wrongGuesses++;
     }
     checkLoss();
   }
@@ -564,6 +772,19 @@ function checkWin() {
     updateScoreUI();
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(true, 150, timeTaken);
+
+    if (isBossGame) {
+      bossCurrentHp = 0;
+      const hpText = document.getElementById("boss-hp-text");
+      const hpFill = document.getElementById("boss-hp-fill");
+      if (hpText) hpText.innerText = `0 / ${bossMaxHp}`;
+      if (hpFill) hpFill.style.width = "0%";
+      if (bossTimerInterval) {
+        clearInterval(bossTimerInterval);
+        bossTimerInterval = null;
+      }
+      showCritHitToast("⚡ BOSS DEFEATED! ⚡");
+    }
 
     // Mark daily complete if this was a daily challenge
     if (isDailyChallenge && currentUserId) {
@@ -649,6 +870,10 @@ function checkWin() {
 function checkLoss() {
   if (wrongGuesses >= MAX_MISTAKES) {
     isGameOver = true;
+    if (bossTimerInterval) {
+      clearInterval(bossTimerInterval);
+      bossTimerInterval = null;
+    }
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(false, 10, timeTaken); // Save score, small XP for trying
     currentScore = 0; // Reset for next sequence
@@ -1223,6 +1448,9 @@ const ACHIEVEMENT_DATA = {
   // ── Loss Badges ──────────────────────────────────────────
   'Die Hard': { icon: '💀', desc: 'Accumulate 50 losses. Respect.', tier: 'bronze' },
   'One Below All': { icon: '🕳️', desc: '100 losses. You exist below defeat itself.', tier: 'dark' },
+  // ── Boss Battle Badges ─────────────────────────────────────
+  'Executioner\'s Bane': { icon: '⚔️', desc: 'Defeat 1 Firewall Boss.', tier: 'gold' },
+  'Arch-Nemesis': { icon: '👹', desc: 'Defeat 5 Firewall Bosses.', tier: 'platinum' },
   // ── Ultimate ─────────────────────────────────────────────
   'One Above All': { icon: '🌟', desc: 'Win 200 games. You transcend the game.', tier: 'cosmic' },
 };
