@@ -424,6 +424,11 @@ function updateAgentHUD() {
   const hud = document.getElementById("agent-hud");
   if (!hud) return;
 
+  if (!currentUser) {
+    hud.classList.add("hidden");
+    return;
+  }
+
   hud?.classList.remove("hidden");
 
   const userEl = document.getElementById("hud-user");
@@ -625,6 +630,7 @@ logoutBtn.addEventListener("click", () => {
   gameContainer?.classList.add("hidden");
   selectionScreen?.classList.add("hidden");
   loginOverlay?.classList.remove("hidden");
+  updateAgentHUD();
 });
 
 // === Sound Toggle ===

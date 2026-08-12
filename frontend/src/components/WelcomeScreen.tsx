@@ -39,19 +39,19 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
                 {phase === 2 && (
                     <div className="absolute text-cyan-400 text-2xl md:text-4xl tracking-[5px] neon-text-cyan animate-text-in font-mono text-center">
-                        ARRESTING THE MAN...
+                        CONNECTING TO THE GRID...
                     </div>
                 )}
 
                 {phase === 3 && (
                     <div className="absolute text-cyan-400 text-2xl md:text-4xl tracking-[5px] neon-text-cyan animate-text-in font-mono text-center">
-                        SETTING UP THE STAGE...
+                        SETTING UP PROTOCOLS...
                     </div>
                 )}
 
                 {phase === 4 && (
                     <div className="absolute text-cyan-400 text-2xl md:text-4xl tracking-[5px] neon-text-cyan animate-text-in font-mono text-center">
-                        THE MAN NEEDS YOU...
+                        THE SYSTEM NEEDS YOU...
                     </div>
                 )}
 
@@ -60,7 +60,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
                         <h1 className="text-white text-5xl md:text-7xl font-bold tracking-[20px] uppercase text-center 
                          drop-shadow-[0_0_30px_rgba(0,255,204,0.9)] 
                          [text-shadow:0_0_60px_rgba(0,255,204,0.5)] mb-12">
-                            THE HANG MAN
+                            TECH HANGMAN
                         </h1>
                         <button
                             onClick={onStart}

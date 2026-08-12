@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HangMan: By NJ",
+  title: "Tech Hangman",
   description: "A cyberpunk-themed technical Hangman game for software engineers.",
 };
 

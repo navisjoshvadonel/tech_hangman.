@@ -29,10 +29,10 @@ export default function Home() {
       <div id="intro-overlay" className="overlay">
         <div className="intro-sequence">
           <div className="intro-text-line" id="intro-line-1">WELCOME AGENT...</div>
-          <div className="intro-text-line" id="intro-line-2">ARRESTING THE MAN...</div>
-          <div className="intro-text-line" id="intro-line-3">SETTING UP THE STAGE...</div>
-          <div className="intro-text-line" id="intro-line-4">THE MAN NEEDS YOU...</div>
-          <div className="intro-main-title" id="intro-logo">THE HANG MAN</div>
+          <div className="intro-text-line" id="intro-line-2">CONNECTING TO THE GRID...</div>
+          <div className="intro-text-line" id="intro-line-3">SETTING UP PROTOCOLS...</div>
+          <div className="intro-text-line" id="intro-line-4">THE SYSTEM NEEDS YOU...</div>
+          <div className="intro-main-title" id="intro-logo">TECH HANGMAN</div>
         </div>
       </div>
 
@@ -48,8 +48,8 @@ export default function Home() {
       <div id="login-overlay" className="overlay hidden">
         <div className="login-wrapper">
           <div className="login-header-main">
-            <h1 className="login-main-title">HANG MAN</h1>
-            <p className="login-main-subtitle">LOGIN TO SAVE YOUR MAN</p>
+            <h1 className="login-main-title">TECH HANGMAN</h1>
+            <p className="login-main-subtitle">LOGIN TO SAVE THE AGENT</p>
           </div>
           <div className="login-content-wrapper">
             <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '420px', height: '320px', margin: '0 auto' }}>
@@ -318,7 +318,7 @@ export default function Home() {
           </div>
         </div>
         <div className="header">
-          <h1>HANG MAN</h1>
+          <h1>TECH HANGMAN</h1>
         </div>
 
         {/* TRACE / ICE Meter */}
