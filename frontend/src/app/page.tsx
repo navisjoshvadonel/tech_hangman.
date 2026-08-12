@@ -586,6 +586,12 @@ export default function Home() {
         <button id="close-leaderboard-btn-x" className="close-x-btn" title="Close Leaderboard">✕</button>
         <h3>TOP PLAYERS</h3>
 
+        {/* Real-time Indicator */}
+        <div className="lb-live-indicator" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#00ffcc', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <span className="live-dot" style={{ width: '6px', height: '6px', backgroundColor: '#00ffcc', borderRadius: '50%', display: 'inline-block' }}></span>
+          LIVE DATA FEED CONNECTED
+        </div>
+
         {/* Dynamic Domain & Threat Level Filters */}
         <div className="lb-filters" style={{ display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <select id="lb-category-select" style={{ background: '#051024', color: '#00ffcc', border: '1px solid #00ffcc', padding: '6px 12px', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: 'monospace' }}>

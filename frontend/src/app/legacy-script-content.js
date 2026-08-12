@@ -919,23 +919,46 @@ function checkLoss() {
 
 // === Leaderboard Logic ===
 let currentLeaderboardType = "score";
+let leaderboardPollInterval = null;
+let previousLeaderboardValues = {
+  score: {},
+  speed: {},
+  streak: {}
+};
 
-async function fetchAndRenderLeaderboard() {
+async function fetchAndRenderLeaderboard(isSilent = false) {
+  const bodyEl = document.getElementById("leaderboard-body");
+
+  // Render loading state only if not a silent background update
+  if (!isSilent && bodyEl) {
+    bodyEl.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #00ffcc; padding: 25px; font-family: monospace;">⚡ RETRIEVING LEADERBOARD DATA...</td></tr>`;
+  }
+
   const catSelect = document.getElementById("lb-category-select");
   const diffSelect = document.getElementById("lb-difficulty-select");
   const category = catSelect ? catSelect.value : "ALL";
   const difficulty = diffSelect ? diffSelect.value : "ALL";
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 seconds graceful timeout
+
   try {
-    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`);
+    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     currentLeaderboardData = await res.json();
-    renderLeaderboard(currentLeaderboardType);
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error("Leaderboard Error", err);
+    if (isSilent) return; // Do not disrupt UI on failed background update
   }
+
+  renderLeaderboard(currentLeaderboardType, isSilent);
 }
 
-function renderLeaderboard(type) {
+function renderLeaderboard(type, shouldFlash = false) {
   currentLeaderboardType = type;
   if (!leaderboardBody) return;
   leaderboardBody.innerHTML = "";
@@ -954,6 +977,8 @@ function renderLeaderboard(type) {
     return;
   }
 
+  const nextPrevValues = {};
+
   dataArr.forEach((entry, index) => {
     const tr = document.createElement("tr");
     let medal = `#${index + 1}`;
@@ -964,10 +989,25 @@ function renderLeaderboard(type) {
     tr.innerHTML = `
       <td style="font-weight: bold; padding: 8px;">${medal}</td>
       <td style="color: #00ffcc; font-weight: bold; padding: 8px;">${entry.username.toUpperCase()}</td>
-      <td style="padding: 8px;">${entry.val}</td>
+      <td style="padding: 8px; font-family: monospace;">${entry.val}</td>
     `;
+
+    // Apply update flash to changes during polling refreshes
+    if (shouldFlash && entry.username) {
+      const prevVal = previousLeaderboardValues[type][entry.username];
+      if (prevVal === undefined || prevVal !== entry.val) {
+        tr.classList.add("row-update-flash");
+      }
+    }
+
+    if (entry.username) {
+      nextPrevValues[entry.username] = entry.val;
+    }
+
     leaderboardBody.appendChild(tr);
   });
+
+  previousLeaderboardValues[type] = nextPrevValues;
 }
 
 lbTabs.forEach(tab => {
@@ -975,22 +1015,17 @@ lbTabs.forEach(tab => {
     lbTabs.forEach(t => t?.classList.remove("active"));
     e?.target?.classList.add("active");
     const type = e.target.getAttribute("data-leaderboard");
-    renderLeaderboard(type);
+    renderLeaderboard(type, false);
   });
 });
 
-document.getElementById("lb-category-select")?.addEventListener("change", fetchAndRenderLeaderboard);
-document.getElementById("lb-difficulty-select")?.addEventListener("change", fetchAndRenderLeaderboard);
+document.getElementById("lb-category-select")?.addEventListener("change", () => fetchAndRenderLeaderboard(false));
+document.getElementById("lb-difficulty-select")?.addEventListener("change", () => fetchAndRenderLeaderboard(false));
 
 async function openLeaderboardModal() {
   const popupEl = document.getElementById("leaderboard-popup");
-  const bodyEl = document.getElementById("leaderboard-body");
   if (popupEl) {
     popupEl.classList.remove("hidden");
-  }
-
-  if (bodyEl) {
-    bodyEl.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #00ffcc; padding: 25px; font-family: monospace;">⚡ RETRIEVING LEADERBOARD DATA...</td></tr>`;
   }
 
   const catSelect = document.getElementById("lb-category-select");
@@ -1011,13 +1046,25 @@ async function openLeaderboardModal() {
   document.querySelector('.lb-tab[data-leaderboard="score"]')?.classList.add("active");
   currentLeaderboardType = "score";
 
-  await fetchAndRenderLeaderboard();
+  await fetchAndRenderLeaderboard(false);
+
+  // Setup periodic background refresh (3s polling interval)
+  if (leaderboardPollInterval) clearInterval(leaderboardPollInterval);
+  leaderboardPollInterval = setInterval(() => {
+    fetchAndRenderLeaderboard(true);
+  }, 3000);
 }
 
 function closeLeaderboardModal() {
   const popupEl = document.getElementById("leaderboard-popup");
   if (popupEl) {
     popupEl.classList.add("hidden");
+  }
+
+  // Clear background refresh polling
+  if (leaderboardPollInterval) {
+    clearInterval(leaderboardPollInterval);
+    leaderboardPollInterval = null;
   }
 }
 
@@ -1046,7 +1093,7 @@ document.addEventListener("click", (e) => {
     tabTarget.classList.add("active");
     const type = tabTarget.getAttribute("data-leaderboard");
     if (typeof renderLeaderboard === "function") {
-      renderLeaderboard(type);
+      renderLeaderboard(type, false);
     }
     return;
   }

@@ -1252,32 +1252,52 @@ function checkLoss() {
 }
 
 // === Leaderboard Logic ===
+let leaderboardPollInterval = null;
+let previousLeaderboardValues = {
+  score: {},
+  speed: {},
+  streak: {}
+};
 
-async function fetchAndRenderLeaderboard() {
+async function fetchAndRenderLeaderboard(isSilent = false) {
   const popupEl = document.getElementById("leaderboard-popup");
   const bodyEl = document.getElementById("leaderboard-body") || leaderboardBody;
   if (!bodyEl) return;
 
-  // Render loading state
-  bodyEl.innerHTML = `
-    <tr>
-      <td colspan="3" style="padding: 24px; text-align: center; color: var(--neon-cyan); font-family: monospace;">
-        <span style="display: inline-block; animation: pulse-glow 1s infinite alternate;">⚡</span> RETRIEVING HIGH SCORES...
-      </td>
-    </tr>
-  `;
+  // Render loading state only if not a silent background update
+  if (!isSilent) {
+    bodyEl.innerHTML = `
+      <tr>
+        <td colspan="3" style="padding: 24px; text-align: center; color: var(--neon-cyan); font-family: monospace;">
+          <span style="display: inline-block; animation: pulse-glow 1s infinite alternate;">⚡</span> RETRIEVING HIGH SCORES...
+        </td>
+      </tr>
+    `;
+  }
 
   const catSelect = document.getElementById("lb-category-select");
   const diffSelect = document.getElementById("lb-difficulty-select");
   const category = catSelect ? catSelect.value : "ALL";
   const difficulty = diffSelect ? diffSelect.value : "ALL";
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 seconds graceful timeout
+
   try {
-    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`);
+    const res = await fetch(`${API_URL}/highscores?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     currentLeaderboardData = await res.json();
   } catch (err) {
-    console.warn("Leaderboard API fetch fallback triggered:", err);
+    clearTimeout(timeoutId);
+    console.warn("Leaderboard API fetch error:", err);
+
+    if (isSilent) {
+      // Gracefully exit without resetting to offline fallback if it was a background update
+      return;
+    }
 
     // Build offline fallback leaderboard from local storage
     const localUsers = JSON.parse(localStorage.getItem("hangman_offline_users") || "{}");
@@ -1318,10 +1338,10 @@ async function fetchAndRenderLeaderboard() {
     };
   }
 
-  renderLeaderboard(currentLeaderboardTab || "score");
+  renderLeaderboard(currentLeaderboardTab || "score", isSilent);
 }
 
-function renderLeaderboard(type) {
+function renderLeaderboard(type, shouldFlash = false) {
   currentLeaderboardTab = type;
   const bodyEl = document.getElementById("leaderboard-body") || leaderboardBody;
   const valHeader = document.getElementById("lb-val-header") || lbValHeader;
@@ -1348,6 +1368,7 @@ function renderLeaderboard(type) {
 
   const dataArr = currentLeaderboardData[type];
   const activeUsername = (currentUser || window.offlineAgentName || "").toUpperCase();
+  const nextPrevValues = {};
 
   dataArr.forEach((entry, index) => {
     const tr = document.createElement("tr");
@@ -1376,8 +1397,23 @@ function renderLeaderboard(type) {
       </td>
       <td style="color: var(--neon-cyan); font-family: monospace; font-weight: bold;">${valDisplay}</td>
     `;
+
+    // Apply glowing update flash to changes during polling refreshes
+    if (shouldFlash && entry.username) {
+      const prevVal = previousLeaderboardValues[type][entry.username];
+      if (prevVal === undefined || prevVal !== entry.val) {
+        tr.classList.add("row-update-flash");
+      }
+    }
+
+    if (entry.username) {
+      nextPrevValues[entry.username] = entry.val;
+    }
+
     bodyEl.appendChild(tr);
   });
+
+  previousLeaderboardValues[type] = nextPrevValues;
 }
 
 function openLeaderboardModal() {
@@ -1395,12 +1431,24 @@ function openLeaderboardModal() {
     }
   });
 
-  fetchAndRenderLeaderboard();
+  fetchAndRenderLeaderboard(false);
+
+  // Setup periodic background refresh (3s polling interval)
+  if (leaderboardPollInterval) clearInterval(leaderboardPollInterval);
+  leaderboardPollInterval = setInterval(() => {
+    fetchAndRenderLeaderboard(true);
+  }, 3000);
 }
 
 function closeLeaderboardModal() {
   const popupEl = document.getElementById("leaderboard-popup");
   if (popupEl) popupEl.classList.add("hidden");
+
+  // Clear background refresh polling
+  if (leaderboardPollInterval) {
+    clearInterval(leaderboardPollInterval);
+    leaderboardPollInterval = null;
+  }
 }
 
 // Global Event Delegation for Leaderboard Interactions
@@ -1429,7 +1477,7 @@ document.addEventListener("click", (e) => {
     tabTarget.classList.add("active");
     const type = tabTarget.getAttribute("data-leaderboard");
     if (typeof renderLeaderboard === "function") {
-      renderLeaderboard(type);
+      renderLeaderboard(type, false);
     }
     return;
   }

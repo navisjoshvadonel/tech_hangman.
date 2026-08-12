@@ -4796,6 +4796,37 @@ body {
   }
 }
 
+@keyframes live-blink {
+  0% {
+    opacity: 0.4;
+    box-shadow: 0 0 4px #00ffcc;
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 12px #00ffcc, 0 0 20px #00ffcc;
+  }
+}
+
+.live-dot {
+  animation: live-blink 1s infinite alternate;
+}
+
+@keyframes row-flash {
+  0% {
+    background-color: rgba(0, 255, 204, 0.35);
+    box-shadow: inset 0 0 15px rgba(0, 255, 204, 0.5);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0px transparent;
+  }
+}
+
+.row-update-flash {
+  animation: row-flash 2.5s ease-out;
+}
+
+
 
 
 
