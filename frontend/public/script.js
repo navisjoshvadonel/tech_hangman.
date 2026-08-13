@@ -39,6 +39,11 @@ let selectedCategory = null;
 let selectedDifficulty = null;
 let currentMode = "classic"; // classic, story, multiplayer
 let isSoundEnabled = localStorage.getItem("hangman_sound") !== "false";
+let sfxVolume = parseInt(localStorage.getItem("hangman_sfxVol") || "80");
+let bgmVolume = parseInt(localStorage.getItem("hangman_bgmVol") || "50");
+let graphicsQuality = localStorage.getItem("hangman_graphics") || "HIGH";
+let cursorStyle = localStorage.getItem("hangman_cursorStyle") || "CYBER_CYAN";
+let isScreenShakeEnabled = localStorage.getItem("hangman_screenShake") !== "false";
 let currentWordData = null;
 let storyProgress = 1;
 let currentStoryLevel = null;
@@ -633,47 +638,256 @@ logoutBtn.addEventListener("click", () => {
   updateAgentHUD();
 });
 
-// === Sound Toggle ===
+// === Sound Toggle & Settings System ===
 const soundToggle = document.getElementById("sound-toggle");
+const settingsPopup = document.getElementById("settings-popup");
+const settingsBtn = document.getElementById("settings-btn");
+const openSettingsBtn = document.getElementById("open-settings-btn");
+const closeSettingsBtn = document.getElementById("close-settings-btn");
+const closeSettingsX = document.getElementById("close-settings-x");
+
+const sfxVolInput = document.getElementById("setting-sfx-vol");
+const bgmVolInput = document.getElementById("setting-bgm-vol");
+const sfxVolLabel = document.getElementById("sfx-vol-label");
+const bgmVolLabel = document.getElementById("bgm-vol-label");
+const muteToggleBtn = document.getElementById("setting-mute-toggle");
+const screenshakeToggleBtn = document.getElementById("setting-screenshake-toggle");
+const resetSettingsBtn = document.getElementById("reset-settings-btn");
+const qualityBtns = document.querySelectorAll(".quality-btn");
+const cursorBtns = document.querySelectorAll(".cursor-btn");
+
+function applyGraphicsQuality(quality) {
+  graphicsQuality = quality;
+  localStorage.setItem("hangman_graphics", quality);
+  document.body.classList.remove("graphics-low", "graphics-medium", "graphics-high");
+  document.body.classList.add(`graphics-${quality.toLowerCase()}`);
+
+  qualityBtns.forEach(btn => {
+    if (btn.getAttribute("data-quality") === quality) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+function applyCursorStyle(style) {
+  cursorStyle = style;
+  localStorage.setItem("hangman_cursorStyle", style);
+  window.dispatchEvent(new CustomEvent("settingsChanged"));
+
+  cursorBtns.forEach(btn => {
+    if (btn.getAttribute("data-cursor") === style) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+function updateSettingsUI() {
+  if (sfxVolInput) sfxVolInput.value = sfxVolume;
+  if (bgmVolInput) bgmVolInput.value = bgmVolume;
+  if (sfxVolLabel) sfxVolLabel.innerText = `${sfxVolume}%`;
+  if (bgmVolLabel) bgmVolLabel.innerText = `${bgmVolume}%`;
+
+  if (soundToggle) {
+    soundToggle.innerText = isSoundEnabled ? "🔊" : "🔈";
+  }
+
+  if (muteToggleBtn) {
+    if (isSoundEnabled) {
+      muteToggleBtn.innerText = "AUDIO ACTIVE";
+      muteToggleBtn.classList.remove("muted");
+    } else {
+      muteToggleBtn.innerText = "AUDIO MUTED";
+      muteToggleBtn.classList.add("muted");
+    }
+  }
+
+  if (screenshakeToggleBtn) {
+    if (isScreenShakeEnabled) {
+      screenshakeToggleBtn.innerText = "ENABLED";
+      screenshakeToggleBtn.classList.add("active");
+    } else {
+      screenshakeToggleBtn.innerText = "DISABLED";
+      screenshakeToggleBtn.classList.remove("active");
+    }
+  }
+
+  applyGraphicsQuality(graphicsQuality);
+  applyCursorStyle(cursorStyle);
+}
+
+function triggerScreenShake() {
+  if (!isScreenShakeEnabled) return;
+  const gameContainer = document.getElementById("game-container");
+  if (!gameContainer) return;
+  gameContainer.classList.remove("game-container-shake");
+  void gameContainer.offsetWidth; // trigger reflow
+  gameContainer.classList.add("game-container-shake");
+}
+
+function playSfx(type) {
+  if (!isSoundEnabled || sfxVolume === 0) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const vol = (sfxVolume / 100) * 0.15;
+
+    if (type === "correct") {
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+    } else if (type === "wrong") {
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.2);
+      triggerScreenShake();
+    } else if (type === "click") {
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.05);
+    } else if (type === "win") {
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.5);
+    } else if (type === "reset") {
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+    }
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (err) {
+    console.error("Audio error:", err);
+  }
+}
+
+function openSettingsModal() {
+  updateSettingsUI();
+  settingsPopup?.classList.remove("hidden");
+  playSfx("click");
+}
+
+function closeSettingsModal() {
+  settingsPopup?.classList.add("hidden");
+  playSfx("click");
+}
+
+if (settingsBtn) settingsBtn.addEventListener("click", openSettingsModal);
+if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettingsModal);
+if (closeSettingsBtn) closeSettingsBtn.addEventListener("click", closeSettingsModal);
+if (closeSettingsX) closeSettingsX.addEventListener("click", closeSettingsModal);
+
+if (settingsPopup) {
+  settingsPopup.addEventListener("click", (e) => {
+    if (e.target === settingsPopup) closeSettingsModal();
+  });
+}
+
 if (soundToggle) {
   soundToggle.innerText = isSoundEnabled ? "🔊" : "🔈";
   soundToggle.addEventListener("click", () => {
     isSoundEnabled = !isSoundEnabled;
     localStorage.setItem("hangman_sound", isSoundEnabled);
-    soundToggle.innerText = isSoundEnabled ? "🔊" : "🔈";
+    updateSettingsUI();
     playSfx("click");
   });
 }
 
-function playSfx(type) {
-  if (!isSoundEnabled) return;
-  // Synthesized sounds for now since no assets exist
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  if (type === "correct") {
-    osc.frequency.setValueAtTime(660, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
-  } else if (type === "wrong") {
-    osc.frequency.setValueAtTime(220, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.2);
-  } else if (type === "click") {
-    osc.frequency.setValueAtTime(440, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.05);
-  } else if (type === "win") {
-    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-    osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.5);
-  }
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(0.1, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-
-  osc.start();
-  osc.stop(ctx.currentTime + 0.2);
+if (muteToggleBtn) {
+  muteToggleBtn.addEventListener("click", () => {
+    isSoundEnabled = !isSoundEnabled;
+    localStorage.setItem("hangman_sound", isSoundEnabled);
+    updateSettingsUI();
+    playSfx("click");
+  });
 }
+
+if (sfxVolInput) {
+  sfxVolInput.addEventListener("input", (e) => {
+    sfxVolume = parseInt(e.target.value);
+    localStorage.setItem("hangman_sfxVol", sfxVolume);
+    if (sfxVolLabel) sfxVolLabel.innerText = `${sfxVolume}%`;
+  });
+  sfxVolInput.addEventListener("change", () => {
+    playSfx("click");
+  });
+}
+
+if (bgmVolInput) {
+  bgmVolInput.addEventListener("input", (e) => {
+    bgmVolume = parseInt(e.target.value);
+    localStorage.setItem("hangman_bgmVol", bgmVolume);
+    if (bgmVolLabel) bgmVolLabel.innerText = `${bgmVolume}%`;
+  });
+}
+
+if (screenshakeToggleBtn) {
+  screenshakeToggleBtn.addEventListener("click", () => {
+    isScreenShakeEnabled = !isScreenShakeEnabled;
+    localStorage.setItem("hangman_screenShake", isScreenShakeEnabled);
+    updateSettingsUI();
+    if (isScreenShakeEnabled) triggerScreenShake();
+    playSfx("click");
+  });
+}
+
+qualityBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const q = btn.getAttribute("data-quality");
+    if (q) {
+      applyGraphicsQuality(q);
+      playSfx("click");
+    }
+  });
+});
+
+cursorBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const c = btn.getAttribute("data-cursor");
+    if (c) {
+      applyCursorStyle(c);
+      playSfx("click");
+    }
+  });
+});
+
+if (resetSettingsBtn) {
+  resetSettingsBtn.addEventListener("click", () => {
+    sfxVolume = 80;
+    bgmVolume = 50;
+    isSoundEnabled = true;
+    graphicsQuality = "HIGH";
+    cursorStyle = "CYBER_CYAN";
+    isScreenShakeEnabled = true;
+
+    localStorage.setItem("hangman_sfxVol", "80");
+    localStorage.setItem("hangman_bgmVol", "50");
+    localStorage.setItem("hangman_sound", "true");
+    localStorage.setItem("hangman_graphics", "HIGH");
+    localStorage.setItem("hangman_cursorStyle", "CYBER_CYAN");
+    localStorage.setItem("hangman_screenShake", "true");
+
+    updateSettingsUI();
+    playSfx("reset");
+  });
+}
+
+// Global ESC key to close open popups
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const openPopups = document.querySelectorAll("#settings-popup:not(.hidden), #achievements-popup:not(.hidden), #leaderboard-popup:not(.hidden), #cyberdeck-popup:not(.hidden), #mission-popup:not(.hidden), #districts-overlay:not(.hidden)");
+    openPopups.forEach(popup => popup.classList.add("hidden"));
+  }
+});
+
+// Initialize on script load
+applyGraphicsQuality(graphicsQuality);
+applyCursorStyle(cursorStyle);
 
 const modeBtns = {
   classic: document.getElementById("mode-classic"),
@@ -1082,6 +1296,10 @@ function handleGuess(letter) {
 
   guessedLetters.push(letter);
 
+  if (isFriendModeActive) {
+    sendFriendDuelAction('playing');
+  }
+
   if (currentWord.includes(letter)) {
     // Correct
     renderWord();
@@ -1122,6 +1340,10 @@ function checkWin() {
     playSfx("win");
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(true, 150, timeTaken);
+
+    if (isFriendModeActive) {
+      sendFriendDuelAction('won');
+    }
 
     // Mark daily complete if this was a daily challenge
     if (isDailyChallenge && currentUserId) {
@@ -1218,6 +1440,10 @@ function checkLoss() {
     submitFinalScore(false, 10, timeTaken); // Save score, small XP for trying
     currentScore = 0; // Reset for next sequence
     updateScoreUI();
+
+    if (isFriendModeActive) {
+      sendFriendDuelAction('lost');
+    }
 
     // Reveal word
     wordDisplay.innerHTML = "";
@@ -2292,6 +2518,7 @@ let activeFriendRoomCode = null;
 let friendPollInterval = null;
 let isFriendModeActive = false;
 let isHostPlayer = false;
+let lastSyncedWord = null;
 
 const modeFriendsBtn = document.getElementById("mode-friends");
 const friendsOverlay = document.getElementById("friends-room-overlay");
@@ -2308,6 +2535,60 @@ const exitDuelBtn = document.getElementById("exit-friend-duel-btn");
 const startGameBtn = document.getElementById("start-friend-game-btn");
 const nextRoundBtn = document.getElementById("next-friend-round-btn");
 const leaderboardContainer = document.getElementById("friend-room-leaderboard-container");
+
+function resetGameVariables() {
+  guessedLetters = [];
+  wrongGuesses = 0;
+  isGameOver = false;
+  hintsUsed = 0;
+  gameStartTime = Date.now();
+
+  if (hangmanParts && hangmanParts.length) {
+    hangmanParts.forEach(part => {
+      if (part) part?.classList.remove("drawn", "detach-head", "detach-body");
+    });
+  }
+
+  if (gameContainer) gameContainer?.classList.remove("win-state", "loss-state", "game-loss", "game-container-shake");
+  if (redOverlay) redOverlay?.classList.remove("active");
+  if (popup) popup?.classList.remove("show", "popup-win", "popup-loss");
+
+  const progressBar = document.getElementById("game-progress-bar");
+  if (progressBar) progressBar.style.width = "0%";
+
+  const escapeContainer = document.getElementById("escape-container");
+  if (escapeContainer) {
+    escapeContainer?.classList.add("hidden");
+    const portal = escapeContainer.querySelector('.escape-portal');
+    const runner = escapeContainer.querySelector('.escape-runner-container');
+    const particles = escapeContainer.querySelector('.particles');
+
+    if (portal) portal?.classList.remove("open");
+    if (runner) runner?.classList.remove("escaping");
+    if (particles) particles.innerHTML = "";
+  }
+}
+
+async function sendFriendDuelAction(roundStatus = 'playing') {
+  if (!isFriendModeActive || !activeFriendRoomCode || !currentUserId) return;
+  try {
+    const correctCount = (currentWord && currentWord.length) ? currentWord.split("").filter(l => guessedLetters.includes(l)).length : 0;
+    await fetch('/api/friend_duel/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: activeFriendRoomCode,
+        user_id: currentUserId,
+        mistakes: wrongGuesses,
+        score_delta: 0,
+        round_status: roundStatus,
+        round_progress: correctCount
+      })
+    });
+  } catch (err) {
+    console.error("Friend duel action sync error:", err);
+  }
+}
 
 if (modeFriendsBtn) {
   modeFriendsBtn.addEventListener("click", () => {
@@ -2346,8 +2627,9 @@ if (createRoomBtn) {
         activeFriendRoomCode = data.code;
         isHostPlayer = true;
         isFriendModeActive = true;
-        currentWord = data.word;
-        currentClue = data.clue;
+        currentWord = (data.word || "").toUpperCase();
+        currentClue = data.clue || "DECRYPT THE ENCRYPTED NODE";
+        lastSyncedWord = currentWord;
 
         setupActiveRoomUI(data);
         startFriendPolling();
@@ -2393,8 +2675,9 @@ async function handleJoinRoom() {
       activeFriendRoomCode = data.code;
       isHostPlayer = false;
       isFriendModeActive = true;
-      currentWord = data.word;
-      currentClue = data.clue;
+      currentWord = (data.word || "").toUpperCase();
+      currentClue = data.clue || "DECRYPT THE ENCRYPTED NODE";
+      lastSyncedWord = currentWord;
 
       setupActiveRoomUI(data);
       startFriendPolling();
@@ -2451,9 +2734,26 @@ async function pollFriendRoomStatus() {
     }
 
     if (displayRound) displayRound.innerText = data.round_number;
-    if (data.current_word && data.current_word !== currentWord) {
-      currentWord = data.current_word;
-      currentClue = data.current_clue;
+
+    // Check if new round word received
+    if (data.current_word) {
+      const incomingWord = data.current_word.toUpperCase();
+      if (incomingWord !== lastSyncedWord) {
+        lastSyncedWord = incomingWord;
+        currentWord = incomingWord;
+        currentClue = data.current_clue || "DECRYPT THE ENCRYPTED NODE";
+
+        // If actively in game container, trigger seamless state reset for next round
+        if (isFriendModeActive && gameContainer && !gameContainer.classList.contains("hidden")) {
+          resetGameVariables();
+          if (clueText) clueText.innerText = currentClue;
+          if (clueDisplayV2) clueDisplayV2.innerText = currentClue;
+          if (clueDisplay) clueDisplay.classList.remove("hidden");
+          renderWord();
+          renderKeyboard();
+          sendFriendDuelAction('playing');
+        }
+      }
     }
 
     const lobbyStatus = document.getElementById("friend-lobby-status");
@@ -2498,6 +2798,7 @@ function renderFriendLeaderboard(players) {
 
 if (startGameBtn) {
   startGameBtn.addEventListener("click", () => {
+    if (!currentWord) return;
     if (friendsOverlay) friendsOverlay?.classList.add("hidden");
     if (selectionScreen) selectionScreen?.classList.add("hidden");
     if (gameContainer) gameContainer?.classList.remove("hidden");
@@ -2516,9 +2817,13 @@ if (startGameBtn) {
     }
 
     resetGameVariables();
+    if (clueText) clueText.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    if (clueDisplayV2) clueDisplayV2.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    if (clueDisplay) clueDisplay.classList.remove("hidden");
+
     renderWord();
     renderKeyboard();
-    if (clueDisplayV2) clueDisplayV2.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
+    sendFriendDuelAction('playing');
   });
 }
 
@@ -2536,8 +2841,9 @@ if (nextRoundBtn) {
       });
       const data = await res.json();
       if (res.ok) {
-        currentWord = data.word;
-        currentClue = data.clue;
+        currentWord = (data.word || "").toUpperCase();
+        currentClue = data.clue || "DECRYPT THE ENCRYPTED NODE";
+        lastSyncedWord = currentWord;
         if (displayRound) displayRound.innerText = data.round_number;
 
         if (startGameBtn) startGameBtn.click();

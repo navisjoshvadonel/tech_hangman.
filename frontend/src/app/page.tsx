@@ -163,6 +163,7 @@ export default function Home() {
                   <button className="mode-btn" id="mode-story">STORY</button>
                   <button className="mode-btn" id="mode-friends" style={{ borderColor: '#00ffcc', color: '#00ffcc' }}>⚔️ PLAY WITH FRIENDS</button>
                   <button className="mode-btn open-leaderboard-btn" style={{ borderColor: '#ffd700', color: '#ffd700' }}>🏆 LEADERBOARD</button>
+                  <button className="mode-btn open-settings-btn" id="open-settings-btn" style={{ borderColor: '#00ffcc', color: '#00ffcc' }}>⚙️ SETTINGS</button>
                 </div>
 
               </div>
@@ -294,6 +295,7 @@ export default function Home() {
             <span id="current-xp" className="exp-badge">EXP: 0</span>
             <div className="status-buttons">
               <button id="sound-toggle" className="icon-btn">🔊</button>
+              <button id="settings-btn" className="icon-btn" title="System Settings">⚙️</button>
               <button id="change-protocol-btn" className="text-btn">CHANGE LEVEL</button>
               <button id="logout-btn" className="text-btn">LOGOUT</button>
             </div>
@@ -761,6 +763,76 @@ export default function Home() {
           <h3>🏆 YOUR TROPHIES</h3>
           <div id="achievements-list"></div>
           <button id="close-achievements-btn">CLOSE</button>
+        </div>
+      </div>
+
+      {/* Settings Modal */}
+      <div id="settings-popup" className="hidden">
+        <div className="settings-content">
+          <div className="settings-header">
+            <h3>⚙️ SYSTEM SETTINGS</h3>
+            <button id="close-settings-x" className="icon-btn close-x">✕</button>
+          </div>
+          <p className="settings-subtitle">AUDIO ENGINE, GRAPHICS PERFORMANCE & CURSOR INTERFACE</p>
+
+          <div className="settings-section">
+            <h4 className="settings-section-title">🔊 AUDIO ENGINE</h4>
+
+            <div className="setting-item">
+              <div className="setting-info">
+                <label htmlFor="setting-sfx-vol">SOUND EFFECTS (SFX)</label>
+                <span id="sfx-vol-label" className="setting-val-badge">80%</span>
+              </div>
+              <input type="range" id="setting-sfx-vol" min="0" max="100" defaultValue="80" className="setting-slider" />
+            </div>
+
+            <div className="setting-item">
+              <div className="setting-info">
+                <label htmlFor="setting-bgm-vol">CYBER SYNTH BGM</label>
+                <span id="bgm-vol-label" className="setting-val-badge">50%</span>
+              </div>
+              <input type="range" id="setting-bgm-vol" min="0" max="100" defaultValue="50" className="setting-slider" />
+            </div>
+
+            <div className="setting-item toggle-item">
+              <span className="setting-label">MUTE ALL AUDIO</span>
+              <button id="setting-mute-toggle" className="text-btn toggle-btn">AUDIO ACTIVE</button>
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h4 className="settings-section-title">🖥️ GRAPHICS PERFORMANCE</h4>
+            <div className="setting-item">
+              <span className="setting-label">RENDER QUALITY</span>
+              <div className="quality-options">
+                <button className="quality-btn active" data-quality="HIGH">ULTRA NEON</button>
+                <button className="quality-btn" data-quality="MEDIUM">BALANCED</button>
+                <button className="quality-btn" data-quality="LOW">PERFORMANCE (LOW)</button>
+              </div>
+            </div>
+            <div className="setting-item toggle-item">
+              <span className="setting-label">SCREEN SHAKE EFFECTS</span>
+              <button id="setting-screenshake-toggle" className="text-btn toggle-btn active">ENABLED</button>
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <h4 className="settings-section-title">🖱️ CYBER CURSOR SKINS</h4>
+            <div className="setting-item">
+              <span className="setting-label">CURSOR STYLE</span>
+              <div className="cursor-options">
+                <button className="cursor-btn active" data-cursor="CYBER_CYAN" style={{ color: '#00ffcc', borderColor: '#00ffcc' }}>🩵 CYAN NEON</button>
+                <button className="cursor-btn" data-cursor="MATRIX_GREEN" style={{ color: '#00ff66', borderColor: '#00ff66' }}>💚 MATRIX GREEN</button>
+                <button className="cursor-btn" data-cursor="SYNTHWAVE_PINK" style={{ color: '#ff00ff', borderColor: '#ff00ff' }}>🩷 SYNTHWAVE PINK</button>
+                <button className="cursor-btn" data-cursor="SYSTEM">🖥️ OS DEFAULT</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="settings-actions">
+            <button id="reset-settings-btn" className="text-btn danger-btn">RESET DEFAULT</button>
+            <button id="close-settings-btn" className="text-btn highlight-btn">APPLY & CLOSE</button>
+          </div>
         </div>
       </div>
     </>

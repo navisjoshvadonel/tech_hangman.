@@ -1,13 +1,31 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 export const CustomCursor: React.FC = () => {
     const dotRef = useRef<HTMLDivElement>(null);
     const outlineRef = useRef<HTMLDivElement>(null);
     const bracketsRef = useRef<HTMLDivElement>(null);
 
+    const [cursorStyle, setCursorStyle] = useState<string>('CYBER_CYAN');
+
     useEffect(() => {
+        const updateSettings = () => {
+            const savedStyle = localStorage.getItem('hangman_cursorStyle') || 'CYBER_CYAN';
+            setCursorStyle(savedStyle);
+        };
+
+        updateSettings();
+
+        window.addEventListener('settingsChanged', updateSettings);
+        return () => {
+            window.removeEventListener('settingsChanged', updateSettings);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (cursorStyle === 'SYSTEM') return;
+
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
         let outlineX = mouseX;
@@ -19,12 +37,19 @@ export const CustomCursor: React.FC = () => {
             mouseY = e.clientY;
         };
 
+        const getColorHex = () => {
+            if (cursorStyle === 'MATRIX_GREEN') return '#00ff66';
+            if (cursorStyle === 'SYNTHWAVE_PINK') return '#ff00ff';
+            return '#00ffcc';
+        };
+
         const onMouseDown = () => {
             isClicking = true;
+            const color = getColorHex();
             if (dotRef.current) dotRef.current.style.transform = `translate(-50%, -50%) scale(1.5)`;
             if (outlineRef.current) {
                 outlineRef.current.style.transform = `translate(-50%, -50%) scale(0.8)`;
-                outlineRef.current.style.backgroundColor = `rgba(0, 255, 204, 0.2)`;
+                outlineRef.current.style.backgroundColor = color === '#ff00ff' ? 'rgba(255, 0, 255, 0.2)' : color === '#00ff66' ? 'rgba(0, 255, 102, 0.2)' : 'rgba(0, 255, 204, 0.2)';
             }
         };
 
@@ -44,9 +69,8 @@ export const CustomCursor: React.FC = () => {
         let animationFrameId: number;
 
         const animate = () => {
-            // Lerp for smooth outline follow
-            outlineX += (mouseX - outlineX) * 0.15;
-            outlineY += (mouseY - outlineY) * 0.15;
+            outlineX += (mouseX - outlineX) * 0.18;
+            outlineY += (mouseY - outlineY) * 0.18;
 
             if (dotRef.current) {
                 if (!isClicking) {
@@ -78,19 +102,40 @@ export const CustomCursor: React.FC = () => {
             window.removeEventListener('mouseup', onMouseUp);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [cursorStyle]);
+
+    if (cursorStyle === 'SYSTEM') {
+        return (
+            <style dangerouslySetInnerHTML={{
+                __html: `* { cursor: auto !important; }`
+            }} />
+        );
+    }
+
+    const themeColor = cursorStyle === 'MATRIX_GREEN' ? '#00ff66' : cursorStyle === 'SYNTHWAVE_PINK' ? '#ff00ff' : '#00ffcc';
+    const bgGlow = cursorStyle === 'MATRIX_GREEN' ? 'rgba(0, 255, 102, 0.4)' : cursorStyle === 'SYNTHWAVE_PINK' ? 'rgba(255, 0, 255, 0.4)' : 'rgba(0, 255, 204, 0.4)';
 
     return (
         <>
             <div
                 ref={dotRef}
-                className="pointer-events-none fixed z-[100000000] w-2 h-2 rounded-full bg-cyan-400 drop-shadow-[0_0_10px_var(--neon-cyan)] transition-transform duration-100 ease-in-out hidden md:block mix-blend-screen"
-                style={{ left: '-10px', top: '-10px', boxShadow: '0 0 10px #00ffcc, 0 0 20px #00ffcc' }}
+                className="pointer-events-none fixed z-[100000000] w-2 h-2 rounded-full transition-transform duration-100 ease-in-out hidden md:block mix-blend-screen"
+                style={{
+                    left: '-10px',
+                    top: '-10px',
+                    backgroundColor: themeColor,
+                    boxShadow: `0 0 10px ${themeColor}, 0 0 20px ${themeColor}`
+                }}
             />
             <div
                 ref={outlineRef}
-                className="pointer-events-none fixed z-[99999999] w-10 h-10 border border-cyan-400 rounded-full transition-[width,height,background-color,border-width,transform] duration-200 ease-out hidden md:block mix-blend-screen"
-                style={{ left: '-20px', top: '-20px', boxShadow: '0 0 15px rgba(0, 255, 204, 0.4)' }}
+                className="pointer-events-none fixed z-[99999999] w-10 h-10 border rounded-full transition-[width,height,background-color,border-width,transform] duration-200 ease-out hidden md:block mix-blend-screen"
+                style={{
+                    left: '-20px',
+                    top: '-20px',
+                    borderColor: themeColor,
+                    boxShadow: `0 0 15px ${bgGlow}`
+                }}
             />
             {/* HUD Brackets */}
             <div
@@ -98,18 +143,12 @@ export const CustomCursor: React.FC = () => {
                 className="pointer-events-none fixed z-[99999998] w-14 h-14 hidden md:block"
                 style={{ left: '-50px', top: '-50px' }}
             >
-                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-cyan-400 opacity-50"></div>
-                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-cyan-400 opacity-50"></div>
-                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-cyan-400 opacity-50"></div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-cyan-400 opacity-50"></div>
+                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 opacity-50" style={{ borderColor: themeColor }}></div>
+                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 opacity-50" style={{ borderColor: themeColor }}></div>
+                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 opacity-50" style={{ borderColor: themeColor }}></div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 opacity-50" style={{ borderColor: themeColor }}></div>
             </div>
 
-            {/* 
-        Tailwind global styles handle the pointer hiding.
-        Interactive elements like buttons should apply the 'hover' classes
-        globally or locally. In React, since we can't easily query all elements efficiently 
-        every frame, we're building the base styles into the cursor and relying on standard CSS for hover if needed.
-      */}
             <style dangerouslySetInnerHTML={{
                 __html: `
         * { cursor: none !important; }
@@ -119,9 +158,9 @@ export const CustomCursor: React.FC = () => {
         input:hover ~ .cursor-outline {
             width: 60px !important;
             height: 60px !important;
-            background-color: rgba(0, 255, 204, 0.1) !important;
+            background-color: ${bgGlow} !important;
             border-width: 3px !important;
-            box-shadow: 0 0 25px rgba(0, 255, 204, 0.6) !important;
+            box-shadow: 0 0 25px ${themeColor} !important;
         }
         
         @media screen and (max-width: 768px) {
