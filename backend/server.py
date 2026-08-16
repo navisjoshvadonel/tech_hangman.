@@ -329,12 +329,13 @@ def init_db():
     # NEW: Words table for massive database
     execute_query(c, '''
         CREATE TABLE IF NOT EXISTS Words (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            word VARCHAR(255) UNIQUE,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT,
             hint TEXT,
-            category VARCHAR(255),
-            difficulty VARCHAR(255),
-            description TEXT
+            category TEXT,
+            difficulty TEXT,
+            description TEXT,
+            UNIQUE(word, category, difficulty)
         )
     ''')
 
@@ -488,28 +489,52 @@ def init_db():
     
     # NEW: Self-healing check for words (Always sync to guarantee all words are reflected)
     from words import CATEGORIZED_WORDS
-    total_in_script = sum(len(word_list) for cat in CATEGORIZED_WORDS.values() for word_list in cat.values())
-    
-    execute_query(c, 'SELECT COUNT(*) FROM Words')
-    res = c.fetchone()
-    count = 0
-    if res:
-        count = row_to_tuple(res)[0]
-    
-    if count < total_in_script:
-        print(f"WORDS SYNC: DB has {count}, Script has {total_in_script}. Syncing...")
-        for category, difficulties in CATEGORIZED_WORDS.items():
-            for difficulty, word_list in difficulties.items():
-                for item in word_list:
-                    try:
-                        execute_query(c, '''
-                            INSERT INTO Words (word, hint, category, difficulty, description)
-                            VALUES (?, ?, ?, ?, ?)
-                        ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
-                    except Exception:
-                        continue # Skip duplicates
-        conn.commit()
-        print(f"POPULATION COMPLETE: Words synced.")
+
+    # Ensure schema is upgraded if old UNIQUE(word) constraint exists
+    try:
+        execute_query(c, "SELECT sql FROM sqlite_master WHERE type='table' AND name='Words'")
+        w_schema = c.fetchone()
+        w_sql = row_to_tuple(w_schema)[0] if w_schema else ""
+        if "UNIQUE(word, category, difficulty)" not in w_sql and "UNIQUE (word, category, difficulty)" not in w_sql:
+            print("MIGRATION: Upgrading Words table schema to UNIQUE(word, category, difficulty)...")
+            execute_query(c, "PRAGMA foreign_keys=OFF")
+            execute_query(c, '''
+                CREATE TABLE IF NOT EXISTS Words_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    word TEXT,
+                    hint TEXT,
+                    category TEXT,
+                    difficulty TEXT,
+                    description TEXT,
+                    UNIQUE(word, category, difficulty)
+                )
+            ''')
+            execute_query(c, '''
+                INSERT OR IGNORE INTO Words_new (id, word, hint, category, difficulty, description)
+                SELECT id, word, hint, category, difficulty, description FROM Words
+            ''')
+            execute_query(c, "DROP TABLE Words")
+            execute_query(c, "ALTER TABLE Words_new RENAME TO Words")
+            execute_query(c, "PRAGMA foreign_keys=ON")
+            conn.commit()
+    except Exception as _schema_err:
+        print(f"MIGRATION NOTICE: {_schema_err}")
+
+    for category, difficulties in CATEGORIZED_WORDS.items():
+        for difficulty, word_list in difficulties.items():
+            for item in word_list:
+                try:
+                    execute_query(c, '''
+                        INSERT INTO Words (word, hint, category, difficulty, description)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(word, category, difficulty) DO UPDATE SET
+                            hint = excluded.hint,
+                            description = excluded.description
+                    ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
+                except Exception:
+                    continue
+    conn.commit()
+    print("POPULATION COMPLETE: Words synced.")
         
     conn.close()
 
@@ -785,6 +810,12 @@ def get_word():
                 available_words = [w for w in available_words if w["word"] not in legacy_guessed]
     except:
         pass
+
+    # Filter out words explicitly excluded via query param (e.g. from frontend local tracking)
+    exclude_param = request.args.get('exclude', '')
+    if exclude_param:
+        excluded_set = set(w.strip().upper() for w in exclude_param.split(',') if w.strip())
+        available_words = [w for w in available_words if w["word"].upper() not in excluded_set]
 
     # If the stack completes a cycle (no available words left)
     if not available_words:

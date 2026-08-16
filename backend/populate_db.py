@@ -32,10 +32,12 @@ def populate():
                     execute_query(c, '''
                         INSERT INTO Words (word, hint, category, difficulty, description)
                         VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(word, category, difficulty) DO UPDATE SET
+                            hint = excluded.hint,
+                            description = excluded.description
                     ''', (word, hint, category, difficulty, description))
                     count += 1
                 except Exception:
-                    # Skip duplicate words
                     pass
     
     conn.commit()
