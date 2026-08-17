@@ -4,6 +4,7 @@ const API_URL = "/api";
 let currentWord = "";
 let guessedLetters = [];
 let wrongGuesses = 0;
+let recentWords = [];
 let MAX_MISTAKES = 10;
 const MISTAKE_MAPPINGS = {
   // 12 mistakes: Some misses do not draw any new limbs
@@ -1067,15 +1068,25 @@ async function initGame() {
 
   // Fetch Word from Python Backend (Smart Anti-Repetition)
   try {
-    let url = `${API_URL}/word?user_id=${currentUserId}`;
-    if (selectedCategory && selectedCategory !== "RANDOM") url += `&category=${selectedCategory}`;
-    if (selectedDifficulty) url += `&difficulty=${selectedDifficulty}`;
+    const seenWords = Array.from(new Set(recentWords.filter(Boolean)));
+    const excludeList = [...seenWords];
 
     if (currentUserId === "offline") {
       const localData = window.loadOfflineUser(window.offlineAgentName);
       if (localData.solved_words && localData.solved_words.length > 0) {
-        url += `&exclude=${encodeURIComponent(localData.solved_words.join(','))}`;
+        localData.solved_words.forEach(word => {
+          if (word) excludeList.push(String(word).toUpperCase());
+        });
       }
+    }
+
+    let url = `${API_URL}/word?user_id=${currentUserId}`;
+    if (selectedCategory && selectedCategory !== "RANDOM") url += `&category=${selectedCategory}`;
+    if (selectedDifficulty) url += `&difficulty=${selectedDifficulty}`;
+
+    const uniqueExclude = [...new Set(excludeList.filter(Boolean).map(word => String(word).toUpperCase()))];
+    if (uniqueExclude.length > 0) {
+      url += `&exclude=${encodeURIComponent(uniqueExclude.join(','))}`;
     }
 
     const res = await fetch(url);
@@ -1098,7 +1109,11 @@ async function initGame() {
     }
 
     currentWordData = data;
-    currentWord = data.word.toUpperCase();
+    currentWord = String(data.word || "").toUpperCase();
+    if (currentWord) {
+      recentWords.push(currentWord);
+      if (recentWords.length > 30) recentWords.shift();
+    }
     clueText.innerText = data.clue || "DECRYPTED_SIGNAL_STABLE";
 
     // Track category progress
