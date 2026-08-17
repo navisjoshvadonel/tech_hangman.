@@ -524,14 +524,23 @@ def init_db():
         for difficulty, word_list in difficulties.items():
             for item in word_list:
                 try:
-                    execute_query(c, '''
-                        INSERT INTO Words (word, hint, category, difficulty, description)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT(word, category, difficulty) DO UPDATE SET
-                            hint = excluded.hint,
-                            description = excluded.description
-                    ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
-                except Exception:
+                    if is_mysql:
+                        execute_query(c, '''
+                            INSERT INTO Words (word, hint, category, difficulty, description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                hint = VALUES(hint),
+                                description = VALUES(description)
+                        ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
+                    else:
+                        execute_query(c, '''
+                            INSERT INTO Words (word, hint, category, difficulty, description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(word, category, difficulty) DO UPDATE SET
+                                hint = excluded.hint,
+                                description = excluded.description
+                        ''', (item['word'].upper(), item['clue'], category, difficulty, item.get('description', '')))
+                except Exception as e:
                     continue
     conn.commit()
     print("POPULATION COMPLETE: Words synced.")

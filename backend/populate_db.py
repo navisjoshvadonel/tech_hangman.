@@ -29,13 +29,25 @@ def populate():
                 description = word_obj.get('description', '')
                 
                 try:
-                    execute_query(c, '''
-                        INSERT INTO Words (word, hint, category, difficulty, description)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT(word, category, difficulty) DO UPDATE SET
-                            hint = excluded.hint,
-                            description = excluded.description
-                    ''', (word, hint, category, difficulty, description))
+                    conn_class_name = conn.__class__.__name__
+                    is_mysql = 'mysql' in conn_class_name.lower() or 'CMySQL' in conn_class_name
+                    
+                    if is_mysql:
+                        execute_query(c, '''
+                            INSERT INTO Words (word, hint, category, difficulty, description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                                hint = VALUES(hint),
+                                description = VALUES(description)
+                        ''', (word, hint, category, difficulty, description))
+                    else:
+                        execute_query(c, '''
+                            INSERT INTO Words (word, hint, category, difficulty, description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(word, category, difficulty) DO UPDATE SET
+                                hint = excluded.hint,
+                                description = excluded.description
+                        ''', (word, hint, category, difficulty, description))
                     count += 1
                 except Exception:
                     pass
