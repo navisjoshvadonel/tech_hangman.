@@ -6,6 +6,8 @@ let guessedLetters = [];
 let wrongGuesses = 0;
 let recentWords = [];
 let MAX_MISTAKES = 10;
+const MAX_LOGIN_ANIMATIONS = 18;
+const loginMatrixLoops = [];
 const MISTAKE_MAPPINGS = {
   // 12 mistakes: Some misses do not draw any new limbs
   EASY: [[0], [1], [], [2], [3], [], [4], [5], [6], [7], [8], [9]],
@@ -222,6 +224,11 @@ function playIntroSequence() {
   }, 10000);
 }
 
+function cleanupLoginMatrix() {
+  loginMatrixLoops.forEach(clearInterval);
+  loginMatrixLoops.length = 0;
+}
+
 // === Interactive Decryption & Popping Hangman Matrix Animation for Login Page ===
 (function initLoginHangmanMatrix() {
   const container = document.getElementById("matrix-popping-words");
@@ -229,6 +236,8 @@ function playIntroSequence() {
     setTimeout(initLoginHangmanMatrix, 200);
     return;
   }
+
+  cleanupLoginMatrix();
 
   // Looping stickman parts sequence
   const parts = [
@@ -244,7 +253,7 @@ function playIntroSequence() {
   let glitchMode = false;
 
   // Animate stickman parts loop
-  setInterval(() => {
+  const stickmanLoop = setInterval(() => {
     const loginOverlay = document.getElementById("login-overlay");
     if (!loginOverlay || loginOverlay?.classList.contains("hidden")) return;
 
@@ -276,6 +285,7 @@ function playIntroSequence() {
       }
     }
   }, 1200);
+  loginMatrixLoops.push(stickmanLoop);
 
   // Pop-words list
   const matrixWordsList = [
@@ -285,7 +295,7 @@ function playIntroSequence() {
   ];
 
   // Spawn popping words or letters
-  setInterval(() => {
+  const spawnLoop = setInterval(() => {
     const loginOverlay = document.getElementById("login-overlay");
     if (!loginOverlay || loginOverlay?.classList.contains("hidden")) return;
 
@@ -297,12 +307,17 @@ function playIntroSequence() {
       const randomChar = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
       spawnMatrixLetter(randomChar);
     }
-  }, 700);
+  }, 900);
+  loginMatrixLoops.push(spawnLoop);
 
   function spawnMatrixWord(word) {
+    if (container.children.length >= MAX_LOGIN_ANIMATIONS) {
+      container.firstElementChild?.remove();
+    }
+
     const wordEl = document.createElement("div");
     wordEl.className = "matrix-word";
-    
+
     // Position randomly within container
     const x = Math.random() * 65 + 5; // 5% to 70%
     const y = Math.random() * 55 + 25; // 25% to 80%
@@ -335,6 +350,10 @@ function playIntroSequence() {
   }
 
   function spawnMatrixLetter(char) {
+    if (container.children.length >= MAX_LOGIN_ANIMATIONS) {
+      container.firstElementChild?.remove();
+    }
+
     const letterEl = document.createElement("div");
     letterEl.className = "matrix-word single-letter";
     const x = Math.random() * 85 + 5;
@@ -349,6 +368,8 @@ function playIntroSequence() {
     }, 3000);
   }
 })();
+
+window.addEventListener("beforeunload", cleanupLoginMatrix);
 
 
 // === Tab Switching ===
@@ -2554,6 +2575,7 @@ const leaderboardContainer = document.getElementById("friend-room-leaderboard-co
 function resetGameVariables() {
   guessedLetters = [];
   wrongGuesses = 0;
+  currentScore = 0;
   isGameOver = false;
   hintsUsed = 0;
   gameStartTime = Date.now();
@@ -2588,6 +2610,7 @@ async function sendFriendDuelAction(roundStatus = 'playing') {
   if (!isFriendModeActive || !activeFriendRoomCode || !currentUserId) return;
   try {
     const correctCount = (currentWord && currentWord.length) ? currentWord.split("").filter(l => guessedLetters.includes(l)).length : 0;
+    const scoreDelta = Math.max(0, Number(currentScore) || 0);
     await fetch('/api/friend_duel/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2595,11 +2618,14 @@ async function sendFriendDuelAction(roundStatus = 'playing') {
         code: activeFriendRoomCode,
         user_id: currentUserId,
         mistakes: wrongGuesses,
-        score_delta: 0,
+        score_delta: scoreDelta,
         round_status: roundStatus,
         round_progress: correctCount
       })
     });
+    if (typeof fetchAndRenderLeaderboard === 'function') {
+      setTimeout(() => fetchAndRenderLeaderboard(true), 250);
+    }
   } catch (err) {
     console.error("Friend duel action sync error:", err);
   }
@@ -2713,6 +2739,21 @@ function setupActiveRoomUI(data) {
 
   if (displayCode) displayCode.innerText = `${data.code} 📋`;
   if (displayRound) displayRound.innerText = data.round_number || 1;
+
+  const roomWord = String((data && (data.current_word || data.word)) || currentWord || '').toUpperCase();
+  const roomClue = data && (data.current_clue || data.clue) ? (data.current_clue || data.clue) : currentClue || 'DECRYPT THE ENCRYPTED NODE';
+  if (roomWord) {
+    currentWord = roomWord;
+    currentClue = roomClue;
+    lastSyncedWord = roomWord;
+    if (clueText) clueText.innerText = currentClue;
+    if (clueDisplayV2) clueDisplayV2.innerText = currentClue;
+    if (gameContainer && !gameContainer.classList.contains('hidden')) {
+      resetGameVariables();
+      renderWord();
+      renderKeyboard();
+    }
+  }
 }
 
 if (displayCode) {
@@ -2769,6 +2810,11 @@ async function pollFriendRoomStatus() {
           sendFriendDuelAction('playing');
         }
       }
+    }
+
+    if (data.current_word && !gameContainer?.classList.contains('hidden')) {
+      if (clueText) clueText.innerText = data.current_clue || currentClue || 'DECRYPT THE ENCRYPTED NODE';
+      if (clueDisplayV2) clueDisplayV2.innerText = data.current_clue || currentClue || 'DECRYPT THE ENCRYPTED NODE';
     }
 
     const lobbyStatus = document.getElementById("friend-lobby-status");

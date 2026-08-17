@@ -2427,13 +2427,32 @@ def friend_duel_action():
 
         new_wins = old_wins + 1 if (round_status == 'won' and prev_round_status != 'won') else old_wins
         new_losses = old_losses + 1 if (round_status == 'lost' and prev_round_status != 'lost') else old_losses
-        new_score = max(0, old_score + score_delta)
+        new_score = max(0, old_score + int(score_delta or 0))
 
         execute_query(c, '''
             UPDATE FriendRoomPlayers
             SET score = ?, mistakes = ?, wins = ?, losses = ?, round_progress = ?, round_status = ?, last_seen = ?
             WHERE room_code = ? AND user_id = ?
         ''', (new_score, mistakes, new_wins, new_losses, round_progress, round_status, now_str, code, user_id))
+
+        execute_query(c, 'SELECT highest_score, total_wins, total_losses FROM Users WHERE id = ?', (user_id,))
+        user_row = c.fetchone()
+        if user_row:
+            user_d = row_to_dict(user_row, c)
+            user_high = user_d.get('highest_score') or 0
+            user_wins = user_d.get('total_wins') or 0
+            user_losses = user_d.get('total_losses') or 0
+            if round_status == 'won' and prev_round_status != 'won':
+                user_wins += 1
+            if round_status == 'lost' and prev_round_status != 'lost':
+                user_losses += 1
+            if new_score > user_high:
+                user_high = new_score
+            execute_query(c, '''
+                UPDATE Users
+                SET highest_score = ?, total_wins = ?, total_losses = ?
+                WHERE id = ?
+            ''', (user_high, user_wins, user_losses, user_id))
 
         conn.commit()
         conn.close()
