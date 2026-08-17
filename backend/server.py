@@ -492,31 +492,32 @@ def init_db():
 
     # Ensure schema is upgraded if old UNIQUE(word) constraint exists
     try:
-        execute_query(c, "SELECT sql FROM sqlite_master WHERE type='table' AND name='Words'")
-        w_schema = c.fetchone()
-        w_sql = row_to_tuple(w_schema)[0] if w_schema else ""
-        if "UNIQUE(word, category, difficulty)" not in w_sql and "UNIQUE (word, category, difficulty)" not in w_sql:
-            print("MIGRATION: Upgrading Words table schema to UNIQUE(word, category, difficulty)...")
-            execute_query(c, "PRAGMA foreign_keys=OFF")
-            execute_query(c, '''
-                CREATE TABLE IF NOT EXISTS Words_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    word TEXT,
-                    hint TEXT,
-                    category TEXT,
-                    difficulty TEXT,
-                    description TEXT,
-                    UNIQUE(word, category, difficulty)
-                )
-            ''')
-            execute_query(c, '''
-                INSERT OR IGNORE INTO Words_new (id, word, hint, category, difficulty, description)
-                SELECT id, word, hint, category, difficulty, description FROM Words
-            ''')
-            execute_query(c, "DROP TABLE Words")
-            execute_query(c, "ALTER TABLE Words_new RENAME TO Words")
-            execute_query(c, "PRAGMA foreign_keys=ON")
-            conn.commit()
+        if not is_mysql:
+            execute_query(c, "SELECT sql FROM sqlite_master WHERE type='table' AND name='Words'")
+            w_schema = c.fetchone()
+            w_sql = row_to_tuple(w_schema)[0] if w_schema else ""
+            if "UNIQUE(word, category, difficulty)" not in w_sql and "UNIQUE (word, category, difficulty)" not in w_sql:
+                print("MIGRATION: Upgrading Words table schema to UNIQUE(word, category, difficulty)...")
+                execute_query(c, "PRAGMA foreign_keys=OFF")
+                execute_query(c, '''
+                    CREATE TABLE IF NOT EXISTS Words_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        word TEXT,
+                        hint TEXT,
+                        category TEXT,
+                        difficulty TEXT,
+                        description TEXT,
+                        UNIQUE(word, category, difficulty)
+                    )
+                ''')
+                execute_query(c, '''
+                    INSERT OR IGNORE INTO Words_new (id, word, hint, category, difficulty, description)
+                    SELECT id, word, hint, category, difficulty, description FROM Words
+                ''')
+                execute_query(c, "DROP TABLE Words")
+                execute_query(c, "ALTER TABLE Words_new RENAME TO Words")
+                execute_query(c, "PRAGMA foreign_keys=ON")
+                conn.commit()
     except Exception as _schema_err:
         print(f"MIGRATION NOTICE: {_schema_err}")
 
@@ -552,14 +553,35 @@ def init_db():
     _idx_conn = get_db_connection()
     _idx_c = get_cursor(_idx_conn)
     try:
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_cat_diff ON Words(category, difficulty)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_diff ON Words(difficulty)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user ON UserWordProgress(user_id)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user_word ON UserWordProgress(user_id, word_id)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_username ON Users(username)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_xp ON Users(xp DESC)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_score ON Users(highest_score DESC)')
-        execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_missionruns_key ON MissionRuns(mission_key, score DESC)')
+        _idx_conn_class_name = _idx_conn.__class__.__name__
+        _is_mysql_idx = 'mysql' in _idx_conn_class_name.lower() or 'CMySQL' in _idx_conn_class_name
+        
+        if _is_mysql_idx:
+            # MySQL handles CREATE INDEX differently and IF NOT EXISTS was added in 8.0, dropping back to catch exceptions
+            mysql_indexes = [
+                'CREATE INDEX idx_words_cat_diff ON Words(category(64), difficulty(64))',
+                'CREATE INDEX idx_words_diff ON Words(difficulty(64))',
+                'CREATE INDEX idx_uwp_user ON UserWordProgress(user_id)',
+                'CREATE INDEX idx_uwp_user_word ON UserWordProgress(user_id, word_id)',
+                'CREATE INDEX idx_users_username ON Users(username)',
+                'CREATE INDEX idx_users_xp ON Users(xp)',
+                'CREATE INDEX idx_users_score ON Users(highest_score)',
+                'CREATE INDEX idx_missionruns_key ON MissionRuns(mission_key(64), score)'
+            ]
+            for idx_query in mysql_indexes:
+                try:
+                    execute_query(_idx_c, idx_query)
+                except Exception:
+                    pass
+        else:
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_cat_diff ON Words(category, difficulty)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_words_diff ON Words(difficulty)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user ON UserWordProgress(user_id)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_uwp_user_word ON UserWordProgress(user_id, word_id)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_username ON Users(username)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_xp ON Users(xp DESC)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_users_score ON Users(highest_score DESC)')
+            execute_query(_idx_c, 'CREATE INDEX IF NOT EXISTS idx_missionruns_key ON MissionRuns(mission_key, score DESC)')
         _idx_conn.commit()
         print("INDEXES: Performance indexes applied.")
     except Exception as e:
