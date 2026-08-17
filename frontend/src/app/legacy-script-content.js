@@ -715,6 +715,33 @@ function handleBossTimeOut() {
   checkLoss();
 }
 
+function sendFriendDuelAction(scoreDelta = 0, statusOverride = null) {
+  if (!activeFriendRoomCode) return;
+  const alphabetic = currentWord.split('').filter(l => /[A-Z]/.test(l));
+  const uniqueChars = new Set(alphabetic);
+  const correctGuesses = guessedLetters.filter(l => uniqueChars.has(l));
+  const progressPercent = uniqueChars.size === 0 ? 0 : Math.floor((correctGuesses.length / uniqueChars.size) * 100);
+  
+  let status = 'playing';
+  if (isGameOver) {
+      status = (wrongGuesses >= MAX_MISTAKES) ? 'lost' : 'won';
+  }
+  if (statusOverride) status = statusOverride;
+
+  fetch('/api/friend_duel/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: activeFriendRoomCode,
+      user_id: window.currentUserId || 1,
+      mistakes: wrongGuesses,
+      score_delta: scoreDelta,
+      round_status: status,
+      round_progress: progressPercent
+    })
+  }).catch(() => {});
+}
+
 function handleGuess(letter) {
   if (isGameOver || guessedLetters.includes(letter)) return;
 
@@ -731,6 +758,7 @@ function handleGuess(letter) {
     document.getElementById(`key-${letter}`)?.classList.add("correct", "disabled");
     currentScore += 100; // Reward per correct letter
     updateScoreUI();
+    sendFriendDuelAction(100);
 
     if (isBossGame) {
       const isRare = "ZQXJK".includes(letter);
@@ -755,6 +783,7 @@ function handleGuess(letter) {
     document.getElementById(`key-${letter}`)?.classList.add("wrong", "disabled");
     currentScore = Math.max(0, currentScore - 50); // 50pt penalty per wrong guess
     updateScoreUI();
+    sendFriendDuelAction(-50);
 
     const isVowel = "AEIOU".includes(letter);
     const penaltyCount = (isVowel && isBossGame && isVowelStealerActive) ? 2 : 1;
@@ -786,6 +815,7 @@ function checkWin() {
     isGameOver = true;
     currentScore += 1000;
     updateScoreUI();
+    sendFriendDuelAction(1000, 'won');
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(true, 150, timeTaken);
 
@@ -886,6 +916,7 @@ function checkWin() {
 function checkLoss() {
   if (wrongGuesses >= MAX_MISTAKES) {
     isGameOver = true;
+    sendFriendDuelAction(0, 'lost');
     if (bossTimerInterval) {
       clearInterval(bossTimerInterval);
       bossTimerInterval = null;
