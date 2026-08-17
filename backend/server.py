@@ -931,9 +931,14 @@ def submit_score():
     
     # Record word progress on win
     word_text = data.get('word')
+    category_text = data.get('category')
     if is_win and word_text:
-        # Resolve word ID
-        execute_query(c, 
+        # Resolve word ID precisely
+        if category_text:
+            execute_query(c, 
+'SELECT id FROM Words WHERE word = ? AND category = ? AND difficulty = ?', (word_text.upper(), category_text.upper(), difficulty))
+        else:
+            execute_query(c, 
 'SELECT id FROM Words WHERE word = ?', (word_text.upper(),))
         w_row = c.fetchone()
         if w_row:

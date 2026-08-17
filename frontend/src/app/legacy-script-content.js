@@ -338,7 +338,7 @@ if (hintBtn) {
         return;
       }
 
-      const unGuessed = currentWord.split("").filter(l => !guessedLetters.includes(l));
+      const unGuessed = currentWord.split("").filter(l => /[A-Z]/.test(l) && !guessedLetters.includes(l));
       if (unGuessed.length > 0) {
         currentScore -= 10; // Hint costs 10 points
         updateScoreUI();
@@ -590,12 +590,22 @@ function renderWord(obscure = false) {
   wordDisplay.innerHTML = "";
   currentWord.split("").forEach(letter => {
     const box = document.createElement("div");
-    box.className = "letter-box";
-    if (guessedLetters.includes(letter) && !obscure) {
-      box.innerText = letter;
-      box?.classList.add("revealed-anim");
+    
+    if (/[A-Z]/.test(letter)) {
+      box.className = "letter-box";
+      if (guessedLetters.includes(letter) && !obscure) {
+        box.innerText = letter;
+        box?.classList.add("revealed-anim");
+      } else {
+        box.innerText = "";
+      }
     } else {
-      box.innerText = "";
+      // Non-alphabetic characters (e.g. spaces, punctuation)
+      box.className = "letter-box";
+      box.style.border = "none";
+      box.style.background = "transparent";
+      box.style.boxShadow = "none";
+      box.innerText = letter === " " ? " " : letter;
     }
     wordDisplay.appendChild(box);
   });
@@ -771,7 +781,7 @@ function handleGuess(letter) {
 }
 
 function checkWin() {
-  const won = currentWord.split("").every(letter => guessedLetters.includes(letter));
+  const won = currentWord.split("").every(letter => guessedLetters.includes(letter) || !/[A-Z]/.test(letter));
   if (won) {
     isGameOver = true;
     currentScore += 1000;
@@ -1433,7 +1443,7 @@ const RANDOM_EVENTS = [
     apply: () => {
       // Reveal one random letter after word is loaded
       setTimeout(() => {
-        const unguessed = currentWord.split('').filter(l => !guessedLetters.includes(l));
+        const unguessed = currentWord.split('').filter(l => /[A-Z]/.test(l) && !guessedLetters.includes(l));
         if (unguessed.length > 0) {
           const lucky = unguessed[Math.floor(Math.random() * unguessed.length)];
           handleGuess(lucky);

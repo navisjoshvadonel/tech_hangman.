@@ -426,7 +426,7 @@
 
         const unGuessed = currentWord
           .split('')
-          .filter((l) => !guessedLetters.includes(l));
+          .filter((l) => /[A-Z]/.test(l) && !guessedLetters.includes(l));
 
         if (unGuessed.length === 0) return;
 
