@@ -346,17 +346,20 @@ body {
 
 /* Intro specific runtime classes controlled via JS */
 .animate-text-in {
+  opacity: 1 !important;
   animation: cinematic-text-fade 2s forwards cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .animate-logo-in {
+  opacity: 1 !important;
   animation: cinematic-logo-reveal 4s forwards cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 .fade-out-overlay {
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  display: none !important;
 }
 
 @keyframes cinematic-text-fade {
@@ -5126,6 +5129,10 @@ body.graphics-low svg filter {
 
 body.graphics-low svg * {
   filter: none !important;
+}
+
+body.graphics-low #intro-overlay {
+  display: none !important;
 }
 
 body.graphics-low .overlay,

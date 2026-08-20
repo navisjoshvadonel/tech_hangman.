@@ -196,22 +196,31 @@ const introLogo = document.getElementById("intro-logo");
 
 // === Initialization, Intro & Login ===
 
-setTimeout(playIntroSequence, 100);
-
 let introSkipped = false;
 function skipIntro() {
-  if (introSkipped) return;
   introSkipped = true;
-  if (introOverlay) introOverlay.style.display = 'none';
+  const iOverlay = document.getElementById("intro-overlay");
   const lOverlay = document.getElementById("login-overlay");
-  if (lOverlay) lOverlay.classList.remove("hidden");
+  if (iOverlay) {
+    iOverlay.classList.add("fade-out-overlay");
+    iOverlay.style.display = 'none';
+  }
+  if (lOverlay) {
+    lOverlay.classList.remove("hidden");
+  }
 }
 
 function playIntroSequence() {
   const iOverlay = document.getElementById("intro-overlay");
-  if (iOverlay) {
-    iOverlay.addEventListener("click", skipIntro);
+  const lOverlay = document.getElementById("login-overlay");
+
+  if (!iOverlay || !lOverlay) {
+    // If elements not in DOM yet, retry shortly
+    setTimeout(playIntroSequence, 100);
+    return;
   }
+
+  iOverlay.addEventListener("click", skipIntro);
 
   // If in Low-Spec Compatibility mode, skip intro instantly
   if (graphicsQuality === "LOW" || document.body.classList.contains("graphics-low")) {
@@ -219,26 +228,34 @@ function playIntroSequence() {
     return;
   }
 
+  const line1 = document.getElementById("intro-line-1");
+  const line2 = document.getElementById("intro-line-2");
+  const line3 = document.getElementById("intro-line-3");
+  const line4 = document.getElementById("intro-line-4");
+  const logo = document.getElementById("intro-logo");
+
   // Line 1: 0.3s
-  setTimeout(() => { if (!introSkipped) introLine1?.classList.add("animate-text-in"); }, 300);
+  setTimeout(() => { if (!introSkipped && line1) line1.classList.add("animate-text-in"); }, 300);
 
   // Line 2: 1.8s
-  setTimeout(() => { if (!introSkipped) introLine2?.classList.add("animate-text-in"); }, 1800);
+  setTimeout(() => { if (!introSkipped && line2) line2.classList.add("animate-text-in"); }, 1800);
 
   // Line 3: 3.2s
-  setTimeout(() => { if (!introSkipped) introLine3?.classList.add("animate-text-in"); }, 3200);
+  setTimeout(() => { if (!introSkipped && line3) line3.classList.add("animate-text-in"); }, 3200);
 
   // Line 4: 4.6s
-  setTimeout(() => { if (!introSkipped) introLine4?.classList.add("animate-text-in"); }, 4600);
+  setTimeout(() => { if (!introSkipped && line4) line4.classList.add("animate-text-in"); }, 4600);
 
   // Logo Reveal: 6.0s
-  setTimeout(() => { if (!introSkipped) introLogo?.classList.add("animate-logo-in"); }, 6000);
+  setTimeout(() => { if (!introSkipped && logo) logo.classList.add("animate-logo-in"); }, 6000);
 
   // Fade out Intro & Show Login: 10.0s
   setTimeout(() => {
     skipIntro();
   }, 10000);
 }
+
+setTimeout(playIntroSequence, 100);
 
 function cleanupLoginMatrix() {
   loginMatrixLoops.forEach(clearInterval);
