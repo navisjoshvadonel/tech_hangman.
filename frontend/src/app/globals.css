@@ -5057,22 +5057,88 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* === LOW GRAPHICS MODE OVERRIDES === */
-body.graphics-low {
-  text-shadow: none !important;
+/* === LOW-SPEC COMPATIBILITY MODE BUTTON STYLES === */
+.compat-toggle-btn {
+  background: rgba(0, 255, 204, 0.08);
+  border: 1px solid rgba(0, 255, 204, 0.4);
+  color: #00ffcc;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-body.graphics-low .neon-text,
-body.graphics-low .cat-btn,
-body.graphics-low .letter-box,
-body.graphics-low .keyboard-key {
-  box-shadow: none !important;
+.compat-toggle-btn:hover {
+  background: rgba(0, 255, 204, 0.18);
+  border-color: #00ffcc;
+}
+
+.compat-toggle-btn.active {
+  background: rgba(0, 255, 204, 0.25);
+  border-color: #00ffcc;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+}
+
+.compat-toggle-btn.active #login-compat-status {
+  color: #00ffcc;
+  font-weight: 800;
+}
+
+/* === LOW GRAPHICS / COMPATIBILITY MODE OVERRIDES (LAG-FREE) === */
+body.graphics-low {
   text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+body.graphics-low *,
+body.graphics-low *::before,
+body.graphics-low *::after {
+  animation: none !important;
+  transition: opacity 0.1s ease, background 0.1s ease, color 0.1s ease !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Hide non-essential visual animation elements to maximize FPS */
+body.graphics-low .matrix-word,
+body.graphics-low .laser-scanner,
+body.graphics-low .particles,
+body.graphics-low .live-dot,
+body.graphics-low .hud-pulse-hint {
+  display: none !important;
+  animation: none !important;
+}
+
+body.graphics-low svg filter {
+  display: none !important;
+}
+
+body.graphics-low svg * {
   filter: none !important;
 }
 
-body.graphics-low .matrix-word {
-  display: none !important;
+body.graphics-low .overlay,
+body.graphics-low .login-box,
+body.graphics-low .login-wrapper,
+body.graphics-low .selection-content-wrapper,
+body.graphics-low .status-bar,
+body.graphics-low .hangman-display,
+body.graphics-low .boss-panel,
+body.graphics-low .trace-panel {
+  background-color: #050c18 !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.3) !important;
 }
 
 

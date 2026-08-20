@@ -50,6 +50,11 @@ export default function Home() {
           <div className="login-header-main">
             <h1 className="login-main-title">TECH HANGMAN</h1>
             <p className="login-main-subtitle">LOGIN TO SAVE THE AGENT</p>
+            <div className="login-compat-bar" style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+              <button id="login-compat-btn" className="compat-toggle-btn" title="Click to toggle lag-free mode for low-end hardware">
+                ⚡ COMPATIBILITY MODE: <span id="login-compat-status">OFF</span>
+              </button>
+            </div>
           </div>
           <div className="login-content-wrapper">
             <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '420px', height: '320px', margin: '0 auto' }}>

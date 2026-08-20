@@ -230,7 +230,7 @@ function cleanupLoginMatrix() {
 }
 
 // === Interactive Decryption & Popping Hangman Matrix Animation for Login Page ===
-(function initLoginHangmanMatrix() {
+function initLoginHangmanMatrix() {
   const container = document.getElementById("matrix-popping-words");
   if (!container) {
     setTimeout(initLoginHangmanMatrix, 200);
@@ -238,6 +238,10 @@ function cleanupLoginMatrix() {
   }
 
   cleanupLoginMatrix();
+
+  if (graphicsQuality === "LOW" || document.body.classList.contains("graphics-low")) {
+    return;
+  }
 
   // Looping stickman parts sequence
   const parts = [
@@ -691,7 +695,46 @@ function applyGraphicsQuality(quality) {
       btn.classList.remove("active");
     }
   });
+
+  const loginCompatBtn = document.getElementById("login-compat-btn");
+  const loginCompatStatus = document.getElementById("login-compat-status");
+  if (loginCompatBtn && loginCompatStatus) {
+    if (quality === "LOW") {
+      loginCompatBtn.classList.add("active");
+      loginCompatStatus.innerText = "ON (LAG-FREE)";
+    } else {
+      loginCompatBtn.classList.remove("active");
+      loginCompatStatus.innerText = "OFF";
+    }
+  }
+
+  if (quality === "LOW") {
+    cleanupLoginMatrix();
+  } else {
+    const loginOverlay = document.getElementById("login-overlay");
+    if (loginOverlay && !loginOverlay.classList.contains("hidden")) {
+      initLoginHangmanMatrix();
+    }
+  }
 }
+
+function initLoginCompatToggle() {
+  const loginCompatBtn = document.getElementById("login-compat-btn");
+  if (loginCompatBtn) {
+    if (!loginCompatBtn.__bound__) {
+      loginCompatBtn.__bound__ = true;
+      loginCompatBtn.addEventListener("click", () => {
+        const newQuality = graphicsQuality === "LOW" ? "HIGH" : "LOW";
+        applyGraphicsQuality(newQuality);
+        if (typeof playSfx === "function") playSfx("click");
+      });
+    }
+    applyGraphicsQuality(graphicsQuality);
+  } else {
+    setTimeout(initLoginCompatToggle, 150);
+  }
+}
+initLoginCompatToggle();
 
 function applyCursorStyle(style) {
   cursorStyle = style;
