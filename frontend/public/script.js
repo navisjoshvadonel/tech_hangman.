@@ -198,29 +198,45 @@ const introLogo = document.getElementById("intro-logo");
 
 setTimeout(playIntroSequence, 100);
 
+let introSkipped = false;
+function skipIntro() {
+  if (introSkipped) return;
+  introSkipped = true;
+  if (introOverlay) introOverlay.style.display = 'none';
+  const lOverlay = document.getElementById("login-overlay");
+  if (lOverlay) lOverlay.classList.remove("hidden");
+}
+
 function playIntroSequence() {
+  const iOverlay = document.getElementById("intro-overlay");
+  if (iOverlay) {
+    iOverlay.addEventListener("click", skipIntro);
+  }
+
+  // If in Low-Spec Compatibility mode, skip intro instantly
+  if (graphicsQuality === "LOW" || document.body.classList.contains("graphics-low")) {
+    skipIntro();
+    return;
+  }
+
   // Line 1: 0.3s
-  setTimeout(() => { introLine1?.classList.add("animate-text-in"); }, 300);
+  setTimeout(() => { if (!introSkipped) introLine1?.classList.add("animate-text-in"); }, 300);
 
   // Line 2: 1.8s
-  setTimeout(() => { introLine2?.classList.add("animate-text-in"); }, 1800);
+  setTimeout(() => { if (!introSkipped) introLine2?.classList.add("animate-text-in"); }, 1800);
 
   // Line 3: 3.2s
-  setTimeout(() => { introLine3?.classList.add("animate-text-in"); }, 3200);
+  setTimeout(() => { if (!introSkipped) introLine3?.classList.add("animate-text-in"); }, 3200);
 
   // Line 4: 4.6s
-  setTimeout(() => { introLine4?.classList.add("animate-text-in"); }, 4600);
+  setTimeout(() => { if (!introSkipped) introLine4?.classList.add("animate-text-in"); }, 4600);
 
-  // Logo Reveal: 6.0s (Animation takes 4s, finishes at 10.0s)
-  setTimeout(() => { introLogo?.classList.add("animate-logo-in"); }, 6000);
+  // Logo Reveal: 6.0s
+  setTimeout(() => { if (!introSkipped) introLogo?.classList.add("animate-logo-in"); }, 6000);
 
-  // Fade out Intro & Show Login: wait for logo animation to finish (10.0s)
+  // Fade out Intro & Show Login: 10.0s
   setTimeout(() => {
-    introOverlay?.classList.add("fade-out-overlay");
-    loginOverlay?.classList.remove("hidden");
-
-    // Remove intro entirely after transition to clean DOM
-    setTimeout(() => { introOverlay.remove(); }, 1000);
+    skipIntro();
   }, 10000);
 }
 
@@ -500,8 +516,8 @@ function updateAgentHUD() {
 }
 
 // Returning Player Login
-loginBtn.addEventListener("click", handleLogin);
-usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleLogin(); });
+if (loginBtn) loginBtn.addEventListener("click", handleLogin);
+if (usernameInput) usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleLogin(); });
 
 // Offline Player Login
 if (offlineLoginBtn) {
@@ -512,12 +528,14 @@ if (offlineUsernameInput) {
 }
 
 function handleOfflineLogin() {
-  const username = offlineUsernameInput.value.trim();
+  const username = offlineUsernameInput ? offlineUsernameInput.value.trim() : "";
   const errorMsg = document.getElementById("offline-error-msg");
   if (!username) return;
 
-  errorMsg.innerText = "INITIALIZING OFFLINE DECRYPTION...";
-  errorMsg.style.color = "var(--neon-cyan)";
+  if (errorMsg) {
+    errorMsg.innerText = "INITIALIZING OFFLINE DECRYPTION...";
+    errorMsg.style.color = "var(--neon-cyan)";
+  }
 
   window.offlineAgentName = username;
   const localData = window.loadOfflineUser(username);
@@ -532,19 +550,21 @@ let _registerInFlight = false;
 
 async function handleLogin() {
   if (_loginInFlight) return; // Prevent double submit
-  const username = usernameInput.value.trim();
+  const username = usernameInput ? usernameInput.value.trim() : "";
   const errorMsg = document.getElementById("login-error-msg");
-  errorMsg?.classList.remove("success");
+  if (errorMsg) errorMsg.classList.remove("success");
   if (!username) {
-    errorMsg.innerText = "";
+    if (errorMsg) errorMsg.innerText = "";
     return;
   }
 
   _loginInFlight = true;
-  const origBtnText = loginBtn.innerText;
-  loginBtn.disabled = true;
-  loginBtn.innerText = "AUTHENTICATING...";
-  errorMsg.innerText = "";
+  const origBtnText = loginBtn ? loginBtn.innerText : "RESUME MISSION";
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.innerText = "AUTHENTICATING...";
+  }
+  if (errorMsg) errorMsg.innerText = "";
 
   try {
     const res = await fetch(`${API_URL}/login`, {
@@ -555,36 +575,42 @@ async function handleLogin() {
     const data = await res.json();
 
     if (res.status === 429) {
-      errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
+      if (errorMsg) errorMsg.innerText = data.error || "TOO MANY ATTEMPTS. Wait 60s.";
     } else if (res.ok) {
-      errorMsg?.classList.add("success");
-      errorMsg.innerText = "ACCESS GRANTED. Loading...";
+      if (errorMsg) {
+        errorMsg.classList.add("success");
+        errorMsg.innerText = "ACCESS GRANTED. Loading...";
+      }
       applyUserSession(data);
     } else {
-      errorMsg.innerText = data.error || "LOGIN FAILED.";
+      if (errorMsg) errorMsg.innerText = data.error || "LOGIN FAILED.";
     }
   } catch (err) {
     console.error("Login Error:", err);
-    errorMsg.innerHTML = `BACKEND OFFLINE. <button id="auto-offline-btn" class="text-btn" style="margin-left: 10px;">BOOT OFFLINE MODE</button>`;
-    const autoBtn = document.getElementById("auto-offline-btn");
-    if (autoBtn) {
-      autoBtn.addEventListener("click", () => {
-        if (offlineUsernameInput) offlineUsernameInput.value = username;
-        handleOfflineLogin();
-      });
+    if (errorMsg) {
+      errorMsg.innerHTML = `BACKEND OFFLINE. <button id="auto-offline-btn" class="text-btn" style="margin-left: 10px;">BOOT OFFLINE MODE</button>`;
+      const autoBtn = document.getElementById("auto-offline-btn");
+      if (autoBtn) {
+        autoBtn.addEventListener("click", () => {
+          if (offlineUsernameInput) offlineUsernameInput.value = username;
+          handleOfflineLogin();
+        });
+      }
     }
   } finally {
     _loginInFlight = false;
-    loginBtn.disabled = false;
-    loginBtn.innerText = origBtnText;
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.innerText = origBtnText;
+    }
   }
 }
 
 // New Recruit Registration
 const registerBtn = document.getElementById("register-btn");
 const registerInput = document.getElementById("register-username-input");
-registerBtn.addEventListener("click", handleRegister);
-registerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleRegister(); });
+if (registerBtn) registerBtn.addEventListener("click", handleRegister);
+if (registerInput) registerInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleRegister(); });
 
 async function handleRegister() {
   if (_registerInFlight) return; // Prevent double submit
@@ -2007,15 +2033,19 @@ catBtns.forEach(btn => {
   });
 });
 
-backToCatBtn.addEventListener("click", () => {
-  difficultySelection?.classList.add("hidden");
-  categorySelection?.classList.remove("hidden");
-  selectedCategory = null;
-  document.body.classList.remove("tamil-theme");
-  // Restore Cross Logo and Bible quote in main lobby
-  document.getElementById("left-logo-container").innerHTML = defaultLogo;
-  document.getElementById("left-quote-container").innerHTML = defaultQuote;
-});
+if (backToCatBtn) {
+  backToCatBtn.addEventListener("click", () => {
+    difficultySelection?.classList.add("hidden");
+    categorySelection?.classList.remove("hidden");
+    selectedCategory = null;
+    document.body.classList.remove("tamil-theme");
+    // Restore Cross Logo and Bible quote in main lobby
+    const lLogo = document.getElementById("left-logo-container");
+    const lQuote = document.getElementById("left-quote-container");
+    if (lLogo) lLogo.innerHTML = defaultLogo;
+    if (lQuote) lQuote.innerHTML = defaultQuote;
+  });
+}
 
 
 diffBtns.forEach(btn => {
@@ -2028,29 +2058,8 @@ diffBtns.forEach(btn => {
   });
 });
 
-changeProtocolBtn.addEventListener("click", () => {
-  isGameOver = true;
-  gameContainer?.classList.add("hidden");
-  popup?.classList.remove("show");
-  redOverlay?.classList.remove("active");
-  selectionScreen?.classList.remove("hidden");
-  categorySelection?.classList.remove("hidden");
-  difficultySelection?.classList.add("hidden");
-  selectedCategory = null;
-  selectedDifficulty = null;
-  document.getElementById("left-logo-container").innerHTML = defaultLogo;
-  document.getElementById("left-quote-container").innerHTML = defaultQuote;
-});
-
-// UI Event Mapping
-nextBtn.addEventListener("click", () => {
-  if (isGameOver && wrongGuesses < MAX_MISTAKES) {
-    submitFinalScore(); // Save immediately if beat
-  }
-
-  if (nextBtn.innerText === "Return to Protocol Context") {
-    nextBtn.innerText = "are u ready to save another man";
-    // Manually trigger "change protocol" to reset state
+if (changeProtocolBtn) {
+  changeProtocolBtn.addEventListener("click", () => {
     isGameOver = true;
     gameContainer?.classList.add("hidden");
     popup?.classList.remove("show");
@@ -2060,12 +2069,41 @@ nextBtn.addEventListener("click", () => {
     difficultySelection?.classList.add("hidden");
     selectedCategory = null;
     selectedDifficulty = null;
-    document.getElementById("left-logo-container").innerHTML = defaultLogo;
-    document.getElementById("left-quote-container").innerHTML = defaultQuote;
-  } else {
-    initGame();
-  }
-});
+    const lLogo = document.getElementById("left-logo-container");
+    const lQuote = document.getElementById("left-quote-container");
+    if (lLogo) lLogo.innerHTML = defaultLogo;
+    if (lQuote) lQuote.innerHTML = defaultQuote;
+  });
+}
+
+// UI Event Mapping
+if (nextBtn) {
+  nextBtn.addEventListener("click", () => {
+    if (isGameOver && wrongGuesses < MAX_MISTAKES) {
+      submitFinalScore(); // Save immediately if beat
+    }
+
+    if (nextBtn.innerText === "Return to Protocol Context") {
+      nextBtn.innerText = "are u ready to save another man";
+      // Manually trigger "change protocol" to reset state
+      isGameOver = true;
+      gameContainer?.classList.add("hidden");
+      popup?.classList.remove("show");
+      redOverlay?.classList.remove("active");
+      selectionScreen?.classList.remove("hidden");
+      categorySelection?.classList.remove("hidden");
+      difficultySelection?.classList.add("hidden");
+      selectedCategory = null;
+      selectedDifficulty = null;
+      const lLogo = document.getElementById("left-logo-container");
+      const lQuote = document.getElementById("left-quote-container");
+      if (lLogo) lLogo.innerHTML = defaultLogo;
+      if (lQuote) lQuote.innerHTML = defaultQuote;
+    } else {
+      initGame();
+    }
+  });
+}
 
 // =========================================================
 // === PHASE 3: DAILY MISSION ==============================
@@ -2073,73 +2111,75 @@ nextBtn.addEventListener("click", () => {
 
 const dailyBtn = document.getElementById('daily-btn');
 
-dailyBtn.addEventListener('click', async () => {
-  if (!currentUserId) return;
-  try {
-    let data;
-    let alreadyCompleted = false;
+if (dailyBtn) {
+  dailyBtn.addEventListener('click', async () => {
+    if (!currentUserId) return;
+    try {
+      let data;
+      let alreadyCompleted = false;
 
-    if (currentUserId === "offline") {
-      const localData = window.loadOfflineUser(window.offlineAgentName);
-      const today = new Date().toISOString().split('T')[0];
-      alreadyCompleted = (localData.last_completed_daily_date === today);
+      if (currentUserId === "offline") {
+        const localData = window.loadOfflineUser(window.offlineAgentName);
+        const today = new Date().toISOString().split('T')[0];
+        alreadyCompleted = (localData.last_completed_daily_date === today);
 
-      const res = await fetch(`${API_URL}/daily_challenge?user_id=offline`);
-      data = await res.json();
-    } else {
-      const res = await fetch(`${API_URL}/daily_challenge?user_id=${currentUserId}`);
-      data = await res.json();
-      alreadyCompleted = data.already_completed;
+        const res = await fetch(`${API_URL}/daily_challenge?user_id=offline`);
+        data = await res.json();
+      } else {
+        const res = await fetch(`${API_URL}/daily_challenge?user_id=${currentUserId}`);
+        data = await res.json();
+        alreadyCompleted = data.already_completed;
+      }
+
+      if (alreadyCompleted || data.already_completed) {
+        showToast('⭐ DAILY MISSION COMPLETE', 'You already conquered today\'s mission. Come back tomorrow!', '#00ffcc');
+        return;
+      }
+
+      // Start the daily game with this word directly
+      isDailyChallenge = true;
+      scoreMultiplier = 5; // 5x XP and score for daily
+
+      // Set game state and switch to game screen
+      selectedCategory = data.category;
+      selectedDifficulty = data.difficulty;
+      MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty]?.length || 9;
+
+      selectionScreen?.classList.add('hidden');
+      gameContainer?.classList.remove('hidden');
+
+      // Init the game using the daily word directly
+      guessedLetters = [];
+      wrongGuesses = 0;
+      isGameOver = false;
+      hintsUsed = 0;
+      gameStartTime = Date.now();
+      currentWord = data.word.toUpperCase();
+
+      // Reset Hint UI
+      if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn?.classList.remove('disabled'); hintBtn.disabled = false; }
+      if (clueDisplay) clueDisplay?.classList.remove('hidden');
+      if (clueText) clueText.innerText = `[DAILY] ${data.hint || data.clue}`;
+
+      // Reset DOM state
+      gameContainer?.classList.remove('win-state', 'loss-state', 'game-loss', 'game-container-shake');
+      redOverlay?.classList.remove('active');
+      popup?.classList.remove('show', 'popup-win', 'popup-loss');
+      hangmanParts.forEach(p => p?.classList.remove('drawn', 'detach-head', 'detach-body'));
+      const escEl = document.getElementById('escape-container');
+      if (escEl) { escEl?.classList.add('hidden'); }
+
+      renderWord();
+      renderKeyboard();
+
+      showToast('📅 DAILY MISSION ACTIVE', `5x XP & SCORE ACTIVE! Category: ${data.category}`, '#ffd700');
+
+      // Mark complete on win — hooked into checkWin via isDailyChallenge flag
+    } catch (err) {
+      console.error('Daily Challenge Error', err);
     }
-
-    if (alreadyCompleted || data.already_completed) {
-      showToast('⭐ DAILY MISSION COMPLETE', 'You already conquered today\'s mission. Come back tomorrow!', '#00ffcc');
-      return;
-    }
-
-    // Start the daily game with this word directly
-    isDailyChallenge = true;
-    scoreMultiplier = 5; // 5x XP and score for daily
-
-    // Set game state and switch to game screen
-    selectedCategory = data.category;
-    selectedDifficulty = data.difficulty;
-    MAX_MISTAKES = MISTAKE_MAPPINGS[selectedDifficulty]?.length || 9;
-
-    selectionScreen?.classList.add('hidden');
-    gameContainer?.classList.remove('hidden');
-
-    // Init the game using the daily word directly
-    guessedLetters = [];
-    wrongGuesses = 0;
-    isGameOver = false;
-    hintsUsed = 0;
-    gameStartTime = Date.now();
-    currentWord = data.word.toUpperCase();
-
-    // Reset Hint UI
-    if (hintBtn) { hintBtn.innerText = 'GET HINT (FREE)'; hintBtn?.classList.remove('disabled'); hintBtn.disabled = false; }
-    if (clueDisplay) clueDisplay?.classList.remove('hidden');
-    clueText.innerText = `[DAILY] ${data.hint || data.clue}`;
-
-    // Reset DOM state
-    gameContainer?.classList.remove('win-state', 'loss-state', 'game-loss', 'game-container-shake');
-    redOverlay?.classList.remove('active');
-    popup?.classList.remove('show', 'popup-win', 'popup-loss');
-    hangmanParts.forEach(p => p?.classList.remove('drawn', 'detach-head', 'detach-body'));
-    const escEl = document.getElementById('escape-container');
-    if (escEl) { escEl?.classList.add('hidden'); }
-
-    renderWord();
-    renderKeyboard();
-
-    showToast('📅 DAILY MISSION ACTIVE', `5x XP & SCORE ACTIVE! Category: ${data.category}`, '#ffd700');
-
-    // Mark complete on win — hooked into checkWin via isDailyChallenge flag
-  } catch (err) {
-    console.error('Daily Challenge Error', err);
-  }
-});
+  });
+}
 
 // Daily complete is handled directly inside checkWin above
 
@@ -2196,13 +2236,18 @@ function rollRandomEvent() {
 
   // Show the Anomaly popup
   const anomalyPopup = document.getElementById('anomaly-popup');
-  document.getElementById('anomaly-event-name').innerText = event.name;
-  document.getElementById('anomaly-event-desc').innerText = event.desc;
+  const eventNameEl = document.getElementById('anomaly-event-name');
+  const eventDescEl = document.getElementById('anomaly-event-desc');
+  if (eventNameEl) eventNameEl.innerText = event.name;
+  if (eventDescEl) eventDescEl.innerText = event.desc;
   anomalyPopup?.classList.remove('hidden');
 
-  document.getElementById('anomaly-confirm-btn').onclick = () => {
-    anomalyPopup?.classList.add('hidden');
-  };
+  const confirmBtn = document.getElementById('anomaly-confirm-btn');
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      anomalyPopup?.classList.add('hidden');
+    };
+  }
 }
 
 // rollRandomEvent is called inline inside initGame above
@@ -2240,45 +2285,23 @@ const achievementsPopup = document.getElementById('achievements-popup');
 const achievementsList = document.getElementById('achievements-list');
 const closeAchievementsBtn = document.getElementById('close-achievements-btn');
 
-trophiesBtn.addEventListener('click', async () => {
-  if (!currentUserId) return;
-  try {
-    let earned = [];
-    if (currentUserId === "offline") {
-      const localData = window.loadOfflineUser(window.offlineAgentName);
-      earned = localData.achievements || [];
-    } else {
-      const res = await fetch(`${API_URL}/achievements?user_id=${currentUserId}`);
-      const data = await res.json();
-      earned = data.achievements || [];
-    }
+if (trophiesBtn) {
+  trophiesBtn.addEventListener('click', async () => {
+    if (!currentUserId) return;
+    try {
+      let earned = [];
+      if (currentUserId === "offline") {
+        const localData = window.loadOfflineUser(window.offlineAgentName);
+        earned = localData.achievements || [];
+      } else {
+        const res = await fetch(`${API_URL}/achievements?user_id=${currentUserId}`);
+        const data = await res.json();
+        earned = data.achievements || [];
+      }
 
-    achievementsList.innerHTML = '';
+      if (achievementsList) achievementsList.innerHTML = '';
 
-    // Show all known achievements, greyed out if not earned
-    Object.entries(ACHIEVEMENT_DATA).forEach(([name, info]) => {
-      const div = document.createElement('div');
-      const unlocked = earned.includes(name);
-      const tierClass = unlocked ? `tier-${info.tier || 'default'}` : '';
-      div.className = `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${tierClass}`;
-      div.innerHTML = `
-        <span class="ach-icon">${unlocked ? info.icon : '🔒'}</span>
-        <div class="ach-info">
-          <div class="ach-name">${name}</div>
-          <div class="ach-desc">${unlocked ? info.desc : '???'}</div>
-        </div>
-      `;
-      achievementsList.appendChild(div);
-    });
-
-    achievementsPopup?.classList.remove('hidden');
-  } catch (err) {
-    console.error('Achievements Error', err);
-    // Fallback to local storage if API call fails
-    if (window.offlineAgentName) {
-      const localData = window.loadOfflineUser(window.offlineAgentName);
-      const earned = localData.achievements || [];
-      achievementsList.innerHTML = '';
+      // Show all known achievements, greyed out if not earned
       Object.entries(ACHIEVEMENT_DATA).forEach(([name, info]) => {
         const div = document.createElement('div');
         const unlocked = earned.includes(name);
@@ -2291,11 +2314,10 @@ trophiesBtn.addEventListener('click', async () => {
             <div class="ach-desc">${unlocked ? info.desc : '???'}</div>
           </div>
         `;
-        achievementsList.appendChild(div);
+        if (achievementsList) achievementsList.appendChild(div);
       });
+
       achievementsPopup?.classList.remove('hidden');
-    }
-  }
 });
 
 closeAchievementsBtn.addEventListener('click', () => {
