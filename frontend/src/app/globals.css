@@ -538,6 +538,22 @@ body {
   fill: none;
 }
 
+/* Graphical progression for hangman parts (classic drawing graph) */
+.draw-part {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.draw-part.drawn {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.graphics-low .draw-part {
+  transition: none !important;
+}
+
 /* Running Animations */
 .runner-group {
   animation: run-bounce 0.4s infinite alternate ease-in-out;

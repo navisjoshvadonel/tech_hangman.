@@ -197,17 +197,26 @@ const introLogo = document.getElementById("intro-logo");
 // === Initialization, Intro & Login ===
 
 let introSkipped = false;
+
 function skipIntro() {
+  if (introSkipped) return;
   introSkipped = true;
+  window.removeEventListener("keydown", handleIntroKey);
   const iOverlay = document.getElementById("intro-overlay");
   const lOverlay = document.getElementById("login-overlay");
   if (iOverlay) {
     iOverlay.classList.add("fade-out-overlay");
-    iOverlay.style.display = 'none';
+    setTimeout(() => {
+      iOverlay.style.display = 'none';
+    }, 300);
   }
   if (lOverlay) {
     lOverlay.classList.remove("hidden");
   }
+}
+
+function handleIntroKey(e) {
+  skipIntro();
 }
 
 function playIntroSequence() {
@@ -215,14 +224,19 @@ function playIntroSequence() {
   const lOverlay = document.getElementById("login-overlay");
 
   if (!iOverlay || !lOverlay) {
-    // If elements not in DOM yet, retry shortly
     setTimeout(playIntroSequence, 100);
     return;
   }
 
-  iOverlay.addEventListener("click", skipIntro);
+  // Ensure intro overlay is visible
+  iOverlay.style.display = 'flex';
+  iOverlay.classList.remove("fade-out-overlay", "hidden");
 
-  // If in Low-Spec Compatibility mode, skip intro instantly
+  // Click or keypress to skip
+  iOverlay.addEventListener("click", skipIntro);
+  window.addEventListener("keydown", handleIntroKey);
+
+  // If in Low-Spec Compatibility mode, skip intro instantly for performance
   if (graphicsQuality === "LOW" || document.body.classList.contains("graphics-low")) {
     skipIntro();
     return;
@@ -234,25 +248,30 @@ function playIntroSequence() {
   const line4 = document.getElementById("intro-line-4");
   const logo = document.getElementById("intro-logo");
 
-  // Line 1: 0.3s
-  setTimeout(() => { if (!introSkipped && line1) line1.classList.add("animate-text-in"); }, 300);
+  // Reset animation state
+  [line1, line2, line3, line4, logo].forEach(el => {
+    if (el) el.classList.remove("animate-text-in", "animate-logo-in");
+  });
 
-  // Line 2: 1.8s
-  setTimeout(() => { if (!introSkipped && line2) line2.classList.add("animate-text-in"); }, 1800);
+  // Line 1: 0.2s - WELCOME AGENT...
+  setTimeout(() => { if (!introSkipped && line1) line1.classList.add("animate-text-in"); }, 200);
 
-  // Line 3: 3.2s
-  setTimeout(() => { if (!introSkipped && line3) line3.classList.add("animate-text-in"); }, 3200);
+  // Line 2: 1.5s - CONNECTING TO THE GRID...
+  setTimeout(() => { if (!introSkipped && line2) line2.classList.add("animate-text-in"); }, 1500);
 
-  // Line 4: 4.6s
-  setTimeout(() => { if (!introSkipped && line4) line4.classList.add("animate-text-in"); }, 4600);
+  // Line 3: 2.8s - SETTING UP PROTOCOLS...
+  setTimeout(() => { if (!introSkipped && line3) line3.classList.add("animate-text-in"); }, 2800);
 
-  // Logo Reveal: 6.0s
-  setTimeout(() => { if (!introSkipped && logo) logo.classList.add("animate-logo-in"); }, 6000);
+  // Line 4: 4.0s - THE SYSTEM NEEDS YOU...
+  setTimeout(() => { if (!introSkipped && line4) line4.classList.add("animate-text-in"); }, 4000);
 
-  // Fade out Intro & Show Login: 10.0s
+  // Logo Reveal: 5.2s - TECH HANGMAN
+  setTimeout(() => { if (!introSkipped && logo) logo.classList.add("animate-logo-in"); }, 5200);
+
+  // Transition to Login Screen: 8.5s
   setTimeout(() => {
-    skipIntro();
-  }, 10000);
+    if (!introSkipped) skipIntro();
+  }, 8500);
 }
 
 setTimeout(playIntroSequence, 100);
@@ -1162,6 +1181,7 @@ async function initGame() {
   hangmanParts.forEach(part => {
     part?.classList.remove("drawn", "detach-head", "detach-body");
   });
+  updateAttemptsUI();
 
   if (isFriendModeActive) {
     if (clueDisplayV2) clueDisplayV2.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
@@ -1245,6 +1265,23 @@ function updateScoreUI() {
   if (currentScore > highestScore) {
     highestScore = currentScore;
     highScoreSpan.innerText = `${highestScore}`;
+  }
+}
+
+function updateAttemptsUI() {
+  const attemptsSpan = document.getElementById("attempts-remaining");
+  if (!attemptsSpan) return;
+  const remaining = Math.max(0, MAX_MISTAKES - wrongGuesses);
+  attemptsSpan.innerText = `${remaining} / ${MAX_MISTAKES}`;
+  if (remaining <= 2) {
+    attemptsSpan.style.color = "#ff0055";
+    attemptsSpan.style.textShadow = "0 0 10px rgba(255, 0, 85, 0.8)";
+  } else if (remaining <= 4) {
+    attemptsSpan.style.color = "#ffd700";
+    attemptsSpan.style.textShadow = "0 0 8px rgba(255, 215, 0, 0.8)";
+  } else {
+    attemptsSpan.style.color = "#ff3366";
+    attemptsSpan.style.textShadow = "0 0 8px rgba(255, 51, 102, 0.8)";
   }
 }
 
@@ -1437,8 +1474,9 @@ function handleGuess(letter) {
 
     if (wrongGuesses < MAX_MISTAKES) {
       // BUG FIX: Guard against null difficulty (edge case on protocol change mid-game)
-      const mapping = MISTAKE_MAPPINGS[selectedDifficulty];
-      const partsToDraw = mapping ? mapping[wrongGuesses] : null;
+      const diffKey = selectedDifficulty || "EASY";
+      const mapping = MISTAKE_MAPPINGS[diffKey];
+      const partsToDraw = mapping ? mapping[wrongGuesses] : [wrongGuesses];
       if (partsToDraw) {
         partsToDraw.forEach(partIdx => {
           const partEl = document.querySelector(`.part-${partIdx}`);
@@ -1446,6 +1484,7 @@ function handleGuess(letter) {
         });
       }
       wrongGuesses++;
+      updateAttemptsUI();
     }
     checkLoss();
   }

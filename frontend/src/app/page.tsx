@@ -307,6 +307,10 @@ export default function Home() {
             </div>
           </div>
           <div className="score-info">
+            <div className="score-box attempts-box" style={{ border: '1px solid rgba(255, 51, 102, 0.5)', background: 'rgba(255, 51, 102, 0.08)' }}>
+              <span className="score-label" style={{ color: '#ff3366' }}>ATTEMPTS LEFT:</span>
+              <span id="attempts-remaining" style={{ color: '#ff3366', fontWeight: 'bold' }}>6 / 6</span>
+            </div>
             <div className="score-box">
               <span className="score-label">SCORE:</span>
               <span id="current-score">0</span>
