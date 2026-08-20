@@ -400,12 +400,10 @@ function initLoginHangmanMatrix() {
     letterEl.innerText = char;
     container.appendChild(letterEl);
 
-    setTimeout(() => {
-      letterEl.remove();
-    }, 3000);
   }
-})();
+}
 
+initLoginHangmanMatrix();
 window.addEventListener("beforeunload", cleanupLoginMatrix);
 
 
@@ -2335,7 +2333,11 @@ if (trophiesBtn) {
       });
 
       achievementsPopup?.classList.remove('hidden');
-});
+    } catch (err) {
+      console.error('Achievements Error', err);
+    }
+  });
+}
 
 closeAchievementsBtn.addEventListener('click', () => {
   achievementsPopup?.classList.add('hidden');
