@@ -108,6 +108,8 @@ export async function GET(request: Request) {
   try {
     const params = new URLSearchParams({ category, difficulty });
     if (userId) params.set('user_id', userId);
+    const exclude = searchParams.get('exclude');
+    if (exclude) params.set('exclude', exclude);
     const res = await fetch(`${PYTHON_API}/word?${params}`, { signal: AbortSignal.timeout(45000) });
     if (res.ok) {
       const data = await res.json();

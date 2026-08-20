@@ -26,13 +26,14 @@ export default function Home() {
       </svg>
 
       {/* Cinematic Intro Overlay */}
-      <div id="intro-overlay" className="overlay hidden">
+      <div id="intro-overlay" className="overlay">
         <div className="intro-sequence">
           <div className="intro-text-line" id="intro-line-1">WELCOME AGENT...</div>
           <div className="intro-text-line" id="intro-line-2">CONNECTING TO THE GRID...</div>
           <div className="intro-text-line" id="intro-line-3">SETTING UP PROTOCOLS...</div>
           <div className="intro-text-line" id="intro-line-4">THE SYSTEM NEEDS YOU...</div>
           <div className="intro-main-title" id="intro-logo">TECH HANGMAN</div>
+          <div className="intro-skip-hint" style={{ position: 'absolute', bottom: '30px', color: 'rgba(0, 255, 204, 0.6)', fontSize: '0.85rem', letterSpacing: '2px', fontFamily: 'Space Mono, monospace' }}>[CLICK ANYWHERE TO SKIP INTRO]</div>
         </div>
       </div>
 
@@ -45,7 +46,7 @@ export default function Home() {
       </div>
 
       {/* Login Overlay */}
-      <div id="login-overlay" className="overlay">
+      <div id="login-overlay" className="overlay hidden">
         <div className="login-wrapper">
           <div className="login-header-main">
             <h1 className="login-main-title">TECH HANGMAN</h1>
