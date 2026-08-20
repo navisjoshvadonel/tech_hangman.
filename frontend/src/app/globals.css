@@ -2564,6 +2564,69 @@ h2,
   transform: translateX(0);
 }
 
+/* Fully Hide Phone HUD Overrides */
+#agent-hud.hud-fully-hidden {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* Close/Hide Button on HUD top right */
+.hud-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: #ff3366;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 105;
+  transition: all 0.2s ease;
+}
+
+.hud-close-btn:hover {
+  background: #ff3366;
+  color: #fff;
+  box-shadow: 0 0 10px #ff3366;
+  transform: scale(1.15);
+}
+
+/* Restore Phone HUD pill button when hidden */
+.hud-restore-pill {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 99;
+  background: rgba(5, 12, 24, 0.85);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+  transition: all 0.3s ease;
+}
+
+.hud-restore-pill:hover {
+  background: var(--neon-cyan);
+  color: #050c18;
+  box-shadow: 0 0 25px var(--neon-cyan);
+  transform: translateY(-2px);
+}
+
 /* One-time pulse hint for new players */
 .hud-pulse-hint {
   animation: hud-hint-glow 2s infinite alternate;

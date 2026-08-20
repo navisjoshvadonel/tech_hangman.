@@ -51,9 +51,12 @@ export default function Home() {
           <div className="login-header-main">
             <h1 className="login-main-title">TECH HANGMAN</h1>
             <p className="login-main-subtitle">LOGIN TO SAVE THE AGENT</p>
-            <div className="login-compat-bar" style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+            <div className="login-compat-bar" style={{ marginTop: '12px', display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <button id="login-compat-btn" className="compat-toggle-btn" title="Click to toggle lag-free mode for low-end hardware">
                 ⚡ COMPATIBILITY MODE: <span id="login-compat-status">OFF</span>
+              </button>
+              <button id="login-hud-toggle-btn" className="compat-toggle-btn" title="Click to hide or show the Phone HUD panel">
+                📱 PHONE HUD: <span id="login-hud-status">VISIBLE</span>
               </button>
             </div>
           </div>
@@ -731,7 +734,8 @@ export default function Home() {
 
       {/* Agent Status HUD - Novel Bottom-Right Display */}
       <div id="agent-hud" className="hidden">
-        <div id="hud-toggle-btn" className="hud-pulse-hint" title="Toggle HUD"></div>
+        <div id="hud-toggle-btn" className="hud-pulse-hint" title="Minimize / Restore HUD"></div>
+        <button id="hud-close-btn" className="hud-close-btn" title="Hide Phone HUD completely">✕</button>
         <div className="hud-header">AGENT STATUS</div>
         <div className="hud-body">
           <div className="hud-line"><span className="label">CALLSIGN:</span> <span id="hud-user">---</span></div>
@@ -764,6 +768,11 @@ export default function Home() {
         </div>
         <div className="home-indicator"></div>
       </div>
+
+      {/* Floating Restore Button for Phone HUD */}
+      <button id="hud-restore-pill" className="hud-restore-pill hidden" title="Show Agent Status Phone HUD">
+        📱 SHOW HUD
+      </button>
 
 
 
@@ -823,6 +832,10 @@ export default function Home() {
             <div className="setting-item toggle-item">
               <span className="setting-label">SCREEN SHAKE EFFECTS</span>
               <button id="setting-screenshake-toggle" className="text-btn toggle-btn active">ENABLED</button>
+            </div>
+            <div className="setting-item toggle-item">
+              <span className="setting-label">AGENT STATUS PHONE HUD</span>
+              <button id="setting-hud-toggle" className="text-btn toggle-btn active">VISIBLE</button>
             </div>
           </div>
 

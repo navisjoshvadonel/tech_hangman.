@@ -501,16 +501,77 @@ function applyUserSession(data) {
   }
 }
 
+function isPhoneHudHidden() {
+  return localStorage.getItem("hud_hidden") === "true";
+}
+
+function setPhoneHudHidden(hidden) {
+  localStorage.setItem("hud_hidden", hidden ? "true" : "false");
+  applyPhoneHudVisibility();
+}
+
+function applyPhoneHudVisibility() {
+  const hud = document.getElementById("agent-hud");
+  const restorePill = document.getElementById("hud-restore-pill");
+  const loginHudStatus = document.getElementById("login-hud-status");
+  const loginHudBtn = document.getElementById("login-hud-toggle-btn");
+  const settingHudToggle = document.getElementById("setting-hud-toggle");
+
+  const hidden = isPhoneHudHidden();
+
+  if (hud) {
+    if (hidden) {
+      hud.classList.add("hud-fully-hidden");
+    } else {
+      hud.classList.remove("hud-fully-hidden");
+    }
+  }
+
+  if (restorePill) {
+    if (hidden && currentUser) {
+      restorePill.classList.remove("hidden");
+    } else {
+      restorePill.classList.add("hidden");
+    }
+  }
+
+  if (loginHudStatus) {
+    loginHudStatus.innerText = hidden ? "HIDDEN" : "VISIBLE";
+  }
+  if (loginHudBtn) {
+    if (hidden) {
+      loginHudBtn.classList.add("active");
+    } else {
+      loginHudBtn.classList.remove("active");
+    }
+  }
+
+  if (settingHudToggle) {
+    if (hidden) {
+      settingHudToggle.innerText = "HIDDEN";
+      settingHudToggle.classList.remove("active");
+      settingHudToggle.classList.add("muted");
+    } else {
+      settingHudToggle.innerText = "VISIBLE";
+      settingHudToggle.classList.add("active");
+      settingHudToggle.classList.remove("muted");
+    }
+  }
+}
+
 function updateAgentHUD() {
   const hud = document.getElementById("agent-hud");
   if (!hud) return;
 
   if (!currentUser) {
     hud.classList.add("hidden");
+    const restorePill = document.getElementById("hud-restore-pill");
+    if (restorePill) restorePill.classList.add("hidden");
     return;
   }
 
   hud?.classList.remove("hidden");
+  applyPhoneHudVisibility();
 
   const userEl = document.getElementById("hud-user");
   const rankEl = document.getElementById("hud-rank");
@@ -796,6 +857,23 @@ function initLoginCompatToggle() {
 }
 initLoginCompatToggle();
 
+function initLoginHudToggle() {
+  const loginHudBtn = document.getElementById("login-hud-toggle-btn");
+  if (loginHudBtn) {
+    if (!loginHudBtn.__bound__) {
+      loginHudBtn.__bound__ = true;
+      loginHudBtn.addEventListener("click", () => {
+        setPhoneHudHidden(!isPhoneHudHidden());
+        if (typeof playSfx === "function") playSfx("click");
+      });
+    }
+    applyPhoneHudVisibility();
+  } else {
+    setTimeout(initLoginHudToggle, 150);
+  }
+}
+initLoginHudToggle();
+
 function applyCursorStyle(style) {
   cursorStyle = style;
   localStorage.setItem("hangman_cursorStyle", style);
@@ -842,6 +920,7 @@ function updateSettingsUI() {
 
   applyGraphicsQuality(graphicsQuality);
   applyCursorStyle(cursorStyle);
+  applyPhoneHudVisibility();
 }
 
 function triggerScreenShake() {
@@ -957,6 +1036,14 @@ if (screenshakeToggleBtn) {
     localStorage.setItem("hangman_screenShake", isScreenShakeEnabled);
     updateSettingsUI();
     if (isScreenShakeEnabled) triggerScreenShake();
+    playSfx("click");
+  });
+}
+
+const settingHudToggleBtn = document.getElementById("setting-hud-toggle");
+if (settingHudToggleBtn) {
+  settingHudToggleBtn.addEventListener("click", () => {
+    setPhoneHudHidden(!isPhoneHudHidden());
     playSfx("click");
   });
 }
@@ -2646,6 +2733,20 @@ async function refreshProgressHUD() {
 }
 // --- HUD Toggle Logic ---
 document.addEventListener('click', (e) => {
+  const closeHudBtn = e.target.closest('#hud-close-btn');
+  if (closeHudBtn) {
+    setPhoneHudHidden(true);
+    if (typeof playSfx === 'function') playSfx('click');
+    return;
+  }
+
+  const restoreHudPill = e.target.closest('#hud-restore-pill');
+  if (restoreHudPill) {
+    setPhoneHudHidden(false);
+    if (typeof playSfx === 'function') playSfx('click');
+    return;
+  }
+
   const toggleBtn = e.target.closest('#hud-toggle-btn');
   const hud = document.getElementById('agent-hud');
 
