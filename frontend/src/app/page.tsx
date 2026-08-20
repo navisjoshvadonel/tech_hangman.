@@ -26,7 +26,7 @@ export default function Home() {
       </svg>
 
       {/* Cinematic Intro Overlay */}
-      <div id="intro-overlay" className="overlay">
+      <div id="intro-overlay" className="overlay hidden">
         <div className="intro-sequence">
           <div className="intro-text-line" id="intro-line-1">WELCOME AGENT...</div>
           <div className="intro-text-line" id="intro-line-2">CONNECTING TO THE GRID...</div>
@@ -45,7 +45,7 @@ export default function Home() {
       </div>
 
       {/* Login Overlay */}
-      <div id="login-overlay" className="overlay hidden">
+      <div id="login-overlay" className="overlay">
         <div className="login-wrapper">
           <div className="login-header-main">
             <h1 className="login-main-title">TECH HANGMAN</h1>
