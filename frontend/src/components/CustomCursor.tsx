@@ -8,23 +8,32 @@ export const CustomCursor: React.FC = () => {
     const bracketsRef = useRef<HTMLDivElement>(null);
 
     const [cursorStyle, setCursorStyle] = useState<string>('CYBER_CYAN');
+    const [isCompatMode, setIsCompatMode] = useState<boolean>(false);
 
     useEffect(() => {
         const updateSettings = () => {
             const savedStyle = localStorage.getItem('hangman_cursorStyle') || 'CYBER_CYAN';
+            const savedGraphics = localStorage.getItem('hangman_graphics') || 'HIGH';
+            const isLowGraphics = savedGraphics === 'LOW' || document.body.classList.contains('graphics-low');
+            
             setCursorStyle(savedStyle);
+            setIsCompatMode(isLowGraphics);
         };
 
         updateSettings();
 
         window.addEventListener('settingsChanged', updateSettings);
+        window.addEventListener('storage', updateSettings);
         return () => {
             window.removeEventListener('settingsChanged', updateSettings);
+            window.removeEventListener('storage', updateSettings);
         };
     }, []);
 
+    const isCursorDisabled = cursorStyle === 'SYSTEM' || isCompatMode;
+
     useEffect(() => {
-        if (cursorStyle === 'SYSTEM') return;
+        if (isCursorDisabled) return;
 
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
@@ -102,12 +111,16 @@ export const CustomCursor: React.FC = () => {
             window.removeEventListener('mouseup', onMouseUp);
             cancelAnimationFrame(animationFrameId);
         };
-    }, [cursorStyle]);
+    }, [cursorStyle, isCursorDisabled]);
 
-    if (cursorStyle === 'SYSTEM') {
+    if (isCursorDisabled) {
         return (
             <style dangerouslySetInnerHTML={{
-                __html: `* { cursor: auto !important; }`
+                __html: `
+                    body, body * { cursor: auto !important; }
+                    button, a, [role="button"], input[type="submit"], .compat-toggle-btn, .quality-btn, .cursor-btn, .cat-btn, .diff-btn, .text-btn { cursor: pointer !important; }
+                    input[type="text"], input[type="password"], textarea { cursor: text !important; }
+                `
             }} />
         );
     }

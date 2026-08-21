@@ -837,6 +837,8 @@ function applyGraphicsQuality(quality) {
       initLoginHangmanMatrix();
     }
   }
+
+  window.dispatchEvent(new CustomEvent("settingsChanged"));
 }
 
 function initLoginCompatToggle() {

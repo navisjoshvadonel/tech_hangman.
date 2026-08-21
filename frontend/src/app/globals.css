@@ -5227,11 +5227,28 @@ body.graphics-low .trace-panel {
   box-shadow: 0 0 0 1px rgba(0, 255, 204, 0.3) !important;
 }
 
+/* === Compatibility Mode Normal System Cursor Overrides === */
+body.graphics-low,
+body.graphics-low * {
+  cursor: auto !important;
+}
 
+body.graphics-low button,
+body.graphics-low a,
+body.graphics-low .pointer,
+body.graphics-low [role="button"],
+body.graphics-low input[type="submit"],
+body.graphics-low .compat-toggle-btn,
+body.graphics-low .quality-btn,
+body.graphics-low .cursor-btn,
+body.graphics-low .cat-btn,
+body.graphics-low .diff-btn,
+body.graphics-low .text-btn {
+  cursor: pointer !important;
+}
 
-
-
-
-
-
-
+body.graphics-low input[type="text"],
+body.graphics-low input[type="password"],
+body.graphics-low textarea {
+  cursor: text !important;
+}

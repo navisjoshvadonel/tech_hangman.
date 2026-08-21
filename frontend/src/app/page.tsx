@@ -2,10 +2,12 @@
 
 import React from 'react';
 import LegacyScript from './LegacyScript';
+import { CustomCursor } from '@/components/CustomCursor';
 
 export default function Home() {
   return (
     <>
+      <CustomCursor />
       {/* 
         This loads the entire vanilla JS logic from the legacy build.
         It runs after the DOM is rendered so document.getElementById works.
