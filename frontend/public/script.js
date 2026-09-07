@@ -1396,6 +1396,50 @@ function handleRoundTimeout() {
   checkLoss();
 }
 
+function getEmergencyFallbackWord(category) {
+  const dict = {
+    TAMIL_MOVIES: [
+      { word: "ROJA", clue: "Mani Ratnam patriotic romance set in Kashmir with AR Rahman debut soundtrack." },
+      { word: "MARK ANTONY", clue: "Vishal and S.J. Suryah in a retro time-travel telephone action comedy." },
+      { word: "BAASHA", clue: "Superstar Rajinikanth as an auto driver with an underworld past in Mumbai." },
+      { word: "VIKRAM", clue: "Lokesh Kanagaraj action thriller starring Kamal Haasan and Fahadh Faasil." },
+      { word: "ANNIYAN", clue: "Shankar psychological thriller starring Vikram with split personality disorder." },
+      { word: "MANKATHA", clue: "Ajith Kumar as suspended cop Vinayak Mahadev in a 500-crore betting heist." },
+      { word: "THALAPATHI", clue: "Mani Ratnam crime drama starring Rajinikanth and Mammootty based on Mahabharata." },
+      { word: "GILLI", clue: "Vijay and Trisha in a kabaddi player running away from Muthupandi in Madurai." }
+    ],
+    DATABASE: [
+      { word: "INDEX", clue: "A data structure that improves the speed of data retrieval operations." },
+      { word: "TRANSACTION", clue: "A unit of work performed within a database management system." },
+      { word: "PRIMARY KEY", clue: "A unique identifier for each record in a relational database table." },
+      { word: "NORMALIZATION", clue: "The process of organizing data in a database to reduce redundancy." }
+    ],
+    DATA_STRUCTURE: [
+      { word: "BINARY TREE", clue: "A tree data structure in which each node has at most two children." },
+      { word: "HASH TABLE", clue: "A data structure that implements an associative array abstract data type." },
+      { word: "LINKED LIST", clue: "A linear collection of data elements whose order is not given by physical placement." },
+      { word: "STACK", clue: "A linear data structure that follows the Last In First Out (LIFO) principle." }
+    ],
+    DEFAULT: [
+      { word: "FIREWALL", clue: "A network security system that monitors and controls network traffic." },
+      { word: "ALGORITHM", clue: "A step-by-step procedure for solving a problem or accomplishing a task." },
+      { word: "ENCRYPTION", clue: "The process of encoding information so only authorized parties can access it." },
+      { word: "PROTOCOL", clue: "A set of rules governing the exchange or transmission of data between devices." },
+      { word: "COMPILER", clue: "A computer program that translates computer code into machine language." }
+    ]
+  };
+
+  const pool = dict[category] || dict.DEFAULT;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return {
+    word: pick.word,
+    clue: pick.clue,
+    status: "client_fallback",
+    words_total: pool.length,
+    words_remaining: pool.length
+  };
+}
+
 // === Game Logic ===
 
 async function initGame() {
@@ -1506,9 +1550,20 @@ async function initGame() {
       url += `&exclude=${encodeURIComponent(uniqueExclude.join(','))}`;
     }
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("API Fetch Failed");
-    const data = await res.json();
+    let data;
+    const fetchController = new AbortController();
+    const fetchTimeoutId = setTimeout(() => fetchController.abort(), 3500);
+
+    try {
+      const res = await fetch(url, { signal: fetchController.signal });
+      clearTimeout(fetchTimeoutId);
+      if (!res.ok) throw new Error("API Fetch Failed");
+      data = await res.json();
+    } catch (fetchErr) {
+      clearTimeout(fetchTimeoutId);
+      console.warn("Word fetch slow or failed, engaging instant emergency fallback:", fetchErr);
+      data = getEmergencyFallbackWord(selectedCategory);
+    }
 
     // Check for exhaustion
     if (data.status === "exhausted") {
@@ -1526,7 +1581,7 @@ async function initGame() {
     }
 
     currentWordData = data;
-    currentWord = String(data.word || "").toUpperCase();
+    currentWord = String(data.word || "PROTOCOL").toUpperCase();
     if (currentWord) {
       recentWords.push(currentWord);
       if (recentWords.length > 30) recentWords.shift();
@@ -1549,8 +1604,14 @@ async function initGame() {
       rollRandomEvent();
     }
   } catch (err) {
-    console.error("Word Fetch Error", err);
-    clueText.innerText = "ERROR GENERATING CLUE";
+    console.error("Word Fetch Fatal Error, recovering:", err);
+    const emergency = getEmergencyFallbackWord(selectedCategory);
+    currentWord = emergency.word;
+    clueText.innerText = emergency.clue;
+    renderWord();
+    renderKeyboard();
+    startRoundTimer();
+    startHeartbeat();
   }
 }
 

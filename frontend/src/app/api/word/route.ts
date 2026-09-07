@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import { promises as fs } from 'fs';
+import wordsData from '@/data/words.json';
 
-const PYTHON_API = process.env.PYTHON_API_URL || 'http://127.0.0.1:5005/api';
+const PYTHON_API = process.env.PYTHON_API_URL || '';
+const isVercel = process.env.VERCEL === '1';
+const hasCustomPythonApi = Boolean(PYTHON_API && !PYTHON_API.includes('127.0.0.1') && !PYTHON_API.includes('localhost'));
 
 type WordObj = { word: string; clue?: string; hint?: string; description?: string };
-
 type WordsJson = Record<string, Record<string, WordObj[]>>;
+
+const typedWordsData = wordsData as unknown as WordsJson;
 
 function fnv1a32(str: string): number {
   let h = 2166136261;
@@ -34,20 +36,14 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
   return a;
 }
 
-async function loadWordsJson(): Promise<WordsJson> {
-  const jsonDirectory = path.join(process.cwd(), 'src/data');
-  const fileContents = await fs.readFile(path.join(jsonDirectory, 'words.json'), 'utf8');
-  return JSON.parse(fileContents);
-}
-
-function buildPool(wordsData: WordsJson, category: string, difficulty: string): WordObj[] {
+function buildPool(data: WordsJson, category: string, difficulty: string): WordObj[] {
   let pool: WordObj[] = [];
 
   const cat = String(category || '').toUpperCase();
   const diff = String(difficulty || '').toUpperCase();
 
-  if (cat && wordsData[cat]) {
-    const diffs = wordsData[cat];
+  if (cat && data[cat]) {
+    const diffs = data[cat];
     if (diff && diffs[diff]) {
       pool = diffs[diff];
     } else {
@@ -55,8 +51,8 @@ function buildPool(wordsData: WordsJson, category: string, difficulty: string): 
     }
   } else {
     // No valid category: flatten all words in deterministic key order.
-    for (const c of Object.keys(wordsData).sort()) {
-      const diffs = wordsData[c] || ({} as any);
+    for (const c of Object.keys(data).sort()) {
+      const diffs = data[c] || ({} as any);
       pool = [...pool, ...(diffs.EASY || []), ...(diffs.MEDIUM || []), ...(diffs.HARD || [])];
     }
   }
@@ -73,12 +69,10 @@ export async function GET(request: Request) {
   const seed = searchParams.get('seed');
   const iParam = searchParams.get('i');
 
-  // Seeded missions: deterministic selection from local words.json.
-  // We bypass the Python backend so all players get the same run.
+  // 1. Seeded missions: deterministic selection from local words.json.
   if (seed && iParam !== null) {
     try {
-      const wordsData = await loadWordsJson();
-      const pool = buildPool(wordsData, category, difficulty);
+      const pool = buildPool(typedWordsData, category, difficulty);
 
       if (pool.length === 0) {
         return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'seeded_fallback' });
@@ -104,25 +98,27 @@ export async function GET(request: Request) {
     }
   }
 
-  // First, try to proxy to the Python backend (when running locally with the backend)
-  try {
-    const params = new URLSearchParams({ category, difficulty });
-    if (userId) params.set('user_id', userId);
-    const exclude = searchParams.get('exclude');
-    if (exclude) params.set('exclude', exclude);
-    const res = await fetch(`${PYTHON_API}/word?${params}`, { signal: AbortSignal.timeout(45000) });
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
+  // 2. If a custom external Python API is configured (or running local fullstack dev),
+  // try proxying with a STRICT 1500ms timeout.
+  if (hasCustomPythonApi || (!isVercel && PYTHON_API)) {
+    try {
+      const params = new URLSearchParams({ category, difficulty });
+      if (userId) params.set('user_id', userId);
+      const exclude = searchParams.get('exclude');
+      if (exclude) params.set('exclude', exclude);
+      const res = await fetch(`${PYTHON_API}/word?${params}`, { signal: AbortSignal.timeout(1500) });
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
+    } catch {
+      // Backend is offline, asleep, or slow - fallback instantly to embedded words
     }
-  } catch {
-    // Python backend not running - use the local words.json fallback
   }
 
-  // Fallback: serve word from the local words.json
+  // 3. Instant local words.json delivery (< 2ms)
   try {
-    const wordsData = await loadWordsJson();
-    const pool = buildPool(wordsData, category, difficulty);
+    const pool = buildPool(typedWordsData, category, difficulty);
 
     if (pool.length === 0) {
       return NextResponse.json({ word: 'PROTOCOL', clue: 'A standard set of rules.', status: 'fallback', words_total: 0, words_remaining: 0 });
