@@ -401,11 +401,15 @@ function renderWord() {
   wordDisplay.innerHTML = "";
   currentWord.split("").forEach(letter => {
     const box = document.createElement("div");
-    box.className = "letter-box";
-    if (guessedLetters.includes(letter)) {
-      box.innerText = letter;
+    if (/[A-Z]/.test(letter)) {
+      box.className = "letter-box";
+      box.innerText = guessedLetters.includes(letter) ? letter : "";
     } else {
-      box.innerText = "";
+      box.className = "letter-box";
+      box.style.border = "none";
+      box.style.background = "transparent";
+      box.style.boxShadow = "none";
+      box.innerText = letter === " " ? " " : letter;
     }
     wordDisplay.appendChild(box);
   });
@@ -469,7 +473,7 @@ function handleGuess(letter) {
 }
 
 function checkWin() {
-  const won = currentWord.split("").every(letter => guessedLetters.includes(letter));
+  const won = currentWord.split("").every(letter => !/[A-Z]/.test(letter) || guessedLetters.includes(letter));
   if (won) {
     isGameOver = true;
     currentScore += 1000;

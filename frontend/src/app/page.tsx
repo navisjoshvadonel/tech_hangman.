@@ -65,7 +65,7 @@ export default function Home() {
           <div className="login-content-wrapper">
             <div className="cyber-core-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '420px', height: '320px', margin: '0 auto' }}>
               <div id="login-hangman-matrix" className="login-hangman-matrix" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', border: '1px solid rgba(0, 255, 204, 0.15)', borderRadius: '8px', background: 'rgba(5, 12, 24, 0.4)' }}>
-                
+
                 {/* Floating words & characters container */}
                 <div id="matrix-popping-words" style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}></div>
 
@@ -215,9 +215,9 @@ export default function Home() {
               <h2 id="chosen-category-title">CATEGORY</h2>
               <p className="subtitle" style={{ textAlign: "center", marginBottom: "15px" }}>SELECT THREAT LEVEL</p>
               <div className="selection-grid">
-                <button className="diff-btn" data-diff="EASY">EASY</button>
-                <button className="diff-btn" data-diff="MEDIUM">MEDIUM</button>
-                <button className="diff-btn" data-diff="HARD">HARD</button>
+                <button className="diff-btn" data-diff="EASY">EASY (20s)</button>
+                <button className="diff-btn" data-diff="MEDIUM">MEDIUM (15s)</button>
+                <button className="diff-btn" data-diff="HARD">HARD (10s)</button>
               </div>
               <button id="back-to-cat-btn" className="text-btn" style={{ marginTop: "20px", width: "100%" }}>&lt; BACK</button>
             </div>
@@ -312,6 +312,10 @@ export default function Home() {
             </div>
           </div>
           <div className="score-info">
+            <div id="round-timer-box" className="score-box timer-box" style={{ border: '1px solid rgba(0, 255, 204, 0.5)', background: 'rgba(0, 255, 204, 0.08)' }}>
+              <span className="score-label" style={{ color: '#00ffcc' }}>TIME:</span>
+              <span id="round-timer" style={{ color: '#00ffcc', fontWeight: 'bold' }}>--</span>
+            </div>
             <div className="score-box attempts-box" style={{ border: '1px solid rgba(255, 51, 102, 0.5)', background: 'rgba(255, 51, 102, 0.08)' }}>
               <span className="score-label" style={{ color: '#ff3366' }}>ATTEMPTS LEFT:</span>
               <span id="attempts-remaining" style={{ color: '#ff3366', fontWeight: 'bold' }}>6 / 6</span>
@@ -550,7 +554,7 @@ export default function Home() {
           </div>
         </div>
 
-        
+
 
         {/* Codebreaker Panel */}
         <div id="codebreaker-panel" className="codebreaker-panel hidden">

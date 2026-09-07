@@ -849,9 +849,12 @@ body.graphics-low .draw-part {
 }
 
 @keyframes relax-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 8px rgba(255, 180, 0, 0.3);
   }
+
   50% {
     box-shadow: 0 0 18px rgba(255, 0, 128, 0.5);
   }
@@ -3831,6 +3834,7 @@ h2,
 /* --- Cursor: Neon Reticle (desktop only) --- */
 
 @media (pointer: fine) and (hover: hover) {
+
   body,
   button,
   a,
@@ -3954,6 +3958,7 @@ h2,
   }
 
   @media (prefers-reduced-motion: reduce) {
+
     #cyber-cursor .cyber-cursor-ring,
     #cyber-cursor .cyber-cursor-dot {
       transition: none;
@@ -3966,17 +3971,21 @@ h2,
   width: 5px;
   height: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: rgba(2, 3, 6, 0.4);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--neon-cyan);
   border-radius: 4px;
   box-shadow: 0 0 8px var(--neon-cyan);
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #00d2ff;
 }
+
 /* --- Laptop / Desktop Full Screen Sizing (min-width: 769px) --- */
 @media (min-width: 769px) {
   body {
@@ -3998,7 +4007,8 @@ h2,
     max-width: 100vw !important;
     height: 100vh !important;
     max-height: 100vh !important;
-    overflow-y: hidden !important; /* Force fit to screen - no scrolling */
+    overflow-y: hidden !important;
+    /* Force fit to screen - no scrolling */
     position: relative !important;
     border: none !important;
     border-radius: 0 !important;
@@ -4233,7 +4243,7 @@ body.tamil-theme::before {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: 
+  background:
     radial-gradient(circle at 20% 30%, rgba(255, 140, 0, 0.18) 0%, transparent 40%),
     radial-gradient(circle at 80% 70%, rgba(255, 0, 128, 0.15) 0%, transparent 40%),
     radial-gradient(circle at 50% 90%, rgba(255, 215, 0, 0.12) 0%, transparent 50%);
@@ -4263,6 +4273,7 @@ body.tamil-theme .clue-box {
     opacity: 0.7;
     transform: scale(1);
   }
+
   100% {
     opacity: 1;
     transform: scale(1.05);
@@ -4283,7 +4294,7 @@ body.tamil-theme .clue-box {
   left: 0;
   width: 200%;
   height: 200%;
-  background-image: 
+  background-image:
     linear-gradient(rgba(0, 255, 204, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 255, 204, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -4305,19 +4316,39 @@ body.tamil-theme .clue-box {
 }
 
 @keyframes login-grid-move {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-40px, -40px); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(-40px, -40px);
+  }
 }
 
 @keyframes login-pulse-glow {
-  0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  0% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
 }
 
 @keyframes matrix-laser-scan {
-  0% { top: -5%; }
-  50% { top: 105%; }
-  100% { top: -5%; }
+  0% {
+    top: -5%;
+  }
+
+  50% {
+    top: 105%;
+  }
+
+  100% {
+    top: -5%;
+  }
 }
 
 .matrix-word {
@@ -4351,12 +4382,15 @@ body.tamil-theme .clue-box {
     transform: translateY(20px) scale(0.8);
     opacity: 0;
   }
+
   15% {
     opacity: 1;
   }
+
   85% {
     opacity: 0.8;
   }
+
   100% {
     transform: translateY(-50px) scale(1.15);
     opacity: 0;
@@ -4383,8 +4417,13 @@ body.tamil-theme .clue-box {
 }
 
 @keyframes matrix-glitch-shake {
-  0% { transform: translate(1px, 0); }
-  100% { transform: translate(-1px, 0.5px); }
+  0% {
+    transform: translate(1px, 0);
+  }
+
+  100% {
+    transform: translate(-1px, 0.5px);
+  }
 }
 
 /* --- Login Overlay Refactoring & Responsive Polish --- */
@@ -4403,7 +4442,8 @@ body.tamil-theme .clue-box {
   gap: clamp(20px, 4vh, 35px);
   width: 100%;
   max-width: 1040px;
-  margin: auto; /* enables natural centering with scrolling */
+  margin: auto;
+  /* enables natural centering with scrolling */
   padding: 10px;
   box-sizing: border-box;
 }
@@ -4442,6 +4482,7 @@ body.tamil-theme .clue-box {
   from {
     text-shadow: 0 0 15px var(--neon-cyan), 0 0 30px rgba(0, 255, 204, 0.3);
   }
+
   to {
     text-shadow: 0 0 25px var(--neon-cyan), 0 0 50px rgba(0, 255, 204, 0.6), 0 0 80px rgba(0, 255, 204, 0.3);
   }
@@ -4466,35 +4507,43 @@ body.tamil-theme .clue-box {
 
 .login-box {
   width: 100%;
-  max-width: 540px !important; /* Increased from 420px to 540px */
+  max-width: 540px !important;
+  /* Increased from 420px to 540px */
   box-sizing: border-box;
-  padding: 50px 40px !important; /* More breathing room */
+  padding: 50px 40px !important;
+  /* More breathing room */
 }
 
 /* Make inputs, buttons, and tab fonts inside login box larger */
 .login-tab {
-  font-size: 0.95rem !important; /* Increased from 0.75rem */
+  font-size: 0.95rem !important;
+  /* Increased from 0.75rem */
   padding: 12px 10px !important;
   letter-spacing: 1.5px !important;
 }
 
 .login-subtitle {
-  font-size: 0.95rem !important; /* Increased from 0.75rem */
+  font-size: 0.95rem !important;
+  /* Increased from 0.75rem */
   margin-bottom: 20px !important;
 }
 
 #username-input,
 #register-username-input,
 #offline-username-input {
-  font-size: 1.15rem !important; /* Increased from 1rem */
-  padding: 12px 15px !important; /* Larger padding */
-  width: 100% !important; /* Ensure it matches parent container width */
+  font-size: 1.15rem !important;
+  /* Increased from 1rem */
+  padding: 12px 15px !important;
+  /* Larger padding */
+  width: 100% !important;
+  /* Ensure it matches parent container width */
 }
 
 #login-btn,
 #register-btn,
 #offline-login-btn {
-  font-size: 1.15rem !important; /* Increased from 1rem */
+  font-size: 1.15rem !important;
+  /* Increased from 1rem */
   padding: 12px 25px !important;
 }
 
@@ -4513,6 +4562,7 @@ body.tamil-theme .clue-box {
     flex-direction: column !important;
     gap: 30px !important;
   }
+
   .cyber-core-container {
     margin-bottom: 0 !important;
     width: 100% !important;
@@ -4565,6 +4615,7 @@ body {
     transform: scale(0.96) translateY(20px);
     filter: blur(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -4625,10 +4676,12 @@ body {
     transform: scale(0.5) translateY(-15px);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.25) translateY(0);
     text-shadow: 0 0 30px var(--neon-cyan), 0 0 60px #fff;
   }
+
   100% {
     transform: scale(1) translateY(0);
   }
@@ -4688,9 +4741,11 @@ body {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.6);
   }
+
   70% {
     transform: translate(-50%, -50%) scale(1.05);
   }
+
   100% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
@@ -4704,13 +4759,17 @@ body {
   border-radius: 16px;
 }
 
-.cat-btn, .lvl-btn, .diff-btn {
+.cat-btn,
+.lvl-btn,
+.diff-btn {
   border-radius: 8px;
   letter-spacing: 1px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.cat-btn:hover, .lvl-btn:hover, .diff-btn:hover {
+.cat-btn:hover,
+.lvl-btn:hover,
+.diff-btn:hover {
   transform: translateY(-3px) scale(1.02);
   box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
 }
@@ -4727,10 +4786,13 @@ body {
 }
 
 @keyframes quantum-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(0, 255, 204, 0.4), inset 0 0 15px rgba(0, 255, 204, 0.2);
     border-color: #00ffcc;
   }
+
   50% {
     box-shadow: 0 0 45px rgba(255, 0, 128, 0.6), inset 0 0 30px rgba(255, 0, 128, 0.3);
     border-color: #ff0080;
@@ -4743,10 +4805,12 @@ body {
     opacity: 0;
     filter: blur(10px);
   }
+
   50% {
     transform: scale(1.03);
     filter: blur(0px);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -4764,13 +4828,16 @@ body {
     opacity: 0;
     filter: drop-shadow(4px 0 0 #ff0080) drop-shadow(-4px 0 0 #00ffcc);
   }
+
   30% {
     transform: translateY(5px) skewX(8deg);
     filter: drop-shadow(-3px 0 0 #ff0080) drop-shadow(3px 0 0 #00ffcc);
   }
+
   60% {
     transform: translateY(-2px) skewX(-4deg);
   }
+
   100% {
     transform: translateY(0) skewX(0deg);
     opacity: 1;
@@ -4789,10 +4856,12 @@ body {
     stroke: #00ffcc;
     filter: drop-shadow(0 0 15px #00ffcc);
   }
+
   50% {
     stroke: #e0e0e0;
     filter: drop-shadow(0 0 25px #ffffff);
   }
+
   100% {
     stroke: #ff0080;
     filter: drop-shadow(0 0 20px #ff0080);
@@ -4873,6 +4942,7 @@ body {
   from {
     box-shadow: 0 0 20px rgba(255, 0, 85, 0.4), inset 0 0 10px rgba(255, 0, 85, 0.1);
   }
+
   to {
     box-shadow: 0 0 40px rgba(255, 0, 85, 0.8), inset 0 0 25px rgba(255, 0, 85, 0.3);
   }
@@ -4883,6 +4953,7 @@ body {
     opacity: 0.4;
     box-shadow: 0 0 4px #00ffcc;
   }
+
   100% {
     opacity: 1;
     box-shadow: 0 0 12px #00ffcc, 0 0 20px #00ffcc;
@@ -4898,6 +4969,7 @@ body {
     background-color: rgba(0, 255, 204, 0.35);
     box-shadow: inset 0 0 15px rgba(0, 255, 204, 0.5);
   }
+
   100% {
     background-color: transparent;
     box-shadow: inset 0 0 0px transparent;
@@ -5252,3 +5324,113 @@ body.graphics-low input[type="password"],
 body.graphics-low textarea {
   cursor: text !important;
 }
+
+/* =========================================================
+   === ROUND TIMER & MULTI-WORD PHRASE STYLES ===========
+   ========================================================= */
+
+.score-box.timer-box {
+  min-width: 90px;
+  transition: all 0.3s ease;
+}
+
+.score-box.timer-box.timer-warning {
+  border-color: rgba(255, 170, 0, 0.8) !important;
+  background: rgba(255, 170, 0, 0.15) !important;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+}
+
+.score-box.timer-box.timer-warning #round-timer,
+.score-box.timer-box.timer-warning .score-label {
+  color: #ffaa00 !important;
+}
+
+.score-box.timer-box.timer-danger {
+  border-color: rgba(255, 0, 85, 0.9) !important;
+  background: rgba(255, 0, 85, 0.2) !important;
+  box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+  animation: timer-panic-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.score-box.timer-box.timer-danger #round-timer,
+.score-box.timer-box.timer-danger .score-label {
+  color: #ff0055 !important;
+}
+
+@keyframes timer-panic-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(255, 0, 85, 0.9), inset 0 0 10px rgba(255, 0, 85, 0.4);
+  }
+}
+
+/* Multi-Word Phrase Layout */
+.word-display {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 10px 0;
+  max-width: 100%;
+}
+
+.word-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.space-box {
+  width: 22px;
+  height: 48px;
+  display: inline-block;
+  pointer-events: none;
+}
+
+.punct-box {
+  width: 20px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--neon-cyan);
+}
+
+.letter-box.unsolved-reveal {
+  color: #ff0055 !important;
+  border-color: #ff0055 !important;
+  text-shadow: 0 0 10px rgba(255, 0, 85, 0.8) !important;
+  animation: pulse-loss-letter 1s infinite alternate;
+}
+
+@keyframes pulse-loss-letter {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 600px) {
+  .word-group {
+    gap: 4px;
+  }
+  .space-box {
+    width: 14px;
+  }
+  .score-box.timer-box {
+    min-width: 70px;
+  }
+}

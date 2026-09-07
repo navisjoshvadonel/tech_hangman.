@@ -63,7 +63,7 @@ const offlineUsernameInput = document.getElementById("offline-username-input");
 
 // === Offline State Management ===
 window.offlineAgentName = "";
-window.loadOfflineUser = function(username) {
+window.loadOfflineUser = function (username) {
   const key = `hangman_offline_${username.toLowerCase()}`;
   const raw = localStorage.getItem(key);
   if (raw) {
@@ -109,12 +109,12 @@ window.loadOfflineUser = function(username) {
   };
 };
 
-window.saveOfflineUser = function(data) {
+window.saveOfflineUser = function (data) {
   const key = `hangman_offline_${data.username.toLowerCase()}`;
   localStorage.setItem(key, JSON.stringify(data));
 };
 
-window.checkOfflineAchievements = function(data, isWin) {
+window.checkOfflineAchievements = function (data, isWin) {
   const currentAchievements = data.achievements || [];
   const newlyUnlocked = [];
 
@@ -635,7 +635,7 @@ function handleOfflineLogin() {
   window.offlineAgentName = username;
   const localData = window.loadOfflineUser(username);
   applyUserSession(localData);
-  
+
   showToast("💻 LOCAL OFFLINE MODE", `Agent ${username.toUpperCase()} initialized locally.`, "#00ffcc");
 }
 
@@ -758,6 +758,9 @@ async function handleRegister() {
 }
 
 logoutBtn.addEventListener("click", () => {
+  isGameOver = true;
+  stopRoundTimer();
+  stopHeartbeat();
   currentUser = null;
   currentUserId = null;
   window.offlineAgentName = "";
@@ -1000,6 +1003,11 @@ if (soundToggle) {
     isSoundEnabled = !isSoundEnabled;
     localStorage.setItem("hangman_sound", isSoundEnabled);
     updateSettingsUI();
+    if (!isSoundEnabled) {
+      if (typeof stopHeartbeat === 'function') stopHeartbeat();
+    } else if (!isGameOver && gameContainer && !gameContainer.classList.contains("hidden")) {
+      if (typeof startHeartbeat === 'function') startHeartbeat();
+    }
     playSfx("click");
   });
 }
@@ -1009,6 +1017,11 @@ if (muteToggleBtn) {
     isSoundEnabled = !isSoundEnabled;
     localStorage.setItem("hangman_sound", isSoundEnabled);
     updateSettingsUI();
+    if (!isSoundEnabled) {
+      if (typeof stopHeartbeat === 'function') stopHeartbeat();
+    } else if (!isGameOver && gameContainer && !gameContainer.classList.contains("hidden")) {
+      if (typeof startHeartbeat === 'function') startHeartbeat();
+    }
     playSfx("click");
   });
 }
@@ -1175,7 +1188,7 @@ if (hintRevealDesc) {
 if (hintRevealLetter) {
   hintRevealLetter.addEventListener("click", async () => {
     if (isGameOver || currentXp < 50) return;
-    const unGuessed = currentWord.split("").filter(l => !guessedLetters.includes(l));
+    const unGuessed = currentWord.split("").filter(l => /[A-Z]/.test(l) && !guessedLetters.includes(l));
     if (unGuessed.length > 0) {
       const randLetter = unGuessed[Math.floor(Math.random() * unGuessed.length)];
       handleGuess(randLetter);
@@ -1199,9 +1212,197 @@ if (hintRevealLetter) {
   });
 }
 
+// =========================================================
+// === DIFFICULTY TIMERS & HEARTBEAT AUDIO SYSTEM ==========
+// =========================================================
+
+const DIFFICULTY_TIMERS = {
+  EASY: 20,
+  MEDIUM: 15,
+  HARD: 10
+};
+
+let roundTimerInterval = null;
+let roundTimeRemaining = 20;
+
+// Heartbeat Audio State
+let heartbeatAudioCtx = null;
+let heartbeatTimerId = null;
+let isHeartbeatRunning = false;
+
+function getHeartbeatAudioContext() {
+  if (!heartbeatAudioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      heartbeatAudioCtx = new AudioContextClass();
+    }
+  }
+  if (heartbeatAudioCtx && heartbeatAudioCtx.state === 'suspended') {
+    heartbeatAudioCtx.resume().catch(() => {});
+  }
+  return heartbeatAudioCtx;
+}
+
+function playHeartbeatThump(frequency = 66, duration = 0.11, volume = 0.3) {
+  if (!isSoundEnabled || sfxVolume === 0) return;
+  const ctx = getHeartbeatAudioContext();
+  if (!ctx) return;
+
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(140, ctx.currentTime);
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(25, frequency * 0.4), ctx.currentTime + duration);
+
+    const targetVol = volume * (sfxVolume / 100);
+    gain.gain.setValueAtTime(targetVol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {
+    // Autoplay restrictions or audio error
+  }
+}
+
+function playHeartbeatBeat() {
+  if (isGameOver || !isSoundEnabled || sfxVolume === 0) return;
+  // First thump (lub)
+  playHeartbeatThump(66, 0.11, 0.32);
+  // Second thump (dub) ~125ms later
+  setTimeout(() => {
+    if (!isGameOver && isSoundEnabled && sfxVolume > 0) {
+      playHeartbeatThump(82, 0.09, 0.24);
+    }
+  }, 125);
+}
+
+function heartbeatLoop() {
+  if (!isHeartbeatRunning || isGameOver || !isSoundEnabled) {
+    isHeartbeatRunning = false;
+    return;
+  }
+
+  playHeartbeatBeat();
+
+  // Accelerates as timer reaches danger zone
+  let delay = 1000;
+  if (typeof roundTimeRemaining === 'number') {
+    if (roundTimeRemaining <= 3) {
+      delay = 380;
+    } else if (roundTimeRemaining <= 6) {
+      delay = 540;
+    } else if (roundTimeRemaining <= 10) {
+      delay = 750;
+    } else {
+      delay = 1050;
+    }
+  }
+
+  heartbeatTimerId = setTimeout(heartbeatLoop, delay);
+}
+
+function startHeartbeat() {
+  stopHeartbeat();
+  if (isGameOver || !isSoundEnabled || sfxVolume === 0) return;
+  isHeartbeatRunning = true;
+  heartbeatLoop();
+}
+
+function stopHeartbeat() {
+  isHeartbeatRunning = false;
+  if (heartbeatTimerId) {
+    clearTimeout(heartbeatTimerId);
+    heartbeatTimerId = null;
+  }
+}
+
+// Pause heartbeat if window loses focus or document is hidden
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopHeartbeat();
+  } else if (!isGameOver && isSoundEnabled && gameContainer && !gameContainer.classList.contains("hidden")) {
+    startHeartbeat();
+  }
+});
+
+function getRoundDuration() {
+  const diffKey = (selectedDifficulty || "EASY").toUpperCase();
+  return DIFFICULTY_TIMERS[diffKey] || 20;
+}
+
+function updateTimerUI() {
+  const timerSpan = document.getElementById("round-timer");
+  const timerBox = document.getElementById("round-timer-box");
+  if (!timerSpan) return;
+
+  timerSpan.innerText = `${roundTimeRemaining}s`;
+
+  if (timerBox) {
+    timerBox.classList.remove("timer-warning", "timer-danger");
+    if (roundTimeRemaining <= 5) {
+      timerBox.classList.add("timer-danger");
+    } else if (roundTimeRemaining <= 10) {
+      timerBox.classList.add("timer-warning");
+    }
+  }
+}
+
+function startRoundTimer() {
+  stopRoundTimer();
+  roundTimeRemaining = getRoundDuration();
+  updateTimerUI();
+
+  roundTimerInterval = setInterval(() => {
+    if (isGameOver) {
+      stopRoundTimer();
+      return;
+    }
+
+    roundTimeRemaining--;
+    updateTimerUI();
+
+    if (roundTimeRemaining <= 0) {
+      stopRoundTimer();
+      handleRoundTimeout();
+    }
+  }, 1000);
+}
+
+function stopRoundTimer() {
+  if (roundTimerInterval) {
+    clearInterval(roundTimerInterval);
+    roundTimerInterval = null;
+  }
+}
+
+function handleRoundTimeout() {
+  if (isGameOver) return;
+  isGameOver = true;
+  stopHeartbeat();
+  playSfx("wrong");
+  showToast("⏰ TIME EXPIRED", "Tactical round timer expired! Mission compromised.", "#ff0055");
+  wrongGuesses = MAX_MISTAKES;
+  checkLoss();
+}
+
 // === Game Logic ===
 
 async function initGame() {
+  // Stop any active timer or heartbeat
+  stopRoundTimer();
+  stopHeartbeat();
+
   // Reset Variables
   guessedLetters = [];
   wrongGuesses = 0;
@@ -1277,6 +1478,8 @@ async function initGame() {
     clueText.innerText = currentClue || "DECRYPT THE ENCRYPTED NODE";
     renderWord();
     renderKeyboard();
+    startRoundTimer();
+    startHeartbeat();
     return;
   }
 
@@ -1337,6 +1540,8 @@ async function initGame() {
 
     renderWord();
     renderKeyboard();
+    startRoundTimer();
+    startHeartbeat();
 
     // Roll a random event after word loads (15% chance, skip on daily)
     if (!isDailyChallenge) {
@@ -1377,14 +1582,14 @@ function updateAttemptsUI() {
 async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
   // Always submit on win/loss for XP, streaks, and loss counts
   if (!currentUserId || isWin === null) return;
-  
+
   if (currentUserId === "offline") {
     // Offline storage calculation logic
     const localData = window.loadOfflineUser(window.offlineAgentName);
-    
+
     const xpAdded = xpGained * scoreMultiplier;
     localData.xp = (localData.xp || 0) + xpAdded;
-    
+
     if (isWin) {
       localData.wins = (localData.wins || 0) + 1;
       localData.streak = (localData.streak || 0) + 1;
@@ -1440,7 +1645,7 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
     currentLevel = localData.level;
     currentXpSpan.innerText = `EXP: ${currentXp}`;
     if (currentRankSpan) currentRankSpan.innerText = `RANK: ${currentRank.toUpperCase().replace(/_/g, " ")}`;
-    
+
     updateAgentHUD();
     refreshProgressHUD();
     return;
@@ -1491,26 +1696,54 @@ async function submitFinalScore(isWin = null, xpGained = 0, timeTaken = null) {
   }
 }
 
-function renderWord() {
+function renderWord(revealAll = false) {
   wordDisplay.innerHTML = "";
-  const uniqueLetters = new Set(currentWord.split("")).size;
-  const correctGuessed = currentWord.split("").filter(l => guessedLetters.includes(l));
+  if (!currentWord) return;
+
+  const lettersOnly = currentWord.split("").filter(c => /[A-Z]/.test(c));
+  const uniqueLetters = new Set(lettersOnly).size;
+  const correctGuessed = lettersOnly.filter(l => guessedLetters.includes(l));
   const uniqueCorrect = new Set(correctGuessed).size;
 
-  const progressPercent = (uniqueCorrect / uniqueLetters) * 100;
+  const progressPercent = uniqueLetters > 0 ? (uniqueCorrect / uniqueLetters) * 100 : 0;
   const progressBar = document.getElementById("game-progress-bar");
   if (progressBar) progressBar.style.width = `${progressPercent}%`;
 
-  currentWord.split("").forEach(letter => {
-    const box = document.createElement("div");
-    box.className = "letter-box";
-    if (guessedLetters.includes(letter)) {
-      box.innerText = letter;
-      box?.classList.add("revealed-anim");
-    } else {
-      box.innerText = "";
+  const words = currentWord.split(" ");
+  words.forEach((wordSegment, wordIndex) => {
+    const wordGroup = document.createElement("div");
+    wordGroup.className = "word-group";
+
+    wordSegment.split("").forEach((char) => {
+      if (/[A-Z]/.test(char)) {
+        const box = document.createElement("div");
+        box.className = "letter-box";
+        if (guessedLetters.includes(char)) {
+          box.innerText = char;
+          box?.classList.add("revealed-anim");
+        } else if (revealAll) {
+          box.innerText = char;
+          box?.classList.add("unsolved-reveal");
+        } else {
+          box.innerText = "";
+        }
+        wordGroup.appendChild(box);
+      } else {
+        const punct = document.createElement("div");
+        punct.className = "punct-box";
+        punct.innerText = char;
+        wordGroup.appendChild(punct);
+      }
+    });
+
+    wordDisplay.appendChild(wordGroup);
+
+    if (wordIndex < words.length - 1) {
+      const spaceBox = document.createElement("div");
+      spaceBox.className = "space-box";
+      spaceBox.innerHTML = "&nbsp;";
+      wordDisplay.appendChild(spaceBox);
     }
-    wordDisplay.appendChild(box);
   });
 }
 
@@ -1580,9 +1813,11 @@ function handleGuess(letter) {
 }
 
 function checkWin() {
-  const won = currentWord.split("").every(letter => guessedLetters.includes(letter));
+  const won = currentWord.split("").every(letter => !/[A-Z]/.test(letter) || guessedLetters.includes(letter));
   if (won) {
     isGameOver = true;
+    stopRoundTimer();
+    stopHeartbeat();
     currentScore += 1000;
     updateScoreUI();
     playSfx("win");
@@ -1684,6 +1919,8 @@ function checkWin() {
 function checkLoss() {
   if (wrongGuesses >= MAX_MISTAKES) {
     isGameOver = true;
+    stopRoundTimer();
+    stopHeartbeat();
     const timeTaken = Math.floor((Date.now() - gameStartTime) / 1000);
     submitFinalScore(false, 10, timeTaken); // Save score, small XP for trying
     currentScore = 0; // Reset for next sequence
@@ -1693,14 +1930,8 @@ function checkLoss() {
       sendFriendDuelAction('lost');
     }
 
-    // Reveal word
-    wordDisplay.innerHTML = "";
-    currentWord.split("").forEach(letter => {
-      const box = document.createElement("div");
-      box.className = "letter-box";
-      box.innerText = letter;
-      wordDisplay.appendChild(box);
-    });
+    // Reveal full word properly preserving word-groups and styling unsolved letters
+    renderWord(true);
 
     // Death Animation Sequence Let user see the final leg get drawn
     setTimeout(() => {
@@ -1853,7 +2084,7 @@ function renderLeaderboard(type, shouldFlash = false) {
   dataArr.forEach((entry, index) => {
     const tr = document.createElement("tr");
     const isMe = entry.username && entry.username.toUpperCase() === activeUsername;
-    
+
     if (isMe) {
       tr.style.background = "rgba(0, 255, 204, 0.18)";
       tr.style.outline = "1px solid var(--neon-cyan)";
@@ -2204,6 +2435,8 @@ diffBtns.forEach(btn => {
 if (changeProtocolBtn) {
   changeProtocolBtn.addEventListener("click", () => {
     isGameOver = true;
+    stopRoundTimer();
+    stopHeartbeat();
     gameContainer?.classList.add("hidden");
     popup?.classList.remove("show");
     redOverlay?.classList.remove("active");
@@ -2230,6 +2463,8 @@ if (nextBtn) {
       nextBtn.innerText = "are u ready to save another man";
       // Manually trigger "change protocol" to reset state
       isGameOver = true;
+      stopRoundTimer();
+      stopHeartbeat();
       gameContainer?.classList.add("hidden");
       popup?.classList.remove("show");
       redOverlay?.classList.remove("active");
@@ -2345,7 +2580,7 @@ const RANDOM_EVENTS = [
     apply: () => {
       // Reveal one random letter after word is loaded
       setTimeout(() => {
-        const unguessed = currentWord.split('').filter(l => !guessedLetters.includes(l));
+        const unguessed = currentWord.split('').filter(l => /[A-Z]/.test(l) && !guessedLetters.includes(l));
         if (unguessed.length > 0) {
           const lucky = unguessed[Math.floor(Math.random() * unguessed.length)];
           handleGuess(lucky);
@@ -2712,7 +2947,7 @@ async function refreshProgressHUD() {
   if (!currentUserId) return;
   try {
     let totalPercentage = 0;
-    
+
     if (currentUserId === "offline") {
       const totalWords = WORDS_TOTAL || 0;
       const totalSolved = (WORDS_TOTAL - WORDS_REMAINING) || 0;
@@ -2835,7 +3070,7 @@ function resetGameVariables() {
 async function sendFriendDuelAction(roundStatus = 'playing') {
   if (!isFriendModeActive || !activeFriendRoomCode || !currentUserId) return;
   try {
-    const correctCount = (currentWord && currentWord.length) ? currentWord.split("").filter(l => guessedLetters.includes(l)).length : 0;
+    const correctCount = (currentWord && currentWord.length) ? currentWord.split("").filter(l => /[A-Z]/.test(l) && guessedLetters.includes(l)).length : 0;
     const scoreDelta = Math.max(0, Number(currentScore) || 0);
     await fetch('/api/friend_duel/action', {
       method: 'POST',
@@ -3154,7 +3389,7 @@ function exitFriendDuel() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: activeFriendRoomCode })
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   if (friendPollInterval) clearInterval(friendPollInterval);
